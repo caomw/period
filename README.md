@@ -16,6 +16,7 @@ TODO: Write a project description
 * Intel® RealSense™ F200 Camera
 * [librealsense](https://github.com/IntelRealSense/librealsense)
 * png++ `sudo apt-get install libpng++-dev`
+* [marvin](https://github.com/PrincetonVision/marvin)
 
 ## Compilation
 

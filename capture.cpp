@@ -17,8 +17,7 @@ struct rgb_pixel
 };
 #pragma pack(pop)
 
-int main(int argc, char * argv[]) try
-{
+int main(int argc, char * argv[]) try {
     rs::log_to_console(rs::log_severity::warn);
     //rs::log_to_file(rs::log_severity::debug, "librealsense.log");
 
@@ -48,7 +47,6 @@ int main(int argc, char * argv[]) try
     rs::intrinsics depth_K = dev.get_stream_intrinsics(rs::stream::depth_aligned_to_color);
     std::string intrinsics_filename = saveto_directory + "intrinsics.K.txt";
     FILE *fp = fopen(intrinsics_filename.c_str(), "w");
-    std::cout << depth_K.ppx << " " << depth_K.ppy << " " << depth_K.fx << " " << depth_K.fy << std::endl;
     fprintf(fp, "%.17g %.17g %.17g\n", depth_K.fx, 0.0f, depth_K.ppx);
     fprintf(fp, "%.17g %.17g %.17g\n", 0.0f, depth_K.fy, depth_K.ppy);
     fprintf(fp, "%.17g %.17g %.17g\n", 0.0f, 0.0f, 1.0f);
@@ -57,8 +55,7 @@ int main(int argc, char * argv[]) try
     // Frame increment
     int frame_idx = 0;
 
-    while (!glfwWindowShouldClose(win))
-    {
+    while (!glfwWindowShouldClose(win)) {
         // Wait for new images
         glfwPollEvents();
         dev.wait_for_frames();
@@ -121,8 +118,7 @@ int main(int argc, char * argv[]) try
         buffers[1].show(dev, rs::stream::color_aligned_to_depth, s, 0, s, h - h / 2);
         buffers[2].show(dev, rs::stream::depth_aligned_to_color, 0, h / 2, s, h - h / 2);
         buffers[3].show(dev, rs::stream::depth, s, h / 2, s, h - h / 2);
-        if (dev.is_stream_enabled(rs::stream::infrared2))
-        {
+        if (dev.is_stream_enabled(rs::stream::infrared2)) {
             buffers[4].show(dev, rs::stream::infrared2_aligned_to_depth, 2 * s, 0, s, h - h / 2);
             buffers[5].show(dev, rs::stream::depth_aligned_to_infrared2, 2 * s, h / 2, s, h - h / 2);
         }
@@ -134,13 +130,11 @@ int main(int argc, char * argv[]) try
     glfwTerminate();
     return EXIT_SUCCESS;
 }
-catch (const rs::error & e)
-{
+catch (const rs::error & e) {
     std::cerr << "RealSense error calling " << e.get_failed_function() << "(" << e.get_failed_args() << "):\n    " << e.what() << std::endl;
     return EXIT_FAILURE;
 }
-catch (const std::exception & e)
-{
+catch (const std::exception & e) {
     std::cerr << e.what() << std::endl;
     return EXIT_FAILURE;
 }
