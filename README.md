@@ -10,6 +10,9 @@ TODO: Write a project description
 * Saves RGB-D frames and intrinsics to disk (depth aligned to color) 
  * Color: frame-XXXXXX.color.png (RGB, 24-bit, PNG)
  * Depth: frame-XXXXXX.depth.png (depth in millimeters, 16-bit, PNG)
+ * Pose: frame-XXXXXX.pose.txt (camera-to-world, 4x4 matrix in homogeneous coordinates).
+* Single-cam and multi-cam capture, bash script for resetting USB ports
+* kinfu, sift-recon
 
 ## Dependencies
 

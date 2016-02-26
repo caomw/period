@@ -3453,8 +3453,394 @@ class MemoryDataLayer : public DataLayer {
     };
 };
 
+template <class T>
+class PeriodDataLayer : public DataLayer {
+    std::future<void> lock;
+    
+    std::vector<size_t> ordering; 
+    std::bernoulli_distribution* distribution_bernoulli;
+    // std::vector<std::uniform_int_distribution<int>*> distribution_uniform2D;
+    // std::vector<std::uniform_int_distribution<int>*> distribution_uniform3D;
+
+    std::vector<FILE*> dataFILE;
+    std::vector<T*> dataCPU;
+    std::vector<T*> dataGPU;
+    std::vector<T*> item_raw;
+
+    Tensor<StorageT>* labelCPUall;
+    Tensor<StorageT>* labelCPU;
+    std::vector<StorageT*> mean_data_GPU;
+    StorageT* labelGPU;
+
+    size_t numel_per_channel_crop2D ;
+    size_t numel_all_channel_crop2D ;
+    size_t numel_per_channel_orgi2D ; 
+    size_t numel_batch_all_channel_crop2D ;
+
+    size_t numel_per_channel_crop3D ;
+    size_t numel_all_channel_crop3D ;
+    size_t numel_per_channel_orgi3D ; 
+    size_t numel_batch_all_channel_crop3D ;
+
+    int epoch_prefetch;
+
+    size_t bytes_per_item2D;
+    size_t bytes_per_item3D;
+    size_t headerBytes2D;
+    size_t headerBytes3D;
+    std::vector<int> size_data2D;
+    std::vector<int> size_data3D;
+    public:
+    bool mirror;
+    std::vector<int> size_crop2D;
+    std::vector<int> size_crop3D;
+    std::vector<std::string> file_data;
+    std::vector<std::string> file_mean;
+    std::string file_label;
+    int batch_size;
+
+    int numofitems(){
+        return labelCPUall->numofitems();
+    };
+
+    void init(){
+        epoch_prefetch  = 0;
+        distribution_bernoulli = new std::bernoulli_distribution(0.5);  
+        //dataFILE = NULL;
+        //dataCPU = NULL;
+        //dataGPU = NULL;
+        labelCPU = NULL;
+        labelGPU = NULL;
+        labelCPUall = NULL;
+        train_me = false;
+        std::cout<<"PeriodDataLayer "<<name<<" loading data: "<<std::endl;
+
+        dataCPU.resize(file_data.size());
+        dataGPU.resize(file_data.size());
+        item_raw.resize(file_data.size());
+        dataFILE.resize(file_data.size());
+
+        // open data file
+        for (int i = 0;i<file_data.size();++i){
+            std::cout << file_data[i] << std::endl;
+            dataFILE[i] = fopen(file_data[i].c_str(),"rb");
+            if (dataFILE[i] ==NULL){
+                std::cerr<<"Fail to open the data file"<<std::endl;
+                FatalError(__LINE__);
+            }
+        }
+
+        mean_data_GPU.resize(file_mean.size());
+        for (int i =0;i<file_mean.size();i++){
+            Tensor<StorageT>* meanCPU = new Tensor<StorageT>(file_mean[i],batch_size);
+            meanCPU->print(veci(0));
+            checkCUDA(__LINE__, cudaMalloc(&mean_data_GPU[i], meanCPU->numBytes()) );
+            meanCPU->writeGPU(mean_data_GPU[i]);
+            delete meanCPU;
+        }
+
+        // Size crop
+        size_crop2D.clear(); size_crop2D.push_back(224); size_crop2D.push_back(224);
+        size_crop3D.clear(); size_crop3D.push_back(30); size_crop3D.push_back(30); size_crop3D.push_back(30);
+
+        // 2D data
+        Tensor<T> tensor2D;
+        headerBytes2D = tensor2D.readHeader(dataFILE[0]);
+        size_data2D.insert( size_data2D.end(), tensor2D.dim.begin()+1, tensor2D.dim.end() );
+
+        numel_per_channel_crop2D = numel(size_crop2D);
+        numel_all_channel_crop2D = size_data2D[0] * numel_per_channel_crop2D;
+        numel_per_channel_orgi2D = sizeofitem(size_data2D);
+        numel_batch_all_channel_crop2D = batch_size*numel_all_channel_crop2D;
+        bytes_per_item2D = sizeof(T)* numel(size_data2D);
+
+        std::vector<int> data_dim2D;
+        data_dim2D.push_back(batch_size);
+        data_dim2D.push_back(size_data2D[0]);
+        data_dim2D.insert( data_dim2D.end(), size_crop2D.begin(), size_crop2D.end() );
+
+        // for (int i = 0;i<file_data.size();++i){
+        // }
+        dataCPU[0]  = new T[numel(data_dim2D)];
+        item_raw[0] = new T[numel(size_data2D)];
+
+        // 3D data
+        Tensor<T> tensor3D;
+        headerBytes3D = tensor3D.readHeader(dataFILE[1]);
+        size_data3D.insert( size_data3D.end(), tensor3D.dim.begin()+1, tensor3D.dim.end() );
+
+        numel_per_channel_crop3D = numel(size_crop3D);
+        numel_all_channel_crop3D = size_data3D[0] * numel_per_channel_crop3D;
+        numel_per_channel_orgi3D = sizeofitem(size_data3D);
+        numel_batch_all_channel_crop3D = batch_size*numel_all_channel_crop3D;
+        bytes_per_item3D = sizeof(T)* numel(size_data3D);
+
+        std::vector<int> data_dim3D;
+        data_dim3D.push_back(batch_size);
+        data_dim3D.push_back(size_data3D[0]);
+        data_dim3D.insert( data_dim3D.end(), size_crop3D.begin(), size_crop3D.end() );
 
 
+        for (int i = 0;i<data_dim2D.size();++i)
+            std::cout << data_dim2D[i] << " ";
+        std::cout << std::endl;
+        std::cout << numel_per_channel_crop2D << std::endl;
+        std::cout << numel_all_channel_crop2D << std::endl;
+        std::cout << numel_per_channel_orgi2D << std::endl;
+        std::cout << numel_batch_all_channel_crop2D << std::endl;
+        std::cout << bytes_per_item2D << std::endl;
+
+        for (int i = 0;i<data_dim3D.size();++i)
+            std::cout << data_dim3D[i] << " ";
+        std::cout << std::endl;
+        std::cout << numel_per_channel_crop3D << std::endl;
+        std::cout << numel_all_channel_crop3D << std::endl;
+        std::cout << numel_per_channel_orgi3D << std::endl;
+        std::cout << numel_batch_all_channel_crop3D << std::endl;
+        std::cout << bytes_per_item3D << std::endl;
+
+        // for (int i = 0;i<file_data.size();++i){
+        //     dataCPU[i]  = new T[numel(data_dim3D)];
+        //     item_raw[i] = new T[numel(size_data3D)];
+        // }
+        dataCPU[1]  = new T[numel(data_dim3D)];
+        item_raw[1] = new T[numel(size_data3D)];
+
+        // for label
+        labelCPUall = new Tensor<StorageT>(file_label);
+        labelCPUall -> print(veci(0));
+        std::cout<<"    "; labelCPUall->printRange();
+        while (labelCPUall->dim.size()<size_data2D.size()+1) labelCPUall->dim.push_back(1);
+        std::vector<int> label_dim = labelCPUall->dim;
+        label_dim[0] = batch_size;
+        labelCPU = new Tensor<StorageT>(label_dim);
+
+
+        // distribution_uniform2D.resize(size_crop2D.size());
+        // for (int d=0; d<size_crop2D.size(); d++){
+        //     distribution_uniform2D[d] = new std::uniform_int_distribution<int>(0,size_data2D[d+1] - size_crop2D[d]);
+        // }
+
+        // distribution_uniform3D.resize(size_crop3D.size());
+        // for (int d=0; d<size_crop3D.size(); d++){
+        //     distribution_uniform3D[d] = new std::uniform_int_distribution<int>(0,size_data3D[d+1] - size_crop3D[d]);
+        // }
+
+        if (phase!=Testing){
+            shuffle();
+        }else{
+            ordering.resize(numofitems());
+            for (int i=0;i<numofitems();++i) ordering[i]=i;
+        }
+    };
+
+    PeriodDataLayer(std::string name_, Phase phase_, bool mirror_, std::vector<int> size_data_, std::vector<int> size_crop_, std::vector<std::string> file_data_, std::string file_label_, int batch_size_): 
+        DataLayer(name_), mirror(mirror_), size_data3D(size_data_), size_crop3D(size_crop_), file_data(file_data_), file_label(file_label_), batch_size(batch_size_){
+        phase = phase_;
+        init();
+    };
+
+    PeriodDataLayer(JSON* json){
+        SetOrDie(json, name)
+        SetValue(json, phase,       Training)
+        SetValue(json, mirror,      false)
+        SetOrDie(json, file_data    )
+        SetValue(json, file_mean,   std::vector<std::string>(0))
+        SetValue(json, file_label,"")
+        SetOrDie(json, batch_size   )
+        SetValue(json, random,      true)
+        init();
+    };
+
+    ~PeriodDataLayer(){
+        if (lock.valid()) lock.wait();
+        delete distribution_bernoulli;
+        // for (int i=0;i<distribution_uniform.size();++i) delete distribution_uniform[i];
+        for (int i = 0; i<dataFILE.size();++i){
+            if (dataFILE[i]!=NULL) fclose(dataFILE[i]);
+        }
+        for (int i = 0; i<dataCPU.size();++i){
+            if (dataCPU[i]!=NULL) delete [] dataCPU[i];
+        }
+        for (int i = 0; i<item_raw.size();++i){
+            if (item_raw[i]!=NULL) delete [] item_raw[i];
+        }
+
+        if (labelCPU!=NULL) delete labelCPU;
+        if (labelCPUall!=NULL) delete labelCPUall;
+
+        for (int i = 0; i<dataGPU.size();++i){
+            if (dataGPU[i]!=NULL) checkCUDA(__LINE__, cudaFree(dataGPU[i]));
+        }
+
+        if (labelGPU!=NULL) checkCUDA(__LINE__, cudaFree(labelGPU));
+
+
+        for (int i =0;i<file_mean.size();i++){
+            if (mean_data_GPU[i]!=NULL) checkCUDA(__LINE__, cudaFree(mean_data_GPU[i]));
+        }
+    };
+
+
+    void shuffle(){
+        if (!random) return;
+        if (phase!=Testing){
+            ordering = randperm(labelCPUall->numofitems(), rng);
+        }
+    }; 
+
+    void prefetch(){
+
+        checkCUDA(__LINE__,cudaSetDevice(GPU));
+
+        
+        // std::vector<size_t> begin_coor(size_crop.size());
+
+        for (size_t i=0;i<batch_size;++i){
+
+            int image_i = ordering[counter];
+            //std::cout<<"i"<<i<<"image_i"<<image_i<<"bytes_per_item"<<bytes_per_item<<std::endl;
+
+            //label 
+            size_t labelSizeOfItem = labelCPU->sizeofitem();
+            memcpy(labelCPU->CPUmem+i*labelSizeOfItem, labelCPUall->CPUmem+image_i*labelSizeOfItem, labelSizeOfItem*sizeofStorageT);
+            
+            // // mirror
+            // bool mirror_this = false;
+            // if (mirror) mirror_this = ((*distribution_bernoulli)(rng));
+            // if (numel_per_channel_orgi != numel_per_channel_crop || mirror_this){
+            //     for (int d=0;d<size_crop.size();++d){
+            //         begin_coor[d] = (numel_per_channel_orgi == numel_per_channel_crop) ? 0 : ((*(distribution_uniform[d]))(rng));
+            //     }
+            // }
+            
+            // 2D
+            // for (int data_i = 0; data_i<file_data.size();data_i++){
+            // read file
+            fseek(dataFILE[0], headerBytes2D + bytes_per_item2D * image_i, SEEK_SET);
+            size_t read_cnt2D = fread(item_raw[0], 1, bytes_per_item2D, dataFILE[0]);
+            if (read_cnt2D != bytes_per_item2D){
+                std::cerr<<"Error reading file for PeriodDataLayer::prefetch : "<<dataFILE[0]<<std::endl;
+                std::cerr<<"data_i"<<0<<"read_cnt2D: "<<read_cnt2D<<" bytes_per_item2D: "<<bytes_per_item2D<<std::endl;
+                FatalError(__LINE__);
+            }
+
+            T* memBegin2D = dataCPU[0] + i * numel_all_channel_crop2D;
+            if (numel_per_channel_orgi2D == numel_per_channel_crop2D){
+                memcpy(memBegin2D, item_raw[0], bytes_per_item2D);
+            }
+
+            // }//for (int data_i = 0; data_i<file_data.size();data_i++)
+
+            // 3D
+            fseek(dataFILE[1], headerBytes3D + bytes_per_item3D * image_i, SEEK_SET);
+            size_t read_cnt3D = fread(item_raw[1], 1, bytes_per_item3D, dataFILE[1]);
+            if (read_cnt3D != bytes_per_item3D){
+                std::cerr<<"Error reading file for PeriodDataLayer::prefetch : "<<dataFILE[1]<<std::endl;
+                std::cerr<<"data_i"<<1<<"read_cnt3D: "<<read_cnt3D<<" bytes_per_item3D: "<<bytes_per_item3D<<std::endl;
+                FatalError(__LINE__);
+            }
+
+            T* memBegin3D = dataCPU[1] + i * numel_all_channel_crop3D;
+            if (numel_per_channel_orgi3D == numel_per_channel_crop3D){
+                memcpy(memBegin3D, item_raw[1], bytes_per_item3D);
+            }
+
+            counter++;
+            if (counter>= ordering.size()){
+                if (phase!=Testing) shuffle();
+                counter = 0;
+                ++epoch_prefetch;
+            }
+        }//end for (size_t i=0;i<batch_size;++i)
+        //std::cout<<"numel_batch_all_channel_crop:  "<<numel_batch_all_channel_crop<<std::endl;
+
+
+        // for (int data_i = 0; data_i<file_data.size();data_i++){
+        // }
+        checkCUDA(__LINE__, cudaMemcpy( dataGPU[0],  dataCPU[0],  numel_batch_all_channel_crop2D*sizeof(T), cudaMemcpyHostToDevice) );
+        checkCUDA(__LINE__, cudaMemcpy( dataGPU[1],  dataCPU[1],  numel_batch_all_channel_crop3D*sizeof(T), cudaMemcpyHostToDevice) );
+            
+        labelCPU->writeGPU(labelGPU);
+
+    };
+
+    void forward(Phase phase_){
+        lock.wait();
+        epoch = epoch_prefetch;
+        // for (int data_i = 0; data_i<file_data.size();data_i++){
+        // }
+        StorageT* mean_data2D =  (0<mean_data_GPU.size()? mean_data_GPU[0]: NULL );
+        Kernel_convert_to_StorageT_subtract<<<CUDA_GET_BLOCKS(numel_batch_all_channel_crop2D), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(numel_batch_all_channel_crop2D), numel_batch_all_channel_crop2D, numel_all_channel_crop2D, dataGPU[0], mean_data2D, out[0]->dataGPU);
+        StorageT* mean_data3D =  (1<mean_data_GPU.size()? mean_data_GPU[1]: NULL );
+        Kernel_convert_to_StorageT_subtract<<<CUDA_GET_BLOCKS(numel_batch_all_channel_crop3D), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(numel_batch_all_channel_crop3D), numel_batch_all_channel_crop3D, numel_all_channel_crop3D, dataGPU[1], mean_data3D, out[1]->dataGPU);
+        std::swap(out[file_data.size()]->dataGPU,labelGPU);
+        lock = std::async(std::launch::async,&PeriodDataLayer<T>::prefetch,this);
+    };
+
+
+    size_t Malloc(Phase phase_){
+
+        if (phase == Training && phase_==Testing) return 0;
+
+        
+
+        if (out.size()!=file_data.size()+1){    std::cout<<"PeriodDataLayer: # of out's should match the # of in-1"<<std::endl; FatalError(__LINE__); }
+        if (! (in.size()==0 || in.size()<file_data.size())){
+            std::cerr<< "PeriodDataLayer in.size()==0 || in.size<file_data.size()"<<std::endl;
+            FatalError(__LINE__);
+        }
+        size_t memoryBytes = 0;
+
+        std::cout<< (train_me? "* " : "  ");
+        std::cout<<name<<std::endl;
+
+        std::vector<int> data_dim2D;
+        data_dim2D.push_back(batch_size);
+        data_dim2D.push_back(size_data2D[0]);
+        data_dim2D.insert( data_dim2D.end(), size_crop2D.begin(), size_crop2D.end() );
+
+        // for (int data_i = 0; data_i<file_data.size();data_i++){
+        out[0]->need_diff = false;
+        out[0]->receptive_field.resize(data_dim2D.size()-2); fill_n(out[0]->receptive_field.begin(),data_dim2D.size()-2,1);
+        out[0]->receptive_gap.resize(data_dim2D.size()-2);   fill_n(out[0]->receptive_gap.begin(),data_dim2D.size()-2,1);     
+        out[0]->receptive_offset.resize(data_dim2D.size()-2);fill_n(out[0]->receptive_offset.begin(),data_dim2D.size()-2,0);
+        memoryBytes += out[0]->Malloc(data_dim2D);
+        // }
+
+        std::vector<int> data_dim3D;
+        data_dim3D.push_back(batch_size);
+        data_dim3D.push_back(size_data3D[0]);
+        data_dim3D.insert( data_dim3D.end(), size_crop3D.begin(), size_crop3D.end() );
+
+        // for (int data_i = 0; data_i<file_data.size();data_i++){
+        out[1]->need_diff = false;
+        out[1]->receptive_field.resize(data_dim3D.size()-2); fill_n(out[1]->receptive_field.begin(),data_dim3D.size()-2,1);
+        out[1]->receptive_gap.resize(data_dim3D.size()-2);   fill_n(out[1]->receptive_gap.begin(),data_dim3D.size()-2,1);     
+        out[1]->receptive_offset.resize(data_dim3D.size()-2);fill_n(out[1]->receptive_offset.begin(),data_dim3D.size()-2,0);
+        memoryBytes += out[1]->Malloc(data_dim3D);
+        // }
+
+        out[file_data.size()]->need_diff = false;
+        memoryBytes += out[file_data.size()]->Malloc(labelCPU->dim);
+        checkCUDA(__LINE__, cudaMalloc(&labelGPU, labelCPU->numBytes()) );
+        memoryBytes += labelCPU->numBytes();
+
+        // for (int data_i = 0; data_i<file_data.size();data_i++){
+        checkCUDA(__LINE__, cudaMalloc(&dataGPU[0], numel_batch_all_channel_crop2D * sizeof(T)) );
+        memoryBytes += numel_batch_all_channel_crop2D * sizeof(T);
+        // }
+
+        // for (int data_i = 0; data_i<file_data.size();data_i++){
+        checkCUDA(__LINE__, cudaMalloc(&dataGPU[1], numel_batch_all_channel_crop3D * sizeof(T)) );
+        memoryBytes += numel_batch_all_channel_crop3D * sizeof(T);
+        // }
+
+        lock = std::async(std::launch::async,&PeriodDataLayer<T>::prefetch,this);
+
+        return memoryBytes;
+    };  
+};
 
 template <class T>
 class DiskDataLayer : public DataLayer {
@@ -6356,6 +6742,22 @@ public:
                 else if (fpTypeid==typeID(typeid(int64_t)))     pLayer = new DiskDataLayer<int64_t>(p);
                 else if (fpTypeid==typeID(typeid(char)))        pLayer = new DiskDataLayer<char>(p);
                 else if (fpTypeid==typeID(typeid(bool)))        pLayer = new DiskDataLayer<bool>(p);
+            }
+            else if (0==type.compare("PeriodData")){
+                uint8_t fpTypeid = readTypeID(p->member["file_data"]->returnString());
+                     if (fpTypeid==typeID(typeid(half)))        pLayer = new PeriodDataLayer<half>(p);
+                else if (fpTypeid==typeID(typeid(float)))       pLayer = new PeriodDataLayer<float>(p);
+                else if (fpTypeid==typeID(typeid(double)))      pLayer = new PeriodDataLayer<double>(p);
+                else if (fpTypeid==typeID(typeid(uint8_t)))     pLayer = new PeriodDataLayer<uint8_t>(p);
+                else if (fpTypeid==typeID(typeid(uint16_t)))    pLayer = new PeriodDataLayer<uint16_t>(p);
+                else if (fpTypeid==typeID(typeid(uint32_t)))    pLayer = new PeriodDataLayer<uint32_t>(p);
+                else if (fpTypeid==typeID(typeid(uint64_t)))    pLayer = new PeriodDataLayer<uint64_t>(p);
+                else if (fpTypeid==typeID(typeid(int8_t)))      pLayer = new PeriodDataLayer<int8_t>(p);
+                else if (fpTypeid==typeID(typeid(int16_t)))     pLayer = new PeriodDataLayer<int16_t>(p);
+                else if (fpTypeid==typeID(typeid(int32_t)))     pLayer = new PeriodDataLayer<int32_t>(p);
+                else if (fpTypeid==typeID(typeid(int64_t)))     pLayer = new PeriodDataLayer<int64_t>(p);
+                else if (fpTypeid==typeID(typeid(char)))        pLayer = new PeriodDataLayer<char>(p);
+                else if (fpTypeid==typeID(typeid(bool)))        pLayer = new PeriodDataLayer<bool>(p);
             }
             else if (0==type.compare("ElementWise"))            pLayer = new ElementWiseLayer(p);
             else if (0==type.compare("Concat"))                 pLayer = new ConcatLayer(p);
