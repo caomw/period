@@ -8,8 +8,8 @@
     "lr_policy": "LR_step",
     "lr_gamma": 0.1,
     "lr_stepsize": 5000,
-    "path": "./PeriodNet",
-    "snapshot_prefix": "./snapshot",
+    "path": "models/PeriodNet",
+    "snapshot_prefix": "models/PeriodNet_snapshot",
     "max_iter": 10000,
     "snapshot_iter": 5000,
     "display_iter": 1,
@@ -18,15 +18,15 @@
     "GPU": 1
   },
   "test": {
-    "GPU": 1
+    "GPU": 0
   },
   "layers": [
     {
       "type":"PeriodData",
       "name":"data3DTrain",
       "phase":"Training",
-      "file_data":["data2DTrain.tensor","data3DTrain.tensor"],
-      "file_label":["labelsTrain.tensor"],
+      "file_data":["../../data/tensors/data2DTrain.tensor","../../data/tensors/data3DTrain.tensor"],
+      "file_label":["../../data/tensors/labelsTrain.tensor"],
       "batch_size":32,
       "size_crop":[30,30,30],
       "out":[
@@ -39,8 +39,8 @@
       "type":"PeriodData",
       "name":"data3DTest",
       "phase":"Testing",
-      "file_data":["data2DTest.tensor","data3DTest.tensor"],
-      "file_label":["labelsTest.tensor"],
+      "file_data":["../../TMPdata2D.tensor","../../TMPdata3D.tensor"],
+      "file_label":["../../TMPlabels.tensor"],
       "batch_size":32,
       "size_crop":[30,30,30],
       "out":[

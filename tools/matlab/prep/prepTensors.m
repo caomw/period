@@ -1,40 +1,116 @@
 clear all; close all;
 addpath('../../marvin/tools/tensorIO_matlab');
 
-dataDir = 'data/processed/train';
-dstDir = 'data/tensors';
+dataDir = '../../../data/train';
+dstDir = '../../../data/tensors';
+mkdir(dstDir);
+
 data2DFilename = 'data2DTrain.tensor';
 data3DFilename = 'data3DTrain.tensor';
 labelsFilename = 'labelsTrain.tensor';
 
+% Change random seed
+rng(sum(100*clock),'twister');
+
 % List files
 colorFiles = dir(fullfile(dataDir,'*.color.png'));
+cropFiles = dir(fullfile(dataDir,'*.crop.txt'));
+tsdfFiles = dir(fullfile(dataDir,'*.tsdf.bin'));
 
-data2D = zeros(224,224,3,length(colorFiles));
-data3D = zeros(30,30,30,3,length(colorFiles));
-labels = zeros(1,1,1,1,length(colorFiles));
-for i=1:length(colorFiles)
-    fprintf('%d/%d\n',i,length(colorFiles));
-    filename = colorFiles(i).name(1:(end-10));
+% Count number of training data points
+num_data = 0;
+for fileIDX=1:length(cropFiles)
+    cropInfo = dlmread(fullfile(dataDir,cropFiles(fileIDX).name));
+    num_data = num_data + sum(cropInfo(:,1) > 0);
+end
+
+data2D = zeros(227,227,3,num_data);
+data3D = zeros(30,30,30,1,num_data);
+labels = zeros(1,1,1,1,num_data);
+dataIDX = 1;
+for fileIDX=1:length(colorFiles)
+    fprintf('%d/%d\n',fileIDX,length(colorFiles));
+    filename = colorFiles(fileIDX).name(1:(end-10));
+
+    % Load color image
+    I = imread(fullfile(dataDir,colorFiles(fileIDX).name));
     
-    % Load rgb data
-    I = imread(fullfile(dataDir,strcat(filename,'.color.png')));
-    I = imresize(I,[224,224]);
-    I = double(I(:,:,[3,2,1]));
-    I(:,:,1) = I(:,:,1) - 102.9801;
-    I(:,:,2) = I(:,:,2) - 115.9465;
-    I(:,:,3) = I(:,:,3) - 122.7717;
-    data2D(:,:,:,i) = I;
+    % Load TSDF volume
+    delimIDX = strfind(tsdfFiles(fileIDX).name,'.');
+    tsdfDimX = str2double(tsdfFiles(fileIDX).name((delimIDX(1)+1):(delimIDX(2)-1)));
+    tsdfDimY = str2double(tsdfFiles(fileIDX).name((delimIDX(2)+1):(delimIDX(3)-1)));
+    tsdfDimZ = str2double(tsdfFiles(fileIDX).name((delimIDX(3)+1):(delimIDX(4)-1)));
+    fileID = fopen(fullfile(dataDir,tsdfFiles(fileIDX).name),'r');
+    tsdf = fread(fileID,'single');
+    fclose(fileID);
+    tsdf = reshape(tsdf,tsdfDimX,tsdfDimY,tsdfDimZ);
     
-    % Load tsdf data
-    load(fullfile(dataDir,strcat(filename,'.tsdf.mat')));
-    data3D(:,:,:,:,i) = tsdf;
+    % Load crop info
+    cropInfo = dlmread(fullfile(dataDir,cropFiles(fileIDX).name));
+%     cropInfo(:,2:5) = round(cropInfo(:,2:5));
+    cropInfo(:,2:end) = cropInfo(:,2:end) + 1;
     
-    if strcmp(filename(1:3),'pos')
-        labels(:,:,:,:,i) = 1;
-    else
-        labels(:,:,:,:,i) = 0;
+    posIDX = find(cropInfo(:,1) > 0);
+    negIDX = find(cropInfo(:,1) == 0);
+    negIDX = randsample(negIDX,size(posIDX,1));
+    
+    for i = 1:size(posIDX,1)
+        % Create 2D image patch and 3D tsdf cube for positive case
+        cubeCrop = cropInfo(posIDX(i),:);
+        patch = I(cubeCrop(4):cubeCrop(5),cubeCrop(2):cubeCrop(3),:);
+        patch = imresize(patch,[227,227]);
+        patch = double(patch(:,:,[3,2,1]));
+        patch(:,:,1) = patch(:,:,1) - 102.9801;
+        patch(:,:,2) = patch(:,:,2) - 115.9465;
+        patch(:,:,3) = patch(:,:,3) - 122.7717;
+        data2D(:,:,:,dataIDX) = patch;
+        cube = tsdf(cubeCrop(6):cubeCrop(7),cubeCrop(8):cubeCrop(9),cubeCrop(10):cubeCrop(11));
+        data3D(:,:,:,:,dataIDX) = cube;
+        labels(:,:,:,:,dataIDX) = 1;
+        dataIDX = dataIDX + 1;
+        
+        % Create 2D image patch and 3D tsdf cube for negative case
+        cubeCrop = cropInfo(negIDX(i),:);
+        patch = I(cubeCrop(4):cubeCrop(5),cubeCrop(2):cubeCrop(3),:);
+        patch = imresize(patch,[227,227]);
+        patch = double(patch(:,:,[3,2,1]));
+        patch(:,:,1) = patch(:,:,1) - 102.9801;
+        patch(:,:,2) = patch(:,:,2) - 115.9465;
+        patch(:,:,3) = patch(:,:,3) - 122.7717;
+        data2D(:,:,:,dataIDX) = patch;
+        cube = tsdf(cubeCrop(6):cubeCrop(7),cubeCrop(8):cubeCrop(9),cubeCrop(10):cubeCrop(11));
+        data3D(:,:,:,:,dataIDX) = cube;
+        labels(:,:,:,:,dataIDX) = 0;
+        dataIDX = dataIDX + 1;
     end
+    
+%     imshow(I(cubeCrop(4):cubeCrop(5),cubeCrop(2):cubeCrop(3),:))
+%     points = [];
+%     for x = 1:30
+%         for y=1:30
+%             for z=1:30
+%                 if abs(cube(x,y,z)) < 0.2
+%                     points = [points; x, y, z];
+%                 end
+%                 edge = 0;
+%                 if x == 1 || x == 30
+%                     edge = edge + 1;
+%                 end
+%                 if y == 1 || y == 30
+%                     edge = edge + 1;
+%                 end
+%                 if z == 1 || z == 30
+%                     edge = edge + 1;
+%                 end
+%                 if edge > 1
+%                     points = [points; x, y, z];
+%                 end
+%             end
+%         end
+%     end
+%     ptCloud = pointCloud(points);
+%     pcwrite(ptCloud,'test.ply','PLYFormat','binary');
+    
     
 end
 

@@ -531,9 +531,12 @@ int main(int argc, char **argv) {
       }
     }
 
-    cv::namedWindow("Display Image", CV_WINDOW_AUTOSIZE );
-    cv::imshow("Display Image", curr_image);
-    cv::waitKey(0);
+    // cv::namedWindow("Display Image", CV_WINDOW_AUTOSIZE );
+    // cv::imshow("Display Image", curr_image);
+    // cv::waitKey(0);
+
+    // Data structure to store crop information of hypothesis cubes
+    std::vector<std::string> crop_data;
 
     // Create hypothesis cubes that are valid (non-empty and with color)
     float tsdf_threshold = 0.2f;
@@ -547,12 +550,12 @@ int main(int argc, char **argv) {
 
           // Get 3D cube
           int cube_occ = 0;
-          float * curr_cube = new float[30 * 30 * 30];
+          // float * curr_cube = new float[30 * 30 * 30];
           for (int i = -15; i < 15; i++) {
             for (int j = -15; j < 15; j++) {
               for (int k = -15; k < 15; k++) {
                 int volumeIDX = (z + k) * 512 * 512 + (y + j) * 512 + (x + i);
-                curr_cube[(k + 15) * 30 * 30 + (j + 15) * 30 + (i + 15)] = voxel_volume.tsdf[volumeIDX];
+                // curr_cube[(k + 15) * 30 * 30 + (j + 15) * 30 + (i + 15)] = voxel_volume.tsdf[volumeIDX];
                 if (voxel_volume.tsdf[volumeIDX] < tsdf_threshold)
                   cube_occ++;
               }
@@ -579,6 +582,8 @@ int main(int argc, char **argv) {
             cube_front_2D[0 * 4 + i] = cube_front[0 * 4 + i] * K[0] / cube_front[2 * 4 + i] + K[2];
             cube_front_2D[1 * 4 + i] = cube_front[1 * 4 + i] * K[4] / cube_front[2 * 4 + i] + K[5];
           }
+          for (int i = 0; i < 12; i++)
+            cube_front_2D[i] = std::round(cube_front_2D[i]);
           if (std::min(std::min(cube_front_2D[0], cube_front_2D[1]), std::min(cube_front_2D[2], cube_front_2D[3])) < 0 ||
               std::max(std::max(cube_front_2D[0], cube_front_2D[1]), std::max(cube_front_2D[2], cube_front_2D[3])) >= 640 ||
               std::min(std::min(cube_front_2D[4], cube_front_2D[5]), std::min(cube_front_2D[6], cube_front_2D[7])) < 0 ||
@@ -608,20 +613,39 @@ int main(int argc, char **argv) {
             overlap = overlap_intersect/obj_bbox_area;
           }
 
-          std::string class_name = "empty";
+          int class_idx = 0;
           if (overlap > 0.7) {
-            std::cout << overlap << std::endl;
+            // std::cout << overlap << std::endl;
             // std::string scene_ply_name = "test.ply";
             // save_volume_to_ply_highlighted(scene_ply_name, cube_bbox_grid);
-            class_name = object_name;
+            class_idx = 1;
 
-            // Show 2D patch
-            cv::namedWindow("Patch", CV_WINDOW_AUTOSIZE );
-            cv::imshow("Patch", curr_patch);
-            cv::waitKey(0);
-            std::cout << std::endl;
-            std::cout << std::endl;
+            // // Show 2D patch
+            // cv::namedWindow("Patch", CV_WINDOW_AUTOSIZE );
+            // cv::imshow("Patch", curr_patch);
+            // cv::waitKey(0);
+            // std::cout << std::endl;
+            // std::cout << std::endl;
           }
+
+          if (overlap > 0.3 && overlap < 0.7)
+            continue;
+
+          // for (int i = 0; i < 8; i++) 
+          //   std::cout << cube_front_2D[i] << " ";
+          // std::cout << std::endl;
+          // for (int i = 0; i < 6; i++) 
+          //   std::cout << cube_bbox_grid[i] << " ";
+          // std::cout << std::endl;
+
+          // Class (idx), 2D patch bbox (x1 x2 y1 y2), 3D tsdf bbox (x1 x2 y1 y2 z1 z2)
+          std::string data_string = std::to_string(class_idx) + " " + std::to_string((int)cube_front_2D[2]) + " " + std::to_string((int)cube_front_2D[1]) + " " + 
+                                                                      std::to_string((int)cube_front_2D[5]) + " " + std::to_string((int)cube_front_2D[4]) + " " + 
+                                                                      std::to_string((int)cube_bbox_grid[0]-(int)grid_bounds[0]) + " " + std::to_string((int)cube_bbox_grid[1]-(int)grid_bounds[0]) + " " + 
+                                                                      std::to_string((int)cube_bbox_grid[2]-(int)grid_bounds[2]) + " " + std::to_string((int)cube_bbox_grid[3]-(int)grid_bounds[2]) + " " + 
+                                                                      std::to_string((int)cube_bbox_grid[4]-(int)grid_bounds[4]) + " " + std::to_string((int)cube_bbox_grid[5]-(int)grid_bounds[4]);
+          // std::cout << data_string << std::endl;
+          crop_data.push_back(data_string);
 
           // // Create name for data point
           // std::string hash_id = gen_rand_str(16);
@@ -638,8 +662,34 @@ int main(int argc, char **argv) {
           // tmp_out.close();
 
           // Clear memory
-          delete [] curr_cube;
+          // delete [] curr_cube;
         }
+
+    // Give current frame a hash id
+    std::string curr_frame_hash = gen_rand_str(16);
+
+    // Save image
+    std::string curr_frame_color_filename = processed_data_directory + "/" + curr_frame_hash + ".color.png";
+    cv::imwrite(curr_frame_color_filename, curr_image);
+
+    // Save volume
+    std::string curr_frame_tsdf_filename = processed_data_directory + "/" + curr_frame_hash + "." + std::to_string((int)grid_bounds[1]-(int)grid_bounds[0]) + "." + std::to_string((int)grid_bounds[3]-(int)grid_bounds[2]) + "." + std::to_string((int)grid_bounds[5]-(int)grid_bounds[4]) + ".tsdf.bin";
+    std::ofstream tmp_out(curr_frame_tsdf_filename, std::ios::binary | std::ios::out);
+    for (int z = grid_bounds[4]; z < grid_bounds[5]; z++)
+      for (int y = grid_bounds[2]; y < grid_bounds[3]; y++)
+        for (int x = grid_bounds[0]; x < grid_bounds[1]; x++) {
+          int volumeIDX = z * 512 * 512 + y * 512 + x;
+          tmp_out.write((char*)&voxel_volume.tsdf[volumeIDX], sizeof(float));
+        }
+    tmp_out.close();
+
+    // Save crop information
+    std::string curr_frame_crop_filename = processed_data_directory + "/" + curr_frame_hash + "." + std::to_string(crop_data.size()) + ".crop.txt";
+    FILE *fp = fopen(curr_frame_crop_filename.c_str(), "w");
+    for (int i = 0; i < crop_data.size(); i++)
+      fprintf(fp, "%s\n", crop_data[i].c_str());
+    fclose(fp);
+
 
     // Clear memory
     free(depth_data);

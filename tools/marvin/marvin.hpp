@@ -3540,7 +3540,7 @@ class PeriodDataLayer : public DataLayer {
         }
 
         // Size crop
-        size_crop2D.clear(); size_crop2D.push_back(224); size_crop2D.push_back(224);
+        size_crop2D.clear(); size_crop2D.push_back(227); size_crop2D.push_back(227);
         size_crop3D.clear(); size_crop3D.push_back(30); size_crop3D.push_back(30); size_crop3D.push_back(30);
 
         // 2D data
