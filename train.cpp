@@ -1,5 +1,6 @@
 #include "util/util.hpp"
 #include <png++/png.hpp>
+#include <opencv2/opencv.hpp>
 
 // Load a MxN matrix from a text file
 std::vector<float> load_matrix_from_file(std::string filename, int M, int N) {
@@ -407,6 +408,10 @@ int main(int argc, char **argv) {
 
   std::string data_directory = "data";
   std::string sequence_directory = data_directory + "/train1";
+  std::string processed_data_directory = data_directory + "/train";
+  std::string object_name = "glue";
+
+  sys_command("mkdir -p " + processed_data_directory);
 
   // Get file list of color images
   std::vector<std::string> file_list_color;
@@ -444,6 +449,14 @@ int main(int argc, char **argv) {
     extrinsics.push_back(curr_extrinsic);
   }
 
+  // std::cout << sequence_directory + "/" + file_list_color[0] << std::endl;
+  // std::string tmp_filename = sequence_directory + "/" + file_list_color[0];
+  // cv::Mat image;
+  // image = cv::imread( tmp_filename.c_str(), 1 );
+  // cv::namedWindow("Display Image", CV_WINDOW_AUTOSIZE );
+  // cv::imshow("Display Image", image);
+  // cv::waitKey(0);
+
   // Init voxel volume params
   init_voxel_volume();
 
@@ -455,9 +468,11 @@ int main(int argc, char **argv) {
     std::cerr << "Fusing frame " << curr_frame << "...";
 
     // Load image/depth/extrinsic data for current frame
+    std::string curr_image_filename = sequence_directory + "/" + file_list_color[curr_frame];
+    cv::Mat curr_image = cv::imread(curr_image_filename.c_str(), 1);
     unsigned short * depth_data = (unsigned short *) malloc(kImageRows * kImageCols * sizeof(unsigned short));
-    std::string curr_filename = sequence_directory + "/" + file_list_depth[curr_frame];
-    read_depth_data(curr_filename, depth_data);
+    std::string curr_depth_filename = sequence_directory + "/" + file_list_depth[curr_frame];
+    read_depth_data(curr_depth_filename, depth_data);
 
     // Compute relative camera pose transform between current frame and base frame
     // Compute camera view frustum bounds within the voxel volume
@@ -472,10 +487,6 @@ int main(int argc, char **argv) {
     // Read bounding box of object
     std::string obj_bbox_filename = sequence_directory + "/glue.bbox.txt";
     std::vector<float> obj_bbox = load_matrix_from_file(obj_bbox_filename, 3, 2);
-    std::cout << std::endl;
-    for (int i = 0; i < 6; i++)
-      std::cout << obj_bbox[i] << " ";
-    std::cout << std::endl;
 
     // Convert bounding box of object from world coordinates to current camera coordinates to grid coordinates
     std::vector<float> curr_pose = extrinsics[curr_frame];
@@ -500,23 +511,13 @@ int main(int argc, char **argv) {
         obj_bbox_cam[i * 2 + 1] = tmp_swap;
       }
     }
-    for (int i = 0; i < 16; i++)
-      std::cout << curr_pose_inv[i] << " ";
-    std::cout << std::endl;
-    for (int i = 0; i < 6; i++)
-      std::cout << obj_bbox_cam[i] << " ";
-    std::cout << std::endl;
     for (int i = 0; i < 2; i++) {
       obj_bbox_grid[0 * 2 + i] = (obj_bbox_cam[0 * 2 + i] - voxel_volume.range[0][0]) / voxel_volume.unit - 1;
       obj_bbox_grid[1 * 2 + i] = (obj_bbox_cam[1 * 2 + i] - voxel_volume.range[1][0]) / voxel_volume.unit - 1;
       obj_bbox_grid[2 * 2 + i] = (obj_bbox_cam[2 * 2 + i] - voxel_volume.range[2][0]) / voxel_volume.unit - 1;
     }
-    for (int i = 0; i < 6; i++)
-      std::cout << obj_bbox_grid[i] << " ";
-    std::cout << std::endl;
 
     // Get bounds of TSDF volume
-    tic();
     float grid_bounds[6] = {0};
     grid_bounds[0] = 512; grid_bounds[2] = 512; grid_bounds[4] = 1024;
     for (int i = 0; i < 512 * 512 * 1024; i++) {
@@ -529,13 +530,12 @@ int main(int argc, char **argv) {
         grid_bounds[4] = std::min(z, grid_bounds[4]); grid_bounds[5] = std::max(z, grid_bounds[5]);
       }
     }
-    for (int i = 0; i < 6; i++)
-      std::cout << grid_bounds[i] << " ";
-    std::cout << std::endl;
-    toc();
+
+    cv::namedWindow("Display Image", CV_WINDOW_AUTOSIZE );
+    cv::imshow("Display Image", curr_image);
+    cv::waitKey(0);
 
     // Create hypothesis cubes that are valid (non-empty and with color)
-    tic();
     float tsdf_threshold = 0.2f;
     float cube_incr = 0.01f;
     int cube_dim = 30;
@@ -544,112 +544,111 @@ int main(int argc, char **argv) {
     for (int x = grid_bounds[0] + cube_dim / 2; x < grid_bounds[1] - cube_dim / 2; x = x + cube_incr_grid)
       for (int y = grid_bounds[2] + cube_dim / 2; y < grid_bounds[3] - cube_dim / 2; y = y + cube_incr_grid)
         for (int z = grid_bounds[4] + cube_dim / 2; z < grid_bounds[5] - cube_dim / 2; z = z + cube_incr_grid) {
-          // Check cube occupancy > 0
-          // int cube_occ = 0;
-          // for (int i = -15; i < 15; i++) {
-          //   if (cube_occ > 0)
-          //     continue;
-          //   for (int j = -15; j < 15; j++) {
-          //     if (cube_occ > 0)
-          //       continue;
-          //     for (int k = -15; k < 15; k++) {
-          //       if (cube_occ > 0)
-          //         continue;
-          //       int volumeIDX = (z+k) * 512 * 512 + (y+j) * 512 + (x+i);
-          //       if (voxel_volume.tsdf[volumeIDX] < tsdf_threshold)
-          //         cube_occ++;
-          //     }
-          //   }
-          // }
-          // if (cube_occ > 0) {
-          //   std::vector<int> tmp_vec;
-          //   tmp_vec.push_back(x); tmp_vec.push_back(y); tmp_vec.push_back(z);
-          //   valid_cube_loc.push_back(tmp_vec);
-          // }
+
+          // Get 3D cube
+          int cube_occ = 0;
+          float * curr_cube = new float[30 * 30 * 30];
+          for (int i = -15; i < 15; i++) {
+            for (int j = -15; j < 15; j++) {
+              for (int k = -15; k < 15; k++) {
+                int volumeIDX = (z + k) * 512 * 512 + (y + j) * 512 + (x + i);
+                curr_cube[(k + 15) * 30 * 30 + (j + 15) * 30 + (i + 15)] = voxel_volume.tsdf[volumeIDX];
+                if (voxel_volume.tsdf[volumeIDX] < tsdf_threshold)
+                  cube_occ++;
+              }
+            }
+          }
+
+          // Skip empty cubes
+          if (cube_occ == 0)
+            continue;
 
           // Convert cube location from grid to camera coordinates
           float x_cam = (x + 1) * voxel_volume.unit + voxel_volume.range[0][0];
           float y_cam = (y + 1) * voxel_volume.unit + voxel_volume.range[1][0];
           float z_cam = (z + 1) * voxel_volume.unit + voxel_volume.range[2][0];
-          // std::cout << x_cam << " " << y_cam << " " << z_cam << std::endl;
 
           // If cube 2D projection is not in image bounds, cube is invalid
-          // float grid_bounds[6] = {0};
-          float cube_rad = ((float) cube_dim)*voxel_volume.unit/2;
+          float cube_rad = ((float) cube_dim) * voxel_volume.unit / 2;
           float cube_front[12] = {(x_cam + cube_rad), (x_cam + cube_rad), (x_cam - cube_rad), (x_cam - cube_rad),
                                   (y_cam + cube_rad), (y_cam - cube_rad), (y_cam - cube_rad), (y_cam + cube_rad),
-                                  (z_cam - cube_rad), (z_cam - cube_rad), (z_cam - cube_rad), (z_cam - cube_rad)};
+                                  (z_cam - cube_rad), (z_cam - cube_rad), (z_cam - cube_rad), (z_cam - cube_rad)
+                                 };
           float cube_front_2D[8] = {};
           for (int i = 0; i < 4; i++) {
-            cube_front_2D[0 * 4 + i] = cube_front[0 * 4 + i]*K[0]/cube_front[2 * 4 + i]+K[2];
-            cube_front_2D[1 * 4 + i] = cube_front[1 * 4 + i]*K[4]/cube_front[2 * 4 + i]+K[5];
+            cube_front_2D[0 * 4 + i] = cube_front[0 * 4 + i] * K[0] / cube_front[2 * 4 + i] + K[2];
+            cube_front_2D[1 * 4 + i] = cube_front[1 * 4 + i] * K[4] / cube_front[2 * 4 + i] + K[5];
           }
-          if (std::min(std::min(cube_front_2D[0],cube_front_2D[1]),std::min(cube_front_2D[2],cube_front_2D[3])) < 0 ||
-              std::max(std::max(cube_front_2D[0],cube_front_2D[1]),std::max(cube_front_2D[2],cube_front_2D[3])) >= 640 ||
-              std::min(std::min(cube_front_2D[4],cube_front_2D[5]),std::min(cube_front_2D[6],cube_front_2D[7])) < 0 ||
-              std::max(std::max(cube_front_2D[4],cube_front_2D[5]),std::max(cube_front_2D[6],cube_front_2D[7])) >= 480)
+          if (std::min(std::min(cube_front_2D[0], cube_front_2D[1]), std::min(cube_front_2D[2], cube_front_2D[3])) < 0 ||
+              std::max(std::max(cube_front_2D[0], cube_front_2D[1]), std::max(cube_front_2D[2], cube_front_2D[3])) >= 640 ||
+              std::min(std::min(cube_front_2D[4], cube_front_2D[5]), std::min(cube_front_2D[6], cube_front_2D[7])) < 0 ||
+              std::max(std::max(cube_front_2D[4], cube_front_2D[5]), std::max(cube_front_2D[6], cube_front_2D[7])) >= 480)
             continue;
 
+          // Get 2D patch of cube's 2D project to image
+          cv::Rect curr_patch_ROI(std::round(cube_front_2D[2]), std::round(cube_front_2D[6]), std::round(cube_front_2D[1] - cube_front_2D[2]), std::round(cube_front_2D[4] - cube_front_2D[6]));
+          // std::cout << std::round(cube_front_2D[2]) << " " << std::round(cube_front_2D[6]) << " " << std::round(cube_front_2D[1]-cube_front_2D[2]) << " " << std::round(cube_front_2D[4]-cube_front_2D[6]) << std::endl;
+          cv::Mat curr_patch = curr_image(curr_patch_ROI);
+          cv::resize(curr_patch, curr_patch, cv::Size(227, 227));
 
-
-
-          for (int i = 0; i < 4; i++) {
-            std::cout << cube_front_2D[i] << " ";
+          // Check overlap of cube with object bbox
+          float overlap = 0;
+          std::vector<float> cube_bbox_grid;
+          cube_bbox_grid.push_back((float)x - 15); cube_bbox_grid.push_back((float)x + 14);
+          cube_bbox_grid.push_back((float)y - 15); cube_bbox_grid.push_back((float)y + 14);
+          cube_bbox_grid.push_back((float)z - 15); cube_bbox_grid.push_back((float)z + 14);
+          if (((cube_bbox_grid[0] > obj_bbox_grid[0] && cube_bbox_grid[0] < obj_bbox_grid[1]) || (cube_bbox_grid[1] > obj_bbox_grid[0] && cube_bbox_grid[1] < obj_bbox_grid[1])) && 
+              ((cube_bbox_grid[2] > obj_bbox_grid[2] && cube_bbox_grid[2] < obj_bbox_grid[3]) || (cube_bbox_grid[3] > obj_bbox_grid[2] && cube_bbox_grid[3] < obj_bbox_grid[3])) &&
+              ((cube_bbox_grid[4] > obj_bbox_grid[4] && cube_bbox_grid[4] < obj_bbox_grid[5]) || (cube_bbox_grid[5] > obj_bbox_grid[4] && cube_bbox_grid[5] < obj_bbox_grid[5]))) {
+            float overlapX = std::min(std::abs(obj_bbox_grid[0]-cube_bbox_grid[1]),std::abs(obj_bbox_grid[1]-cube_bbox_grid[0]));
+            float overlapY = std::min(std::abs(obj_bbox_grid[2]-cube_bbox_grid[3]),std::abs(obj_bbox_grid[3]-cube_bbox_grid[2]));
+            float overlapZ = std::min(std::abs(obj_bbox_grid[4]-cube_bbox_grid[5]),std::abs(obj_bbox_grid[5]-cube_bbox_grid[4]));
+            float overlap_intersect = overlapX*overlapY*overlapZ;
+            float obj_bbox_area = (obj_bbox_grid[1]-obj_bbox_grid[0])*(obj_bbox_grid[3]-obj_bbox_grid[2])*(obj_bbox_grid[5]-obj_bbox_grid[4]);
+            overlap = overlap_intersect/obj_bbox_area;
           }
-          std::cout << std::endl;
-          for (int i = 4; i < 8; i++) {
-            std::cout << cube_front_2D[i] << " ";
+
+          std::string class_name = "empty";
+          if (overlap > 0.7) {
+            std::cout << overlap << std::endl;
+            // std::string scene_ply_name = "test.ply";
+            // save_volume_to_ply_highlighted(scene_ply_name, cube_bbox_grid);
+            class_name = object_name;
+
+            // Show 2D patch
+            cv::namedWindow("Patch", CV_WINDOW_AUTOSIZE );
+            cv::imshow("Patch", curr_patch);
+            cv::waitKey(0);
+            std::cout << std::endl;
+            std::cout << std::endl;
           }
-          std::cout << std::endl;
-          std::cout << std::endl;
-          // cube_front = []
-// float ex_mat1[16] =
-           // { ex_pose1.R[0 * 3 + 0], ex_pose1.R[0 * 3 + 1], ex_pose1.R[0 * 3 + 2], ex_pose1.t[0],
-           //   ex_pose1.R[1 * 3 + 0], ex_pose1.R[1 * 3 + 1], ex_pose1.R[1 * 3 + 2], ex_pose1.t[1],
-           //   ex_pose1.R[2 * 3 + 0], ex_pose1.R[2 * 3 + 1], ex_pose1.R[2 * 3 + 2], ex_pose1.t[2],
-           //   0,                0,                0,            1
-           // };
 
+          // // Create name for data point
+          // std::string hash_id = gen_rand_str(16);
+          // std::string data_point_name = class_name + "." + hash_id;
 
+          // // Save 2D patch to processed folder
+          // cv::imwrite(processed_data_directory + "/" + data_point_name + ".color.png", curr_patch);
 
+          // // Save 3D TSDF cube to processed folder
+          // // std::string tsdf_filename = processed_data_directory + "/" + data_point_name + ".tsdf.bin";
+          // std::ofstream tmp_out(processed_data_directory + "/" + data_point_name + ".tsdf.bin", std::ios::binary | std::ios::out);
+          // for (int i = 0; i < 30*30*30; i++)
+          //   tmp_out.write((char*)&curr_cube[i], sizeof(float));
+          // tmp_out.close();
 
-
-           // tmpCube = [tmpCubeLoc+[ 0.5*cubeDim; 0.5*cubeDim;-0.5*cubeDim], ...
-           //            tmpCubeLoc+[ 0.5*cubeDim;-0.5*cubeDim;-0.5*cubeDim], ...
-           //            tmpCubeLoc+[-0.5*cubeDim;-0.5*cubeDim;-0.5*cubeDim], ...
-           //            tmpCubeLoc+[-0.5*cubeDim; 0.5*cubeDim;-0.5*cubeDim]];
-           // tmpCube2D = round((tmpCube(1:2,:).*repmat([K(1,1);K(2,2)],1,size(tmpCube,2)))./repmat(tmpCube(3,:),2,1)+repmat([K(1,3);K(2,3)],1,size(tmpCube,2)));
-           // tmpCube2D = [tmpCube2D,tmpCube2D(:,1)];
-           // if min(tmpCube2D(1,:),[],2) < 1 || max(tmpCube2D(1,:),[],2) > 640 || ...
-           //    min(tmpCube2D(2,:),[],2) < 1 || max(tmpCube2D(2,:),[],2) > 480
-           //     continue;
-           // end
-
-
-
-
-
-
-
-
-
-
+          // Clear memory
+          delete [] curr_cube;
         }
-
-    std::cout << valid_cube_loc.size() << std::endl;
-    toc();
-
-
-
 
     // Clear memory
     free(depth_data);
     std::cerr << " done!" << std::endl;
 
     // Save curr volume to file
-    std::string scene_ply_name = "test.ply";
+    // std::string scene_ply_name = "test.ply";
     // save_volume_to_ply(scene_ply_name);
-    save_volume_to_ply_highlighted(scene_ply_name, obj_bbox_grid);
+    // save_volume_to_ply_highlighted(scene_ply_name, obj_bbox_grid);
 
     // Init new volume
     memset(voxel_volume.weight, 0, sizeof(float) * 512 * 512 * 1024);
