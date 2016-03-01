@@ -711,6 +711,10 @@ void test() {
 
   if (highest_class_score == 0) {
     std::cout << "No object detected!" << std::endl;
+    std::string results_filename = "TMP.results.txt";
+    FILE *fp = fopen(results_filename.c_str(), "w");
+    fprintf(fp, "0 0 0 0");
+    fclose(fp); 
     return;
   }
 
