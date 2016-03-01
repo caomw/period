@@ -37,7 +37,8 @@ int main(int argc, char * argv[]) try {
     glfwMakeContextCurrent(win);
 
     // Create a data folder to save frames
-    std::string saveto_directory = "data/seq/";
+    std::string hash_id = gen_rand_str(16);
+    std::string saveto_directory = "data/" + hash_id + "/";
     sys_command("mkdir -p " + saveto_directory);
 
     // Determine depth value corresponding to one meter

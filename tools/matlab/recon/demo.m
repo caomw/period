@@ -1,3 +1,5 @@
+function demo(n)
+
 %% Demo for SIFT-based 3D reconstruction with RGB-D frames
 
 % Directory containing sequence of RGB-D frames
@@ -5,7 +7,7 @@
 %     Color: frame-XXXXXX.color.png (640x480, RGB-8, 24-bit, PNG)
 %     Depth: frame-XXXXXX.depth.png (640x480, depth in millimeters, 16-bit, PNG)
 % Computed extrinsics will be saved to the same directory
-seq = '../../../data/train1';
+seq = ['data/glue.train.',num2str(n)];
 
 % Load intrinsic matrix for depth camera
 K = dlmread(fullfile(seq,'intrinsics.K.txt'));
@@ -31,6 +33,13 @@ for frameIDX = 1:length(depthFiles)
     % Load RGB-D frame
     I = imread(fullfile(seq,colorFiles(frameIDX).name));
     D = double(imread(fullfile(seq,depthFiles(frameIDX).name)))./1000;
+    
+%     % Make sure depth is not corrupted
+%     if sum(find(D > 0)) == 0
+%         delete(fullfile(seq,colorFiles(frameIDX).name));
+%         delete(fullfile(seq,depthFiles(frameIDX).name));
+%         continue;
+%     end
     
     % Set invalid depth to 0
     D(find(D < 0.2)) = 0;
@@ -106,8 +115,8 @@ for frameIDX = 1:length(depthFiles)
     points = densePtCloud{frameIDX};
     colors = get3Dpoints(I, selectedMask);
     
-    % Save point cloud
-    pcwrite(pointCloud(points','Color',colors'),fullfile('data',sprintf('ptCloud%d',frameIDX)),'PLYFormat','binary');
+%     % Save point cloud
+%     pcwrite(pointCloud(points','Color',colors'),fullfile('data',sprintf('ptCloud%d',frameIDX)),'PLYFormat','binary');
 end
 
 

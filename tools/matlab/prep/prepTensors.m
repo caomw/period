@@ -12,6 +12,18 @@ labelsFilename = 'labelsTrain.tensor';
 % Change random seed
 rng(sum(100*clock),'twister');
 
+% Remove empty files
+colorFiles = dir(fullfile(dataDir,'*.color.png'));
+cropFiles = dir(fullfile(dataDir,'*.crop.txt'));
+tsdfFiles = dir(fullfile(dataDir,'*.tsdf.bin'));
+for fileIDX=1:length(cropFiles)
+    if ~isempty(findstr(cropFiles(fileIDX).name,'.0.'))
+        delete(fullfile(dataDir,colorFiles(fileIDX).name));
+        delete(fullfile(dataDir,cropFiles(fileIDX).name));
+        delete(fullfile(dataDir,tsdfFiles(fileIDX).name));
+    end
+end
+
 % List files
 colorFiles = dir(fullfile(dataDir,'*.color.png'));
 cropFiles = dir(fullfile(dataDir,'*.crop.txt'));
@@ -19,7 +31,7 @@ tsdfFiles = dir(fullfile(dataDir,'*.tsdf.bin'));
 
 % Count number of training data points
 num_data = 0;
-for fileIDX=1:length(cropFiles)
+for fileIDX=1:4:length(cropFiles)
     cropInfo = dlmread(fullfile(dataDir,cropFiles(fileIDX).name));
     num_data = num_data + sum(cropInfo(:,1) > 0);
 end
@@ -28,7 +40,7 @@ data2D = zeros(227,227,3,num_data);
 data3D = zeros(30,30,30,1,num_data);
 labels = zeros(1,1,1,1,num_data);
 dataIDX = 1;
-for fileIDX=1:length(colorFiles)
+for fileIDX=1:4:length(colorFiles)
     fprintf('%d/%d\n',fileIDX,length(colorFiles));
     filename = colorFiles(fileIDX).name(1:(end-10));
 

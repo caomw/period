@@ -407,9 +407,11 @@ void integrate(std::vector<float> &K, ushort* depth_data, float* view_bounds, fl
 int main(int argc, char **argv) {
 
   std::string data_directory = "data";
-  std::string sequence_directory = data_directory + "/train1";
+  std::string sequence_directory = data_directory + "/glue.train.14";
   std::string processed_data_directory = data_directory + "/train";
   std::string object_name = "glue";
+
+  std::cout << sequence_directory << std::endl;
 
   sys_command("mkdir -p " + processed_data_directory);
 
@@ -465,7 +467,7 @@ int main(int argc, char **argv) {
 
   // Fuse frames
   for (int curr_frame = 0; curr_frame < file_list_depth.size(); curr_frame++) {
-    std::cerr << "Fusing frame " << curr_frame << "...";
+    std::cerr << "Fusing frame " << curr_frame << "/" << file_list_depth.size() << "...";
 
     // Load image/depth/extrinsic data for current frame
     std::string curr_image_filename = sequence_directory + "/" + file_list_color[curr_frame];
@@ -485,7 +487,7 @@ int main(int argc, char **argv) {
     integrate(K, depth_data, view_bounds, camera_relative_pose);
 
     // Read bounding box of object
-    std::string obj_bbox_filename = sequence_directory + "/glue.bbox.txt";
+    std::string obj_bbox_filename = sequence_directory + "/object.bbox.txt";
     std::vector<float> obj_bbox = load_matrix_from_file(obj_bbox_filename, 3, 2);
 
     // Convert bounding box of object from world coordinates to current camera coordinates to grid coordinates
@@ -516,6 +518,12 @@ int main(int argc, char **argv) {
       obj_bbox_grid[1 * 2 + i] = (obj_bbox_cam[1 * 2 + i] - voxel_volume.range[1][0]) / voxel_volume.unit - 1;
       obj_bbox_grid[2 * 2 + i] = (obj_bbox_cam[2 * 2 + i] - voxel_volume.range[2][0]) / voxel_volume.unit - 1;
     }
+
+    // Compute center of object's bounding box
+    std::vector<float> obj_bbox_mid_cam;
+    obj_bbox_mid_cam.push_back((obj_bbox_cam[0] + obj_bbox_cam[1]) / 2);
+    obj_bbox_mid_cam.push_back((obj_bbox_cam[2] + obj_bbox_cam[3]) / 2);
+    obj_bbox_mid_cam.push_back((obj_bbox_cam[4] + obj_bbox_cam[5]) / 2);
 
     // Get bounds of TSDF volume
     float grid_bounds[6] = {0};
@@ -567,9 +575,9 @@ int main(int argc, char **argv) {
             continue;
 
           // Convert cube location from grid to camera coordinates
-          float x_cam = (x + 1) * voxel_volume.unit + voxel_volume.range[0][0];
-          float y_cam = (y + 1) * voxel_volume.unit + voxel_volume.range[1][0];
-          float z_cam = (z + 1) * voxel_volume.unit + voxel_volume.range[2][0];
+          float x_cam = ((float)x + 1) * voxel_volume.unit + voxel_volume.range[0][0];
+          float y_cam = ((float)y + 1) * voxel_volume.unit + voxel_volume.range[1][0];
+          float z_cam = ((float)z + 1) * voxel_volume.unit + voxel_volume.range[2][0];
 
           // If cube 2D projection is not in image bounds, cube is invalid
           float cube_rad = ((float) cube_dim) * voxel_volume.unit / 2;
@@ -602,25 +610,31 @@ int main(int argc, char **argv) {
           cube_bbox_grid.push_back((float)x - 15); cube_bbox_grid.push_back((float)x + 14);
           cube_bbox_grid.push_back((float)y - 15); cube_bbox_grid.push_back((float)y + 14);
           cube_bbox_grid.push_back((float)z - 15); cube_bbox_grid.push_back((float)z + 14);
-          if (((cube_bbox_grid[0] > obj_bbox_grid[0] && cube_bbox_grid[0] < obj_bbox_grid[1]) || (cube_bbox_grid[1] > obj_bbox_grid[0] && cube_bbox_grid[1] < obj_bbox_grid[1])) && 
+          if (((cube_bbox_grid[0] > obj_bbox_grid[0] && cube_bbox_grid[0] < obj_bbox_grid[1]) || (cube_bbox_grid[1] > obj_bbox_grid[0] && cube_bbox_grid[1] < obj_bbox_grid[1])) &&
               ((cube_bbox_grid[2] > obj_bbox_grid[2] && cube_bbox_grid[2] < obj_bbox_grid[3]) || (cube_bbox_grid[3] > obj_bbox_grid[2] && cube_bbox_grid[3] < obj_bbox_grid[3])) &&
               ((cube_bbox_grid[4] > obj_bbox_grid[4] && cube_bbox_grid[4] < obj_bbox_grid[5]) || (cube_bbox_grid[5] > obj_bbox_grid[4] && cube_bbox_grid[5] < obj_bbox_grid[5]))) {
-            float overlapX = std::min(std::abs(obj_bbox_grid[0]-cube_bbox_grid[1]),std::abs(obj_bbox_grid[1]-cube_bbox_grid[0]));
-            float overlapY = std::min(std::abs(obj_bbox_grid[2]-cube_bbox_grid[3]),std::abs(obj_bbox_grid[3]-cube_bbox_grid[2]));
-            float overlapZ = std::min(std::abs(obj_bbox_grid[4]-cube_bbox_grid[5]),std::abs(obj_bbox_grid[5]-cube_bbox_grid[4]));
-            float overlap_intersect = overlapX*overlapY*overlapZ;
-            float obj_bbox_area = (obj_bbox_grid[1]-obj_bbox_grid[0])*(obj_bbox_grid[3]-obj_bbox_grid[2])*(obj_bbox_grid[5]-obj_bbox_grid[4]);
-            overlap = overlap_intersect/obj_bbox_area;
+            float overlapX = std::min(std::abs(obj_bbox_grid[0] - cube_bbox_grid[1]), std::abs(obj_bbox_grid[1] - cube_bbox_grid[0]));
+            float overlapY = std::min(std::abs(obj_bbox_grid[2] - cube_bbox_grid[3]), std::abs(obj_bbox_grid[3] - cube_bbox_grid[2]));
+            float overlapZ = std::min(std::abs(obj_bbox_grid[4] - cube_bbox_grid[5]), std::abs(obj_bbox_grid[5] - cube_bbox_grid[4]));
+            float overlap_intersect = overlapX * overlapY * overlapZ;
+            float obj_bbox_area = (obj_bbox_grid[1] - obj_bbox_grid[0]) * (obj_bbox_grid[3] - obj_bbox_grid[2]) * (obj_bbox_grid[5] - obj_bbox_grid[4]);
+            overlap = overlap_intersect / obj_bbox_area;
           }
 
+          // Check distance between center of cube to center of object bbox
+          float obj_dist = std::sqrt((obj_bbox_mid_cam[0] - x_cam) * (obj_bbox_mid_cam[0] - x_cam) +
+                                     (obj_bbox_mid_cam[1] - y_cam) * (obj_bbox_mid_cam[1] - y_cam) +
+                                     (obj_bbox_mid_cam[2] - z_cam) * (obj_bbox_mid_cam[2] - z_cam));
+
           int class_idx = 0;
-          if (overlap > 0.7) {
+          if (obj_dist < 0.02) {
             // std::cout << overlap << std::endl;
             // std::string scene_ply_name = "test.ply";
             // save_volume_to_ply_highlighted(scene_ply_name, cube_bbox_grid);
             class_idx = 1;
 
             // // Show 2D patch
+            // std::cout << obj_dist << std::endl;
             // cv::namedWindow("Patch", CV_WINDOW_AUTOSIZE );
             // cv::imshow("Patch", curr_patch);
             // cv::waitKey(0);
@@ -628,22 +642,22 @@ int main(int argc, char **argv) {
             // std::cout << std::endl;
           }
 
-          if (overlap > 0.3 && overlap < 0.7)
-            continue;
+          // if (overlap > 0.3 && overlap < 0.7)
+          //   continue;
 
-          // for (int i = 0; i < 8; i++) 
+          // for (int i = 0; i < 8; i++)
           //   std::cout << cube_front_2D[i] << " ";
           // std::cout << std::endl;
-          // for (int i = 0; i < 6; i++) 
+          // for (int i = 0; i < 6; i++)
           //   std::cout << cube_bbox_grid[i] << " ";
           // std::cout << std::endl;
 
           // Class (idx), 2D patch bbox (x1 x2 y1 y2), 3D tsdf bbox (x1 x2 y1 y2 z1 z2)
-          std::string data_string = std::to_string(class_idx) + " " + std::to_string((int)cube_front_2D[2]) + " " + std::to_string((int)cube_front_2D[1]) + " " + 
-                                                                      std::to_string((int)cube_front_2D[5]) + " " + std::to_string((int)cube_front_2D[4]) + " " + 
-                                                                      std::to_string((int)cube_bbox_grid[0]-(int)grid_bounds[0]) + " " + std::to_string((int)cube_bbox_grid[1]-(int)grid_bounds[0]) + " " + 
-                                                                      std::to_string((int)cube_bbox_grid[2]-(int)grid_bounds[2]) + " " + std::to_string((int)cube_bbox_grid[3]-(int)grid_bounds[2]) + " " + 
-                                                                      std::to_string((int)cube_bbox_grid[4]-(int)grid_bounds[4]) + " " + std::to_string((int)cube_bbox_grid[5]-(int)grid_bounds[4]);
+          std::string data_string = std::to_string(class_idx) + " " + std::to_string((int)cube_front_2D[2]) + " " + std::to_string((int)cube_front_2D[1]) + " " +
+                                    std::to_string((int)cube_front_2D[5]) + " " + std::to_string((int)cube_front_2D[4]) + " " +
+                                    std::to_string((int)cube_bbox_grid[0] - (int)grid_bounds[0]) + " " + std::to_string((int)cube_bbox_grid[1] - (int)grid_bounds[0]) + " " +
+                                    std::to_string((int)cube_bbox_grid[2] - (int)grid_bounds[2]) + " " + std::to_string((int)cube_bbox_grid[3] - (int)grid_bounds[2]) + " " +
+                                    std::to_string((int)cube_bbox_grid[4] - (int)grid_bounds[4]) + " " + std::to_string((int)cube_bbox_grid[5] - (int)grid_bounds[4]);
           // std::cout << data_string << std::endl;
           crop_data.push_back(data_string);
 
@@ -673,7 +687,7 @@ int main(int argc, char **argv) {
     cv::imwrite(curr_frame_color_filename, curr_image);
 
     // Save volume
-    std::string curr_frame_tsdf_filename = processed_data_directory + "/" + curr_frame_hash + "." + std::to_string((int)grid_bounds[1]-(int)grid_bounds[0]) + "." + std::to_string((int)grid_bounds[3]-(int)grid_bounds[2]) + "." + std::to_string((int)grid_bounds[5]-(int)grid_bounds[4]) + ".tsdf.bin";
+    std::string curr_frame_tsdf_filename = processed_data_directory + "/" + curr_frame_hash + "." + std::to_string((int)grid_bounds[1] - (int)grid_bounds[0]) + "." + std::to_string((int)grid_bounds[3] - (int)grid_bounds[2]) + "." + std::to_string((int)grid_bounds[5] - (int)grid_bounds[4]) + ".tsdf.bin";
     std::ofstream tmp_out(curr_frame_tsdf_filename, std::ios::binary | std::ios::out);
     for (int z = grid_bounds[4]; z < grid_bounds[5]; z++)
       for (int y = grid_bounds[2]; y < grid_bounds[3]; y++)
