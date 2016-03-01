@@ -17,16 +17,30 @@ PERIOD stands for Pose Estimation and Recognition for Instance-level Object Dete
  * Note: install with the Video4Linux backend
  * Note: after installation, verify that you can run the example executables
 2. Install PNG++, a library for PNG I/O
-* `sudo apt-get install libpng++-dev`
-3. Install the dependencies required by [Marvin](https://github.com/PrincetonVision/marvin) (CUDA 7.5 and cuDNN 4)
-* Note: instead of installing cuDNN 4, install cuDNN 4rc (old version of the installation instructions can be found [here](https://github.com/PrincetonVision/marvin/blob/f1a628efb34e858c8dddb66ac928dde2341cccd1/README.md))
+ * `sudo apt-get install libpng++-dev`
+3. Install the dependencies required by [Marvin](https://github.com/PrincetonVision/marvin) (CUDA 7.5 and cuDNN 4rc)
+ * Note: instead of installing cuDNN 4 as suggested by the current Marvin README, install cuDNN 4rc (older version of the installation instructions for Marvin can be found [here](https://github.com/PrincetonVision/marvin/blob/f1a628efb34e858c8dddb66ac928dde2341cccd1/README.md))
 4. Compile Marvin
  * Navigate to `/tools/marvin` and run `./compile.sh`
 5. If you have not yet done so, install OpenCV (we are using OpenCV 2.4.11) 
+6. Download Period's training data for Marvin [here](https://drive.google.com/folderview?id=0B4mCa-2YGnp7bE4yN1BwWVpjUWM&usp=sharing)
+ * Place `data2DTrain.tensor`, `data3DTrain.tensor`, `labelsTrain.tensor` in folder `data/tensors` (if the folder doesn't exist, create it)
+7. Download Period's pre-trained weights for Marvin [here](https://drive.google.com/folderview?id=0B4mCa-2YGnp7bE4yN1BwWVpjUWM&usp=sharing)
+ * Place `PeriodNet.marvin` in folder `tools/marvin`
 
 ## Compilation
 
 `./compile.sh`
+
+## Standalone Usage
+
+* Run `./standalone`
+ * Note: on running the executable, a window will pop up and stream data from the sensor
+ * Press the spacebar key to run object detection
+ * Note: detection dialogue will display itself on the command prompt
+ * If an object is successfully detected, a second window will pop up displaying the cube bounding box of the object
+ * Detection dialogue will return information about the object's 3D location with respect to the camera
+ * Press the spacebar key again to continue streaming data from the sensor
 
 ## Other Features
 

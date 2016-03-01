@@ -710,7 +710,7 @@ void test() {
   std::cout << "Finished running Marvin." << std::endl;
 
   if (highest_class_score == 0) {
-    std::cout << "No object detected!" << std::endl;
+    std::cout << "No objects detected!" << std::endl;
     std::string results_filename = "TMP.results.txt";
     FILE *fp = fopen(results_filename.c_str(), "w");
     fprintf(fp, "0 0 0 0");
@@ -720,10 +720,13 @@ void test() {
 
   // Display detection results
   cv::rectangle(curr_image, cv::Point(crop_data[best_guess_IDX * 7 + 0], crop_data[best_guess_IDX * 7 + 2]), cv::Point(crop_data[best_guess_IDX * 7 + 1], crop_data[best_guess_IDX * 7 + 3]), cv::Scalar(0, 255, 0));
+  cv::circle(curr_image, cv::Point((crop_data[best_guess_IDX * 7 + 0]+crop_data[best_guess_IDX * 7 + 1])/2,(crop_data[best_guess_IDX * 7 + 2]+crop_data[best_guess_IDX * 7 + 3])/2), 5, cv::Scalar(0, 255, 0), -1);
+
   // std::cout << crop_data[best_guess_IDX * 10 + 0] << " " << crop_data[best_guess_IDX * 10 + 1] << " " << crop_data[best_guess_IDX * 10 + 2] << " " << crop_data[best_guess_IDX * 10 + 3] << std::endl;
   cv::namedWindow("Object Detection", CV_WINDOW_AUTOSIZE );
   cv::imshow("Object Detection", curr_image);
 
+  std::cout << "Detected object: glue" << std::endl;
   std::cout << "Detection confidence: " << highest_class_score << std::endl;
   // Convert cube location from grid to camera coordinates
   // std::vector<float> best_guess_center_grid;
