@@ -15,7 +15,6 @@ PERIOD stands for Pose Estimation and Recognition for Instance-level Object Dete
 ## Installation Instructions
 1. Install [librealsense](https://github.com/IntelRealSense/librealsense) (instructions can be found [here](https://github.com/IntelRealSense/librealsense/blob/master/doc/installation.md))
  * Note: install with the Video4Linux backend
- * Note: after installation, verify that you can run the example executables
 2. Install PNG++, a library for PNG I/O
  * `sudo apt-get install libpng++-dev`
 3. Install the dependencies required by [Marvin](https://github.com/PrincetonVision/marvin) (CUDA 7.5 and cuDNN 4rc)
