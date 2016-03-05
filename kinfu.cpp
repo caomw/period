@@ -1,4 +1,3 @@
-// #include "kinfu.hpp"
 #include "util/util.hpp"
 #include <png++/png.hpp>
 
@@ -14,8 +13,6 @@ std::vector<float> load_matrix_from_file(std::string filename, int M, int N) {
   fclose(fp);
   return matrix;
 }
-
-
 
 const int kImageRows = 480;
 const int kImageCols = 640;
