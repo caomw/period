@@ -72,7 +72,7 @@ void save_volume_to_ply(const std::string &file_name, float* vox_tsdf, float* vo
 
   // Count total number of points in point cloud
   int num_points = 0;
-  for (int i = 0; i < 512 * 512 * 1024; i++)
+  for (int i = 0; i < 512 * 512 * 512; i++)
     if (std::abs(vox_tsdf[i]) < tsdf_threshold && vox_weight[i] > weight_threshold)
       num_points++;
 
@@ -87,7 +87,7 @@ void save_volume_to_ply(const std::string &file_name, float* vox_tsdf, float* vo
   fprintf(fp, "end_header\n");
 
   // Create point cloud content for ply file
-  for (int i = 0; i < 512 * 512 * 1024; i++) {
+  for (int i = 0; i < 512 * 512 * 512; i++) {
 
     // If TSDF value of voxel is less than some threshold, add voxel coordinates to point cloud
     if (std::abs(vox_tsdf[i]) < tsdf_threshold && vox_weight[i] > weight_threshold) {
@@ -123,62 +123,6 @@ bool read_depth_data(const std::string &file_name, unsigned short * data) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
-void integrateCPU(float* K, ushort* depth_data, float* view_bounds, float* camera_relative_pose,
-                  float vox_unit, float vox_mu, float* vox_range_cam, float* vox_tsdf, float* vox_weight) {
-
-  for (int z = view_bounds[2 * 2 + 0]; z < view_bounds[2 * 2 + 1]; z++) {
-    for (int y = view_bounds[1 * 2 + 0]; y < view_bounds[1 * 2 + 1]; y++) {
-      for (int x = view_bounds[0 * 2 + 0]; x < view_bounds[0 * 2 + 1]; x++) {
-
-        // grid to world coords
-        float tmp_pos[3] = {0};
-        tmp_pos[0] = (x + 1) * vox_unit + vox_range_cam[0 * 2 + 0];
-        tmp_pos[1] = (y + 1) * vox_unit + vox_range_cam[1 * 2 + 0];
-        tmp_pos[2] = (z + 1) * vox_unit + vox_range_cam[2 * 2 + 0];
-
-        // std::cout << tmp_pos[0] << " " << tmp_pos[1] << " " << tmp_pos[2] << std::endl;
-
-        // transform
-        float tmp_arr[3] = {0};
-        tmp_arr[0] = tmp_pos[0] - camera_relative_pose[3];
-        tmp_arr[1] = tmp_pos[1] - camera_relative_pose[7];
-        tmp_arr[2] = tmp_pos[2] - camera_relative_pose[11];
-        tmp_pos[0] = camera_relative_pose[0 * 4 + 0] * tmp_arr[0] + camera_relative_pose[1 * 4 + 0] * tmp_arr[1] + camera_relative_pose[2 * 4 + 0] * tmp_arr[2];
-        tmp_pos[1] = camera_relative_pose[0 * 4 + 1] * tmp_arr[0] + camera_relative_pose[1 * 4 + 1] * tmp_arr[1] + camera_relative_pose[2 * 4 + 1] * tmp_arr[2];
-        tmp_pos[2] = camera_relative_pose[0 * 4 + 2] * tmp_arr[0] + camera_relative_pose[1 * 4 + 2] * tmp_arr[1] + camera_relative_pose[2 * 4 + 2] * tmp_arr[2];
-        // std::cout << tmp_pos[0] << " " << tmp_pos[1] << " " << tmp_pos[2] << std::endl << std::endl;
-        if (tmp_pos[2] <= 0)
-          continue;
-
-        int px = std::round(K[0] * (tmp_pos[0] / tmp_pos[2]) + K[2]);
-        int py = std::round(K[4] * (tmp_pos[1] / tmp_pos[2]) + K[5]);
-        if (px < 1 || px > 640 || py < 1 || py > 480)
-          continue;
-
-        float p_depth = *(depth_data + (py - 1) * 640 + (px - 1)) / 1000.f;
-        if (p_depth < 0.2 || p_depth > 0.8)
-          continue;
-        if (std::round(p_depth * 1000.0f) == 0)
-          continue;
-
-        float eta = (p_depth - tmp_pos[2]) * sqrt(1 + pow((tmp_pos[0] / tmp_pos[2]), 2) + pow((tmp_pos[1] / tmp_pos[2]), 2));
-        if (eta <= -vox_mu)
-          continue;
-
-        // Integrate
-        int volumeIDX = z * 512 * 512 + y * 512 + x;
-        float sdf = std::min(1.0f, eta / vox_mu);
-        float w_old = vox_weight[volumeIDX];
-        float w_new = w_old + 1.0f;
-        vox_weight[volumeIDX] = w_new;
-        vox_tsdf[volumeIDX] = (vox_tsdf[volumeIDX] * w_old + sdf) / w_new;
-
-      }
-    }
-  }
-
-}
 
 __global__
 void integrate(float* K, unsigned short* depth_data, float* view_bounds, float* camera_relative_pose,
@@ -232,9 +176,7 @@ void integrate(float* K, unsigned short* depth_data, float* view_bounds, float* 
     float w_new = w_old + 1.0f;
     vox_weight[volumeIDX] = w_new;
     vox_tsdf[volumeIDX] = (vox_tsdf[volumeIDX] * w_old + sdf) / w_new;
-
   }
-
 }
 
 void FatalError(const int lineNumber = 0) {
@@ -297,7 +239,7 @@ int main(int argc, char **argv) {
   }
 
   // Init voxel volume params
-  float vox_unit = 0.001;
+  float vox_unit = 0.005;
   float vox_mu_grid = 5;
   float vox_mu = vox_unit * vox_mu_grid;
   float vox_size[3];
@@ -306,27 +248,27 @@ int main(int argc, char **argv) {
   float * vox_weight;
   vox_size[0] = 512;
   vox_size[1] = 512;
-  vox_size[2] = 1024;
+  vox_size[2] = 512;
   vox_range_cam[0 * 2 + 0] = -vox_size[0] * vox_unit / 2;
   vox_range_cam[0 * 2 + 1] = vox_range_cam[0 * 2 + 0] + vox_size[0] * vox_unit;
   vox_range_cam[1 * 2 + 0] = -vox_size[1] * vox_unit / 2;
   vox_range_cam[1 * 2 + 1] = vox_range_cam[1 * 2 + 0] + vox_size[1] * vox_unit;
-  vox_range_cam[2 * 2 + 0] = -0.05;
+  vox_range_cam[2 * 2 + 0] = -50.0f * vox_unit;
   vox_range_cam[2 * 2 + 1] = vox_range_cam[2 * 2 + 0] + vox_size[2] * vox_unit;
-  vox_tsdf = new float[512 * 512 * 1024];
-  vox_weight = new float[512 * 512 * 1024];
-  memset(vox_weight, 0, sizeof(float) * 512 * 512 * 1024);
-  for (int i = 0; i < 512 * 512 * 1024; i++)
+  vox_tsdf = new float[512 * 512 * 512];
+  vox_weight = new float[512 * 512 * 512];
+  memset(vox_weight, 0, sizeof(float) * 512 * 512 * 512);
+  for (int i = 0; i < 512 * 512 * 512; i++)
     vox_tsdf[i] = 1.0f;
 
   // Copy voxel volume to GPU
   float * d_vox_tsdf;
   float * d_vox_weight;
-  cudaMalloc(&d_vox_tsdf, 512 * 512 * 1024 * sizeof(float));
-  cudaMalloc(&d_vox_weight, 512 * 512 * 1024 * sizeof(float));
+  cudaMalloc(&d_vox_tsdf, 512 * 512 * 512 * sizeof(float));
+  cudaMalloc(&d_vox_weight, 512 * 512 * 512 * sizeof(float));
   checkCUDA(__LINE__, cudaGetLastError());
-  cudaMemcpy(d_vox_tsdf, vox_tsdf, 512 * 512 * 1024 * sizeof(float), cudaMemcpyHostToDevice);
-  cudaMemcpy(d_vox_weight, vox_weight, 512 * 512 * 1024 * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_vox_tsdf, vox_tsdf, 512 * 512 * 512 * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_vox_weight, vox_weight, 512 * 512 * 512 * sizeof(float), cudaMemcpyHostToDevice);
   checkCUDA(__LINE__, cudaGetLastError());
 
   // Allocate GPU to hold fusion params
@@ -372,8 +314,8 @@ int main(int argc, char **argv) {
     // Integrate
     // integrateCPU(K, depth_data, view_bounds, camera_relative_pose,
     //           vox_unit, vox_mu, vox_range_cam, vox_tsdf, vox_weight);
-    integrate <<< 1024, 512 >>>(d_K, d_depth_data, d_view_bounds, d_camera_relative_pose,
-                           vox_unit, vox_mu, d_vox_range_cam, d_vox_tsdf, d_vox_weight);
+    integrate <<< 512, 512 >>>(d_K, d_depth_data, d_view_bounds, d_camera_relative_pose,
+                                vox_unit, vox_mu, d_vox_range_cam, d_vox_tsdf, d_vox_weight);
     checkCUDA(__LINE__, cudaGetLastError());
 
     // Clear memory
@@ -382,11 +324,11 @@ int main(int argc, char **argv) {
 
     // Save curr volume to file
     std::string scene_ply_name = "test.ply";
-    if (curr_frame%10 == 0) {
+    if (curr_frame % 10 == 0) {
 
       // Copy data back to memory
-      cudaMemcpy(vox_tsdf, d_vox_tsdf, 512 * 512 * 1024 * sizeof(float), cudaMemcpyDeviceToHost);
-      cudaMemcpy(vox_weight, d_vox_weight, 512 * 512 * 1024 * sizeof(float), cudaMemcpyDeviceToHost);
+      cudaMemcpy(vox_tsdf, d_vox_tsdf, 512 * 512 * 512 * sizeof(float), cudaMemcpyDeviceToHost);
+      cudaMemcpy(vox_weight, d_vox_weight, 512 * 512 * 512 * sizeof(float), cudaMemcpyDeviceToHost);
       checkCUDA(__LINE__, cudaGetLastError());
       save_volume_to_ply(scene_ply_name, vox_tsdf, vox_weight);
     }
