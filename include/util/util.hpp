@@ -24,6 +24,19 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+///////////////////////////////////////////////////////////////////////
+// Load a MxN matrix from a text file
+std::vector<float> load_matrix_from_file(std::string filename, int M, int N) {
+  std::vector<float> matrix;
+  FILE *fp = fopen(filename.c_str(), "r");
+  for (int i = 0; i < M * N; i++) {
+    float tmp;
+    int iret = fscanf(fp, "%f", &tmp);
+    matrix.push_back(tmp);
+  }
+  fclose(fp);
+  return matrix;
+}
 
 ///////////////////////////////////////////////////////////////////////
 // Timer
