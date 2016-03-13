@@ -3,108 +3,6 @@
 
 
 
-////////////////////////////////////////////////////////////////////////////////
-
-void FatalError(const int lineNumber = 0) {
-  std::cerr << "FatalError";
-  if (lineNumber != 0) std::cerr << " at LINE " << lineNumber;
-  std::cerr << ". Program Terminated." << std::endl;
-  cudaDeviceReset();
-  exit(EXIT_FAILURE);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-void checkCUDA(const int lineNumber, cudaError_t status) {
-  if (status != cudaSuccess) {
-    std::cerr << "CUDA failure at LINE " << lineNumber << ": " << status << std::endl;
-    FatalError();
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Fusion: always keep a TSDF volume active in GPU
-
-// TSDF volume in CPU memory
-float vox_unit;
-float vox_mu_grid;
-float vox_mu;
-int vox_size[3];
-float vox_range_cam[6];
-float * vox_tsdf;
-float * vox_weight;
-
-// TSDF volume in GPU memory
-__device__ int * d_vox_size;
-__device__ float * d_vox_tsdf;
-__device__ float * d_vox_weight;
-
-// Fusion params in GPU memory
-__device__ float * d_K;
-__device__ unsigned short * d_depth_data;
-__device__ float * d_view_bounds;
-__device__ float * d_camera_relative_pose;
-__device__ float * d_vox_range_cam;
-
-// Initialize existing TSDF volume in GPU memory
-__global__
-void reset_vox_GPU() {
-  int z = blockIdx.x;
-  int y = threadIdx.x;
-  for (int x = 0; x < d_vox_size[0]; x++) {
-    d_vox_tsdf[z * d_vox_size[0] * d_vox_size[1] + y * d_vox_size[0] + x] = 1.0f;
-    d_vox_weight[z * d_vox_size[0] * d_vox_size[1] + y * d_vox_size[0] + x] = 0;
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-// Initialize TSDF volume and fusion params
-void init_fusion_GPU() {
-
-  // Init voxel volume params
-  vox_unit = 0.005;
-  vox_mu_grid = 5;
-  vox_mu = vox_unit * vox_mu_grid;
-  vox_size[0] = 512;
-  vox_size[1] = 512;
-  vox_size[2] = 512;
-  vox_range_cam[0 * 2 + 0] = -(float)(vox_size[0]) * vox_unit / 2;
-  vox_range_cam[0 * 2 + 1] = vox_range_cam[0 * 2 + 0] + (float)(vox_size[0]) * vox_unit;
-  vox_range_cam[1 * 2 + 0] = -(float)(vox_size[1]) * vox_unit / 2;
-  vox_range_cam[1 * 2 + 1] = vox_range_cam[1 * 2 + 0] + (float)(vox_size[1]) * vox_unit;
-  vox_range_cam[2 * 2 + 0] = -50.0f * vox_unit;
-  vox_range_cam[2 * 2 + 1] = vox_range_cam[2 * 2 + 0] + (float)(vox_size[2]) * vox_unit;
-  vox_tsdf = new float[vox_size[0] * vox_size[1] * vox_size[2]];
-  vox_weight = new float[vox_size[0] * vox_size[1] * vox_size[2]];
-  memset(vox_weight, 0, sizeof(float) * vox_size[0] * vox_size[1] * vox_size[2]);
-  memset(vox_tsdf, 0, sizeof(float) * vox_size[0] * vox_size[1] * vox_size[2]);
-  // for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
-  //   vox_tsdf[i] = 1.0f;
-
-  // Copy voxel volume to GPU
-  // cudaMalloc(&d_vox_size, 3 * sizeof(float));
-  // cudaMalloc(&d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float));
-  // cudaMalloc(&d_vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float));
-  // checkCUDA(__LINE__, cudaGetLastError());
-  checkCUDA(__LINE__, cudaMemcpyToSymbol("d_vox_size", &vox_size, 3 * sizeof(float), size_t(0), cudaMemcpyHostToDevice));
-  checkCUDA(__LINE__, cudaMemcpyToSymbol(d_vox_tsdf, &vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float)));
-  checkCUDA(__LINE__, cudaMemcpyToSymbol(d_vox_weight, &vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float)));
-
-  // Init volume in GPU
-  int CUDA_NUM_BLOCKS = vox_size[2];
-  int CUDA_NUM_THREADS = vox_size[1];
-  reset_vox_GPU <<< CUDA_NUM_BLOCKS, CUDA_NUM_THREADS >>>();
-  checkCUDA(__LINE__, cudaGetLastError());
-
-  // Allocate GPU to hold fusion params
-  // cudaMalloc(&d_K, 9 * sizeof(float));
-  // cudaMalloc(&d_depth_data, 480 * 640 * sizeof(unsigned short));
-  // cudaMalloc(&d_view_bounds, 6 * sizeof(float));
-  // cudaMalloc(&d_camera_relative_pose, 16 * sizeof(float));
-  // cudaMalloc(&d_vox_range_cam, 6 * sizeof(float));
-  // checkCUDA(__LINE__, cudaGetLastError());
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -204,40 +102,41 @@ void save_volume_to_ply(const std::string &file_name, int* vox_size, float* vox_
 ////////////////////////////////////////////////////////////////////////////////
 
 __global__
-void integrate(float tmp_vox_unit, float tmp_vox_mu) {
+void integrate(float* tmp_K, unsigned short* tmp_depth_data, float* tmp_view_bounds, float* tmp_camera_relative_pose,
+               float tmp_vox_unit, float tmp_vox_mu, int* tmp_vox_size, float* tmp_vox_range_cam, float* tmp_vox_tsdf, float* tmp_vox_weight) {
 
   int z = blockIdx.x;
   int y = threadIdx.x;
 
-  if (z < (int)d_view_bounds[2 * 2 + 0] || z >= (int)d_view_bounds[2 * 2 + 1])
+  if (z < (int)tmp_view_bounds[2 * 2 + 0] || z >= (int)tmp_view_bounds[2 * 2 + 1])
     return;
-  if (y < (int)d_view_bounds[1 * 2 + 0] || y >= (int)d_view_bounds[1 * 2 + 1])
+  if (y < (int)tmp_view_bounds[1 * 2 + 0] || y >= (int)tmp_view_bounds[1 * 2 + 1])
     return;
-  for (int x = d_view_bounds[0 * 2 + 0]; x < d_view_bounds[0 * 2 + 1]; x++) {
+  for (int x = tmp_view_bounds[0 * 2 + 0]; x < tmp_view_bounds[0 * 2 + 1]; x++) {
 
     // grid to world coords
     float tmp_pos[3] = {0};
-    tmp_pos[0] = (x + 1) * tmp_vox_unit + d_vox_range_cam[0 * 2 + 0];
-    tmp_pos[1] = (y + 1) * tmp_vox_unit + d_vox_range_cam[1 * 2 + 0];
-    tmp_pos[2] = (z + 1) * tmp_vox_unit + d_vox_range_cam[2 * 2 + 0];
+    tmp_pos[0] = (x + 1) * tmp_vox_unit + tmp_vox_range_cam[0 * 2 + 0];
+    tmp_pos[1] = (y + 1) * tmp_vox_unit + tmp_vox_range_cam[1 * 2 + 0];
+    tmp_pos[2] = (z + 1) * tmp_vox_unit + tmp_vox_range_cam[2 * 2 + 0];
 
     // transform
     float tmp_arr[3] = {0};
-    tmp_arr[0] = tmp_pos[0] - d_camera_relative_pose[3];
-    tmp_arr[1] = tmp_pos[1] - d_camera_relative_pose[7];
-    tmp_arr[2] = tmp_pos[2] - d_camera_relative_pose[11];
-    tmp_pos[0] = d_camera_relative_pose[0 * 4 + 0] * tmp_arr[0] + d_camera_relative_pose[1 * 4 + 0] * tmp_arr[1] + d_camera_relative_pose[2 * 4 + 0] * tmp_arr[2];
-    tmp_pos[1] = d_camera_relative_pose[0 * 4 + 1] * tmp_arr[0] + d_camera_relative_pose[1 * 4 + 1] * tmp_arr[1] + d_camera_relative_pose[2 * 4 + 1] * tmp_arr[2];
-    tmp_pos[2] = d_camera_relative_pose[0 * 4 + 2] * tmp_arr[0] + d_camera_relative_pose[1 * 4 + 2] * tmp_arr[1] + d_camera_relative_pose[2 * 4 + 2] * tmp_arr[2];
+    tmp_arr[0] = tmp_pos[0] - tmp_camera_relative_pose[3];
+    tmp_arr[1] = tmp_pos[1] - tmp_camera_relative_pose[7];
+    tmp_arr[2] = tmp_pos[2] - tmp_camera_relative_pose[11];
+    tmp_pos[0] = tmp_camera_relative_pose[0 * 4 + 0] * tmp_arr[0] + tmp_camera_relative_pose[1 * 4 + 0] * tmp_arr[1] + tmp_camera_relative_pose[2 * 4 + 0] * tmp_arr[2];
+    tmp_pos[1] = tmp_camera_relative_pose[0 * 4 + 1] * tmp_arr[0] + tmp_camera_relative_pose[1 * 4 + 1] * tmp_arr[1] + tmp_camera_relative_pose[2 * 4 + 1] * tmp_arr[2];
+    tmp_pos[2] = tmp_camera_relative_pose[0 * 4 + 2] * tmp_arr[0] + tmp_camera_relative_pose[1 * 4 + 2] * tmp_arr[1] + tmp_camera_relative_pose[2 * 4 + 2] * tmp_arr[2];
     if (tmp_pos[2] <= 0)
       continue;
 
-    int px = roundf(d_K[0] * (tmp_pos[0] / tmp_pos[2]) + d_K[2]);
-    int py = roundf(d_K[4] * (tmp_pos[1] / tmp_pos[2]) + d_K[5]);
+    int px = roundf(tmp_K[0] * (tmp_pos[0] / tmp_pos[2]) + tmp_K[2]);
+    int py = roundf(tmp_K[4] * (tmp_pos[1] / tmp_pos[2]) + tmp_K[5]);
     if (px < 1 || px > 640 || py < 1 || py > 480)
       continue;
 
-    float p_depth = *(d_depth_data + (py - 1) * 640 + (px - 1)) / 1000.f;
+    float p_depth = *(tmp_depth_data + (py - 1) * 640 + (px - 1)) / 1000.f;
     if (p_depth < 0.2 || p_depth > 0.8)
       continue;
     if (roundf(p_depth * 1000.0f) == 0)
@@ -248,12 +147,12 @@ void integrate(float tmp_vox_unit, float tmp_vox_mu) {
       continue;
 
     // Integrate
-    int volumeIDX = z * d_vox_size[0] * d_vox_size[1] + y * d_vox_size[0] + x;
+    int volumeIDX = z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x;
     float sdf = fmin(1.0f, eta / tmp_vox_mu);
-    float w_old = d_vox_weight[volumeIDX];
+    float w_old = tmp_vox_weight[volumeIDX];
     float w_new = w_old + 1.0f;
-    d_vox_weight[volumeIDX] = w_new;
-    d_vox_tsdf[volumeIDX] = (d_vox_tsdf[volumeIDX] * w_old + sdf) / w_new;
+    tmp_vox_weight[volumeIDX] = w_new;
+    tmp_vox_tsdf[volumeIDX] = (tmp_vox_tsdf[volumeIDX] * w_old + sdf) / w_new;
   }
 }
 
@@ -270,13 +169,122 @@ void vol2bin() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void FatalError(const int lineNumber = 0) {
+  std::cerr << "FatalError";
+  if (lineNumber != 0) std::cerr << " at LINE " << lineNumber;
+  std::cerr << ". Program Terminated." << std::endl;
+  cudaDeviceReset();
+  exit(EXIT_FAILURE);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void checkCUDA(const int lineNumber, cudaError_t status) {
+  if (status != cudaSuccess) {
+    std::cerr << "CUDA failure at LINE " << lineNumber << ": " << status << std::endl;
+    FatalError();
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Fusion: always keep a TSDF volume active in GPU
+
+// TSDF volume in CPU memory
+float vox_unit;
+float vox_mu_grid;
+float vox_mu;
+int vox_size[3];
+float vox_range_cam[6];
+float * vox_tsdf;
+float * vox_weight;
+
+// TSDF volume in GPU memory
+int * d_vox_size;
+float * d_vox_tsdf;
+float * d_vox_weight;
+
+// Fusion params in GPU memory
+float * d_K;
+unsigned short * d_depth_data;
+float * d_view_bounds;
+float * d_camera_relative_pose;
+float * d_vox_range_cam;
+
+// Initialize existing TSDF volume in GPU memory
+__global__
+void reset_vox_GPU(int* tmp_vox_size, float* tmp_vox_tsdf, float* tmp_vox_weight) {
+  int z = blockIdx.x;
+  int y = threadIdx.x;
+  for (int x = 0; x < tmp_vox_size[0]; x++) {
+    tmp_vox_tsdf[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 1.0f;
+    tmp_vox_weight[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 0;
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+// Initialize TSDF volume and fusion params
+void init_fusion_GPU() {
+
+  // Init voxel volume params
+  vox_unit = 0.005;
+  vox_mu_grid = 5;
+  vox_mu = vox_unit * vox_mu_grid;
+  vox_size[0] = 512;
+  vox_size[1] = 512;
+  vox_size[2] = 512;
+  vox_range_cam[0 * 2 + 0] = -(float)(vox_size[0]) * vox_unit / 2;
+  vox_range_cam[0 * 2 + 1] = vox_range_cam[0 * 2 + 0] + (float)(vox_size[0]) * vox_unit;
+  vox_range_cam[1 * 2 + 0] = -(float)(vox_size[1]) * vox_unit / 2;
+  vox_range_cam[1 * 2 + 1] = vox_range_cam[1 * 2 + 0] + (float)(vox_size[1]) * vox_unit;
+  vox_range_cam[2 * 2 + 0] = -50.0f * vox_unit;
+  vox_range_cam[2 * 2 + 1] = vox_range_cam[2 * 2 + 0] + (float)(vox_size[2]) * vox_unit;
+  vox_tsdf = new float[vox_size[0] * vox_size[1] * vox_size[2]];
+  vox_weight = new float[vox_size[0] * vox_size[1] * vox_size[2]];
+  memset(vox_weight, 0, sizeof(float) * vox_size[0] * vox_size[1] * vox_size[2]);
+  memset(vox_tsdf, 0, sizeof(float) * vox_size[0] * vox_size[1] * vox_size[2]);
+  // for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
+  //   vox_tsdf[i] = 1.0f;
+
+  // Copy voxel volume to GPU
+  cudaMalloc(&d_vox_size, 3 * sizeof(float));
+  cudaMalloc(&d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float));
+  cudaMalloc(&d_vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float));
+  checkCUDA(__LINE__, cudaGetLastError());
+  cudaMemcpy(d_vox_size, vox_size, 3 * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_vox_tsdf, vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_vox_weight, vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyHostToDevice);
+  checkCUDA(__LINE__, cudaGetLastError());
+
+  // Init volume in GPU
+  int CUDA_NUM_BLOCKS = vox_size[2];
+  int CUDA_NUM_THREADS = vox_size[1];
+  reset_vox_GPU <<< CUDA_NUM_BLOCKS, CUDA_NUM_THREADS >>>(d_vox_size, d_vox_tsdf, d_vox_weight);
+  checkCUDA(__LINE__, cudaGetLastError());
+
+  // Allocate GPU to hold fusion params
+  cudaMalloc(&d_K, 9 * sizeof(float));
+  cudaMalloc(&d_depth_data, 480 * 640 * sizeof(unsigned short));
+  cudaMalloc(&d_view_bounds, 6 * sizeof(float));
+  cudaMalloc(&d_camera_relative_pose, 16 * sizeof(float));
+  cudaMalloc(&d_vox_range_cam, 6 * sizeof(float));
+  checkCUDA(__LINE__, cudaGetLastError());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 // void realloc_fusion_params() {
 
-//   cudaFree(d_K);
-//   cudaFree(d_depth_data);
-//   cudaFree(d_view_bounds);
-//   cudaFree(d_camera_relative_pose);
-//   cudaFree(d_vox_range_cam);
+//   if (d_K != NULL)
+//     cudaFree(d_K);
+//   if (d_depth_data != NULL)
+//     cudaFree(d_depth_data);
+//   if (d_view_bounds != NULL)
+//     cudaFree(d_view_bounds);
+//   if (d_camera_relative_pose != NULL)
+//     cudaFree(d_camera_relative_pose);
+//   if (d_vox_range_cam != NULL)
+//     cudaFree(d_vox_range_cam);
 //   checkCUDA(__LINE__, cudaGetLastError());
 
 //   cudaMalloc(&d_K, 9 * sizeof(float));
