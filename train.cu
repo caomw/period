@@ -1,7 +1,4 @@
 #include "util/util.hpp"
-#include <png++/png.hpp>
-#include <curand.h>
-#include <curand_kernel.h>
 #include <opencv2/opencv.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -97,21 +94,6 @@ void save_volume_to_ply(const std::string &file_name, int* vox_size, float* vox_
     }
   }
   fclose(fp);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-bool read_depth_data(const std::string &file_name, unsigned short * data) {
-  png::image< png::gray_pixel_16 > img(file_name.c_str(), png::require_color_space< png::gray_pixel_16 >());
-  int index = 0;
-  for (int i = 0; i < 480; ++i) {
-    for (int j = 0; j < 640; ++j) {
-      unsigned short s = img.get_pixel(j, i);
-      *(data + index) = s;
-      ++index;
-    }
-  }
-  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -247,13 +229,6 @@ void show_object_pose(float* K, float* object_pose, cv::Mat& display_frame) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-//
-
-
-////////////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////////////
 // Fusion: always keep a TSDF volume active in GPU
 
 // TSDF volume in CPU memory
@@ -287,6 +262,8 @@ void reset_vox_GPU(int* tmp_vox_size, float* tmp_vox_tsdf, float* tmp_vox_weight
     tmp_vox_weight[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 0;
   }
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 // Initialize TSDF volume and fusion params
 void init_fusion_GPU() {
@@ -399,150 +376,18 @@ void gen_hypothesis_labels(int num_hypothesis, unsigned short* tmp_hypothesis_lo
 
   // Save label (positive case if dist to ground truth object center < some threshold)
   if (obj_dist < 0.01f)
-    tmp_hypothesis_labels[hypothesis_idx] = 1;
+    tmp_hypothesis_labels[hypothesis_idx] = (char)1;
   else
-    tmp_hypothesis_labels[hypothesis_idx] = 2;
+    tmp_hypothesis_labels[hypothesis_idx] = (char)2;
 
   // Save 2D patch of cube's 2D project to image
-  tmp_hypothesis_crop_2D[0 * num_hypothesis + hypothesis_idx] = (char)roundf(cube_front_2D[2]);
-  tmp_hypothesis_crop_2D[1 * num_hypothesis + hypothesis_idx] = (char)roundf(cube_front_2D[6]);
-  tmp_hypothesis_crop_2D[2 * num_hypothesis + hypothesis_idx] = (char)roundf(cube_front_2D[1] - cube_front_2D[2]);
-  tmp_hypothesis_crop_2D[3 * num_hypothesis + hypothesis_idx] = (char)roundf(cube_front_2D[4] - cube_front_2D[6]);
-
-
-  // // Create hypothesis cubes that are valid (non-empty and with color)
-  // float tsdf_threshold = 0.2f;
-  // float cube_incr = 0.01f;
-  // int cube_dim = 30;
-  // int cube_incr_grid = (int) round(cube_incr / voxel_volume.unit);
-  // std::vector<std::vector<int>> valid_cube_loc;
-  // for (int x = grid_bounds[0] + cube_dim / 2; x < grid_bounds[1] - cube_dim / 2; x = x + cube_incr_grid)
-  //   for (int y = grid_bounds[2] + cube_dim / 2; y < grid_bounds[3] - cube_dim / 2; y = y + cube_incr_grid)
-  //     for (int z = grid_bounds[4] + cube_dim / 2; z < grid_bounds[5] - cube_dim / 2; z = z + cube_incr_grid) {
-
-  //       // Get 3D cube
-  //       int cube_occ = 0;
-  //       // float * curr_cube = new float[30 * 30 * 30];
-  //       for (int i = -15; i < 15; i++) {
-  //         for (int j = -15; j < 15; j++) {
-  //           for (int k = -15; k < 15; k++) {
-  //             int volumeIDX = (z + k) * 512 * 512 + (y + j) * 512 + (x + i);
-  //             // curr_cube[(k + 15) * 30 * 30 + (j + 15) * 30 + (i + 15)] = voxel_volume.tsdf[volumeIDX];
-  //             if (voxel_volume.tsdf[volumeIDX] < tsdf_threshold)
-  //               cube_occ++;
-  //           }
-  //         }
-  //       }
-
-  //       // Skip empty cubes
-  //       if (cube_occ == 0)
-  //         continue;
-
-  //       // Convert cube location from grid to camera coordinates
-  //       float x_cam = ((float)x + 1) * voxel_volume.unit + voxel_volume.range[0][0];
-  //       float y_cam = ((float)y + 1) * voxel_volume.unit + voxel_volume.range[1][0];
-  //       float z_cam = ((float)z + 1) * voxel_volume.unit + voxel_volume.range[2][0];
-
-  //       // If cube 2D projection is not in image bounds, cube is invalid
-  //       float cube_rad = ((float) cube_dim) * voxel_volume.unit / 2;
-  //       float cube_front[12] = {(x_cam + cube_rad), (x_cam + cube_rad), (x_cam - cube_rad), (x_cam - cube_rad),
-  //                               (y_cam + cube_rad), (y_cam - cube_rad), (y_cam - cube_rad), (y_cam + cube_rad),
-  //                               (z_cam - cube_rad), (z_cam - cube_rad), (z_cam - cube_rad), (z_cam - cube_rad)
-  //                              };
-  //       float cube_front_2D[8] = {};
-  //       for (int i = 0; i < 4; i++) {
-  //         cube_front_2D[0 * 4 + i] = cube_front[0 * 4 + i] * K[0] / cube_front[2 * 4 + i] + K[2];
-  //         cube_front_2D[1 * 4 + i] = cube_front[1 * 4 + i] * K[4] / cube_front[2 * 4 + i] + K[5];
-  //       }
-  //       for (int i = 0; i < 12; i++)
-  //         cube_front_2D[i] = std::round(cube_front_2D[i]);
-  //       if (std::min(std::min(cube_front_2D[0], cube_front_2D[1]), std::min(cube_front_2D[2], cube_front_2D[3])) < 0 ||
-  //           std::max(std::max(cube_front_2D[0], cube_front_2D[1]), std::max(cube_front_2D[2], cube_front_2D[3])) >= 640 ||
-  //           std::min(std::min(cube_front_2D[4], cube_front_2D[5]), std::min(cube_front_2D[6], cube_front_2D[7])) < 0 ||
-  //           std::max(std::max(cube_front_2D[4], cube_front_2D[5]), std::max(cube_front_2D[6], cube_front_2D[7])) >= 480)
-  //         continue;
-
-  //       // Get 2D patch of cube's 2D project to image
-  //       cv::Rect curr_patch_ROI(std::round(cube_front_2D[2]), std::round(cube_front_2D[6]), std::round(cube_front_2D[1] - cube_front_2D[2]), std::round(cube_front_2D[4] - cube_front_2D[6]));
-  //       // std::cout << std::round(cube_front_2D[2]) << " " << std::round(cube_front_2D[6]) << " " << std::round(cube_front_2D[1]-cube_front_2D[2]) << " " << std::round(cube_front_2D[4]-cube_front_2D[6]) << std::endl;
-  //       cv::Mat curr_patch = curr_image(curr_patch_ROI);
-  //       cv::resize(curr_patch, curr_patch, cv::Size(227, 227));
-
-  //       // Check overlap of cube with object bbox
-  //       float overlap = 0;
-  //       std::vector<float> cube_bbox_grid;
-  //       cube_bbox_grid.push_back((float)x - 15); cube_bbox_grid.push_back((float)x + 14);
-  //       cube_bbox_grid.push_back((float)y - 15); cube_bbox_grid.push_back((float)y + 14);
-  //       cube_bbox_grid.push_back((float)z - 15); cube_bbox_grid.push_back((float)z + 14);
-  //       if (((cube_bbox_grid[0] > obj_bbox_grid[0] && cube_bbox_grid[0] < obj_bbox_grid[1]) || (cube_bbox_grid[1] > obj_bbox_grid[0] && cube_bbox_grid[1] < obj_bbox_grid[1])) &&
-  //           ((cube_bbox_grid[2] > obj_bbox_grid[2] && cube_bbox_grid[2] < obj_bbox_grid[3]) || (cube_bbox_grid[3] > obj_bbox_grid[2] && cube_bbox_grid[3] < obj_bbox_grid[3])) &&
-  //           ((cube_bbox_grid[4] > obj_bbox_grid[4] && cube_bbox_grid[4] < obj_bbox_grid[5]) || (cube_bbox_grid[5] > obj_bbox_grid[4] && cube_bbox_grid[5] < obj_bbox_grid[5]))) {
-  //         float overlapX = std::min(std::abs(obj_bbox_grid[0] - cube_bbox_grid[1]), std::abs(obj_bbox_grid[1] - cube_bbox_grid[0]));
-  //         float overlapY = std::min(std::abs(obj_bbox_grid[2] - cube_bbox_grid[3]), std::abs(obj_bbox_grid[3] - cube_bbox_grid[2]));
-  //         float overlapZ = std::min(std::abs(obj_bbox_grid[4] - cube_bbox_grid[5]), std::abs(obj_bbox_grid[5] - cube_bbox_grid[4]));
-  //         float overlap_intersect = overlapX * overlapY * overlapZ;
-  //         float obj_bbox_area = (obj_bbox_grid[1] - obj_bbox_grid[0]) * (obj_bbox_grid[3] - obj_bbox_grid[2]) * (obj_bbox_grid[5] - obj_bbox_grid[4]);
-  //         overlap = overlap_intersect / obj_bbox_area;
-  //       }
-
-  //       // Check distance between center of cube to center of object bbox
-  //       float obj_dist = std::sqrt((obj_bbox_mid_cam[0] - x_cam) * (obj_bbox_mid_cam[0] - x_cam) +
-  //                                  (obj_bbox_mid_cam[1] - y_cam) * (obj_bbox_mid_cam[1] - y_cam) +
-  //                                  (obj_bbox_mid_cam[2] - z_cam) * (obj_bbox_mid_cam[2] - z_cam));
-
-  //       int class_idx = 0;
-  //       if (obj_dist < 0.02) {
-  //         // std::cout << overlap << std::endl;
-  //         // std::string scene_ply_name = "test.ply";
-  //         // save_volume_to_ply_highlighted(scene_ply_name, cube_bbox_grid);
-  //         class_idx = 1;
-
-  //         // // Show 2D patch
-  //         // std::cout << obj_dist << std::endl;
-  //         // cv::namedWindow("Patch", CV_WINDOW_AUTOSIZE );
-  //         // cv::imshow("Patch", curr_patch);
-  //         // cv::waitKey(0);
-  //         // std::cout << std::endl;
-  //         // std::cout << std::endl;
-  //       }
-
-  //       // if (overlap > 0.3 && overlap < 0.7)
-  //       //   continue;
-
-  //       // for (int i = 0; i < 8; i++)
-  //       //   std::cout << cube_front_2D[i] << " ";
-  //       // std::cout << std::endl;
-  //       // for (int i = 0; i < 6; i++)
-  //       //   std::cout << cube_bbox_grid[i] << " ";
-  //       // std::cout << std::endl;
-
-  //       // Class (idx), 2D patch bbox (x1 x2 y1 y2), 3D tsdf bbox (x1 x2 y1 y2 z1 z2)
-  //       std::string data_string = std::to_string(class_idx) + " " + std::to_string((int)cube_front_2D[2]) + " " + std::to_string((int)cube_front_2D[1]) + " " +
-  //                                 std::to_string((int)cube_front_2D[5]) + " " + std::to_string((int)cube_front_2D[4]) + " " +
-  //                                 std::to_string((int)cube_bbox_grid[0] - (int)grid_bounds[0]) + " " + std::to_string((int)cube_bbox_grid[1] - (int)grid_bounds[0]) + " " +
-  //                                 std::to_string((int)cube_bbox_grid[2] - (int)grid_bounds[2]) + " " + std::to_string((int)cube_bbox_grid[3] - (int)grid_bounds[2]) + " " +
-  //                                 std::to_string((int)cube_bbox_grid[4] - (int)grid_bounds[4]) + " " + std::to_string((int)cube_bbox_grid[5] - (int)grid_bounds[4]);
-  //       // std::cout << data_string << std::endl;
-  //       crop_data.push_back(data_string);
-
-  //       // // Create name for data point
-  //       // std::string hash_id = gen_rand_str(16);
-  //       // std::string data_point_name = class_name + "." + hash_id;
-
-  //       // // Save 2D patch to processed folder
-  //       // cv::imwrite(processed_data_directory + "/" + data_point_name + ".color.png", curr_patch);
-
-  //       // // Save 3D TSDF cube to processed folder
-  //       // // std::string tsdf_filename = processed_data_directory + "/" + data_point_name + ".tsdf.bin";
-  //       // std::ofstream tmp_out(processed_data_directory + "/" + data_point_name + ".tsdf.bin", std::ios::binary | std::ios::out);
-  //       // for (int i = 0; i < 30*30*30; i++)
-  //       //   tmp_out.write((char*)&curr_cube[i], sizeof(float));
-  //       // tmp_out.close();
-
-  //       // Clear memory
-  //       // delete [] curr_cube;
-  //     }
+  tmp_hypothesis_crop_2D[0 * num_hypothesis + hypothesis_idx] = (unsigned short)roundf(cube_front_2D[2]);
+  tmp_hypothesis_crop_2D[1 * num_hypothesis + hypothesis_idx] = (unsigned short)roundf(cube_front_2D[6]);
+  tmp_hypothesis_crop_2D[2 * num_hypothesis + hypothesis_idx] = (unsigned short)roundf(cube_front_2D[1] - cube_front_2D[2]);
+  tmp_hypothesis_crop_2D[3 * num_hypothesis + hypothesis_idx] = (unsigned short)roundf(cube_front_2D[4] - cube_front_2D[6]);
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 __global__
 void check_valid_hypothesis_loc(char* tmp_is_grid_loc_valid, int* tmp_vox_size, float* tmp_vox_tsdf) {
@@ -575,11 +420,12 @@ void check_valid_hypothesis_loc(char* tmp_is_grid_loc_valid, int* tmp_vox_size, 
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 int main(int argc, char **argv) {
 
   init_fusion_GPU();
 
-  tic();
   std::string data_directory = "data/train";
   std::string object_name = "glue";
   std::string object_directory = data_directory + "/" + object_name;
@@ -600,7 +446,7 @@ int main(int argc, char **argv) {
   int rand_frame_idx = (int)floor(gen_random_float(0, (float)frame_names.size()));
   std::string curr_frame_name = frame_names[rand_frame_idx];
   curr_frame_name = curr_frame_name.substr(0, curr_frame_name.length() - 10);
-  std::cout << curr_frame_name << std::endl;
+  std::cout << "Preparing Training Frame: " << curr_sequence_directory << "/" << curr_frame_name << std::endl;
 
   // Load intrinsics (3x3 matrix)
   std::string intrinsic_filename = curr_sequence_directory + "/intrinsics.K.txt";
@@ -636,11 +482,11 @@ int main(int argc, char **argv) {
   //   std::cout << curr_cam_pose_inv[i] << std::endl;
   float object_pose[16] = {0};
   multiply_matrix(curr_cam_pose_inv, object_pose_arr, object_pose);
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++)
-      std::cout << object_pose[i * 4 + j] << " ";
-    std::cout << std::endl;
-  }
+  // for (int i = 0; i < 4; i++) {
+  //   for (int j = 0; j < 4; j++)
+  //     std::cout << object_pose[i * 4 + j] << " ";
+  //   std::cout << std::endl;
+  // }
 
   // Display ground truth object pose
   show_object_pose(K, object_pose, curr_frame_color);
@@ -657,8 +503,8 @@ int main(int argc, char **argv) {
   object_pose_axis[0] = (object_pose[9] - object_pose[6]) / (2 * std::sin(object_pose_angle));
   object_pose_axis[1] = (object_pose[2] - object_pose[8]) / (2 * std::sin(object_pose_angle));
   object_pose_axis[2] = (object_pose[4] - object_pose[1]) / (2 * std::sin(object_pose_angle));
-  for (int i = 0; i < 3; i++)
-    std::cout << object_pose_axis[i] << std::endl;
+  // for (int i = 0; i < 3; i++)
+  //   std::cout << object_pose_axis[i] << std::endl;
 
   // Convert axis/angle to pose
   float object_pose_rotation[9] = {0};
@@ -747,8 +593,6 @@ int main(int argc, char **argv) {
   // reset_vox_GPU <<< CUDA_NUM_BLOCKS, CUDA_NUM_THREADS >>>(d_vox_size, d_vox_tsdf, d_vox_weight);
   // checkCUDA(__LINE__, cudaGetLastError());
 
-  toc();
-
   // Copy data back to memory
   cudaMemcpy(vox_tsdf, d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost);
   cudaMemcpy(vox_weight, d_vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost);
@@ -780,9 +624,9 @@ int main(int argc, char **argv) {
   grid_bounds[0] = std::max(grid_bounds[0], 15.0f); grid_bounds[1] = std::min(grid_bounds[1], (float)vox_size[0] - 15.0f - 1.0f);
   grid_bounds[2] = std::max(grid_bounds[2], 15.0f); grid_bounds[3] = std::min(grid_bounds[3], (float)vox_size[1] - 15.0f - 1.0f);
   grid_bounds[4] = std::max(grid_bounds[4], 15.0f); grid_bounds[5] = std::min(grid_bounds[5], (float)vox_size[2] - 15.0f - 1.0f);
-  std::cout << grid_bounds[0] << " " << grid_bounds[1] << std::endl;
-  std::cout << grid_bounds[2] << " " << grid_bounds[3] << std::endl;
-  std::cout << grid_bounds[4] << " " << grid_bounds[5] << std::endl;
+  // std::cout << grid_bounds[0] << " " << grid_bounds[1] << std::endl;
+  // std::cout << grid_bounds[2] << " " << grid_bounds[3] << std::endl;
+  // std::cout << grid_bounds[4] << " " << grid_bounds[5] << std::endl;
   int grid_size[3] = {0};
   grid_size[0] = grid_bounds[1] - grid_bounds[0] + 1;
   grid_size[1] = grid_bounds[3] - grid_bounds[2] + 1;
@@ -790,7 +634,7 @@ int main(int argc, char **argv) {
 
   // Create list of hypothesis cubes (store grid locations, and is valid or not (0 for invalid, 1 for positive, 2 for negative))
   int num_hypothesis = grid_size[0] * grid_size[1] * grid_size[2];
-  std::cout << num_hypothesis << std::endl;
+  // std::cout << num_hypothesis << std::endl;
   unsigned short * hypothesis_locations = new unsigned short[3 * num_hypothesis];
   char * hypothesis_labels = new char[num_hypothesis];
   memset(hypothesis_labels, 0, sizeof(char) * num_hypothesis);
@@ -826,501 +670,73 @@ int main(int argc, char **argv) {
   CUDA_NUM_THREADS = 512;
   CUDA_NUM_BLOCKS = (int)ceil(((float)num_hypothesis) / ((float)CUDA_NUM_THREADS));
   gen_hypothesis_labels <<< CUDA_NUM_BLOCKS, CUDA_NUM_THREADS >>>(num_hypothesis, d_hypothesis_locations, d_hypothesis_labels, d_hypothesis_crop_2D, d_object_center_cam, d_K, vox_unit, d_vox_size, d_vox_range_cam, d_vox_tsdf);
-  
+
   // Copy 2D crop information back to CPU
   unsigned short * hypothesis_crop_2D = new unsigned short[4 * num_hypothesis];
   cudaMemcpy(hypothesis_labels, d_hypothesis_labels, num_hypothesis * sizeof(char), cudaMemcpyDeviceToHost);
   cudaMemcpy(hypothesis_crop_2D, d_hypothesis_crop_2D, 4 * num_hypothesis * sizeof(unsigned short), cudaMemcpyDeviceToHost);
 
-  int num_invalid = 0;
-  int num_positive = 0;
-  int num_negative = 0;
+  int num_invalid_hypotheses = 0;
+  int num_positive_hypotheses = 0;
+  int num_negative_hypotheses = 0;
   for (int i = 0; i < num_hypothesis; i++) {
     if (((int)hypothesis_labels[i]) == 0)
-      num_invalid++;
-    if (((int)hypothesis_labels[i]) == 1)
-      num_positive++;
+      num_invalid_hypotheses++;
+    if (((int)hypothesis_labels[i]) == 1) {
+      num_positive_hypotheses++;
+      // std::cout << (int)hypothesis_locations[0 * num_hypothesis + i] << " " << (int)hypothesis_locations[1 * num_hypothesis + i] << " " << (int)hypothesis_locations[2 * num_hypothesis + i] << std::endl;
+      // std::cout << (int)hypothesis_crop_2D[0 * num_hypothesis + i] << " " << (int)hypothesis_crop_2D[1 * num_hypothesis + i] << " " << (int)hypothesis_crop_2D[2 * num_hypothesis + i] << " " << (int)hypothesis_crop_2D[3 * num_hypothesis + i] << std::endl;
+      // std::cout << std::endl;
+      // cv::Rect curr_patch_ROI((int)hypothesis_crop_2D[0 * num_hypothesis + i], (int)hypothesis_crop_2D[1 * num_hypothesis + i], (int)hypothesis_crop_2D[2 * num_hypothesis + i], (int)hypothesis_crop_2D[3 * num_hypothesis + i]);
+      // cv::Mat curr_patch = curr_frame_color(curr_patch_ROI);
+      // cv::resize(curr_patch, curr_patch, cv::Size(227, 227));
+      // cv::imshow("Patch", curr_patch);
+      // cv::waitKey(0);
+    }
     if (((int)hypothesis_labels[i]) == 2)
-      num_negative++;
+      num_negative_hypotheses++;
   }
+  int num_valid_hypotheses = num_positive_hypotheses + num_negative_hypotheses;
+  std::cout << "    Number of positive hypotheses found: " << num_positive_hypotheses << std::endl;
+  std::cout << "    Number of negative hypotheses found: " << num_negative_hypotheses << std::endl;
 
-  std::cout << num_invalid << std::endl;
-  std::cout << num_positive << std::endl;
-  std::cout << num_negative << std::endl;
-
-  // gen_hypothesis_labels <<< CUDA_NUM_BLOCKS, CUDA_NUM_THREADS >>>(d_rand_vox_points, d_vox_points_label,
-  //   d_K, d_depth_data, d_view_bounds, d_camera_relative_pose,
-  //     vox_unit, vox_mu, d_vox_size, d_vox_range_cam, d_vox_tsdf, d_vox_weight);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  // tic();
-  // // Initialize CUDA's random number generator
-  // curandGenerator_t generator;
-  // std::random_device rd;
-  // if ( curandCreateGenerator(&generator, CURAND_RNG_PSEUDO_DEFAULT) != CURAND_STATUS_SUCCESS || curandSetPseudoRandomGeneratorSeed(generator, rd()) != CURAND_STATUS_SUCCESS ) {
-  //   std::cerr << "Cannot initialize Curand" << std::endl;
-  //   FatalError(__LINE__);
+  // Save to binary file: 8 x num_valid_hypotheses (int) (label, grid location (x,y,z), hypothesis 2D patch (x,y,width,height))
+  std::string labels_filename = curr_sequence_directory + "/" + curr_frame_name + ".labels.bin";
+  int * train_labels = new int[num_valid_hypotheses * 8 + 1];
+  train_labels[0] = num_valid_hypotheses;
+  int train_idx = 0;
+  for (int i = 0; i < num_hypothesis; i++) {
+    if (((int)hypothesis_labels[i]) > 0) {
+      train_labels[0 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_labels[i];
+      train_labels[1 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_locations[0 * num_hypothesis + i];
+      train_labels[2 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_locations[1 * num_hypothesis + i];
+      train_labels[3 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_locations[2 * num_hypothesis + i];
+      train_labels[4 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_crop_2D[0 * num_hypothesis + i];
+      train_labels[5 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_crop_2D[1 * num_hypothesis + i];
+      train_labels[6 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_crop_2D[2 * num_hypothesis + i];
+      train_labels[7 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_crop_2D[3 * num_hypothesis + i];
+      train_idx++;
+    }
+  }
+  // for (int i = 0; i < num_valid_hypotheses; i++) {
+  //   for (int j = 0; j < 8; j++)
+  //     std::cout << train_labels[j * num_valid_hypotheses + i + 1] << " ";
+  //   std::cout << std::endl;
   // }
-  // curandState *d_state;
-  // cudaMalloc(&d_state, sizeof(curandState));
-  // checkCUDA(__LINE__, cudaGetLastError());
+  std::ofstream tmp_out(labels_filename, std::ios::binary | std::ios::out);
+  for (int i = 0; i < num_valid_hypotheses * 8 + 1; i++)
+    tmp_out.write((char*)&train_labels[i], sizeof(int));
+  tmp_out.close();
 
-  // // Find a negative case
-  // int * d_hypothesis_crop_2D_param;
-  // float * d_hypothesis_crop_3D;
-  // float * d_object_center_cam;
 
-  // cudaMalloc(&d_hypothesis_crop_2D_param, 4 * sizeof(int));
-  // cudaMalloc(&d_hypothesis_crop_3D, 30 * 30 * 30 * sizeof(float));
-  // cudaMalloc(&d_object_center_cam, 3 * sizeof(float));
-  // checkCUDA(__LINE__, cudaGetLastError());
 
-  // cudaMemcpy(d_object_center_cam, object_center_cam, 3 * sizeof(float), cudaMemcpyHostToDevice);
-  // checkCUDA(__LINE__, cudaGetLastError());
 
-  // get_negative_hypothesis <<< 1, 1 >>>(false, d_state, d_hypothesis_crop_3D, d_hypothesis_crop_2D_param, d_object_center_cam, d_K, vox_unit, d_vox_size, d_vox_range_cam, d_vox_tsdf);
-  // checkCUDA(__LINE__, cudaGetLastError());
 
-  // int hypothesis_crop_2D_param[4] = {0};
-  // int hypothesis_crop_3D[4] = {0};
-  // cudaMemcpy(hypothesis_crop_2D_param, d_hypothesis_crop_2D_param, 4 * sizeof(int), cudaMemcpyDeviceToHost);
-  // // cudaMemcpy(hypothesis_crop_3D, d_hypothesis_crop_3D, 30 * 30 * 30 * sizeof(float), cudaMemcpyDeviceToHost);
-  // checkCUDA(__LINE__, cudaGetLastError());
-  // for (int i = 0; i < 4; i++)
-  //   std::cout << hypothesis_crop_2D_param[i] << std::endl;
-  // toc();
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-  // bool is_negative_patch_found = false;
-  // while (!is_negative_patch_found) {
-
-  //   // Pick random points in voxel volume (each with a binary label for positive/negative case)
-  //   tic();
-  //   const int num_rand_points = 512 * 100;
-  //   int rand_vox_points[3 * num_rand_points] = {0};
-  //   std::random_device rd;
-  //   std::mt19937 mt(rd());
-  //   std::uniform_real_distribution<double> dist_x(15.0f, (float)vox_size[0] - 15.0f - 0.0001);
-  //   std::uniform_real_distribution<double> dist_y(15.0f, (float)vox_size[1] - 15.0f - 0.0001);
-  //   std::uniform_real_distribution<double> dist_z(15.0f, (float)vox_size[2] - 15.0f - 0.0001);
-  //   for (int i = 0; i < num_rand_points; i++) {
-  //     rand_vox_points[0 * num_rand_points + i] = (int)floor(dist_x(mt));
-  //     rand_vox_points[1 * num_rand_points + i] = (int)floor(dist_y(mt));
-  //     rand_vox_points[2 * num_rand_points + i] = (int)floor(dist_z(mt));
-  //   }
-  //   toc();
-
-  //   // For each point, label if it is valid (1) or invalid case (0) negative case, and save 2D crop
-  //   int vox_points_label[num_rand_points] = {0};
-  //   int vox_points_crop_2D[4 * num_rand_points] = {0};
-  //   int * d_rand_vox_points;
-  //   int * d_vox_points_label;
-  //   int * d_vox_points_crop_2D;
-  //   float * d_object_center_cam;
-  //   cudaMalloc(&d_rand_vox_points, 3 * num_rand_points * sizeof(int));
-  //   cudaMalloc(&d_vox_points_label, num_rand_points * sizeof(int));
-  //   cudaMalloc(&d_vox_points_crop_2D, 4 * num_rand_points * sizeof(int));
-  //   cudaMalloc(&d_object_center_cam, 3 * sizeof(float));
-  //   checkCUDA(__LINE__, cudaGetLastError());
-  //   cudaMemcpy(d_rand_vox_points, rand_vox_points, 3 * num_rand_points * sizeof(int), cudaMemcpyHostToDevice);
-  //   cudaMemcpy(d_vox_points_label, vox_points_label, num_rand_points * sizeof(int), cudaMemcpyHostToDevice);
-  //   cudaMemcpy(d_vox_points_crop_2D, vox_points_crop_2D, 4 * num_rand_points * sizeof(int), cudaMemcpyHostToDevice);
-  //   cudaMemcpy(d_object_center_cam, object_center_cam, 3 * sizeof(float), cudaMemcpyHostToDevice);
-  //   checkCUDA(__LINE__, cudaGetLastError());
-  //   CUDA_NUM_THREADS = 512;
-  //   CUDA_NUM_BLOCKS = num_rand_points / CUDA_NUM_THREADS;
-  //   // gen_hypothesis_labels(num_rand_points, rand_vox_points, vox_points_label, vox_points_crop_2D, object_center_cam, K, vox_unit, vox_size, vox_range_cam, vox_tsdf);
-  //   gen_hypothesis_labels <<< CUDA_NUM_BLOCKS, CUDA_NUM_THREADS >>>(num_rand_points, d_rand_vox_points, d_vox_points_label, d_vox_points_crop_2D, d_object_center_cam, d_K, vox_unit, d_vox_size, d_vox_range_cam, d_vox_tsdf);
-  //   cudaMemcpy(vox_points_label, d_vox_points_label, num_rand_points * sizeof(int), cudaMemcpyDeviceToHost);
-  //   cudaMemcpy(vox_points_crop_2D, d_vox_points_crop_2D, 4 * num_rand_points * sizeof(int), cudaMemcpyDeviceToHost);
-  //   // gen_hypothesis_labels <<< CUDA_NUM_BLOCKS, CUDA_NUM_THREADS >>>(d_rand_vox_points, d_vox_points_label,
-  //   //   d_K, d_depth_data, d_view_bounds, d_camera_relative_pose,
-  //   //     vox_unit, vox_mu, d_vox_size, d_vox_range_cam, d_vox_tsdf, d_vox_weight);
-
-  //   cv::namedWindow("Valid Negative Patch", CV_WINDOW_AUTOSIZE);
-  //   // cv::rectangle(curr_image, cv::Point(crop_data[best_guess_IDX * 7 + 0], crop_data[best_guess_IDX * 7 + 2]), cv::Point(crop_data[best_guess_IDX * 7 + 1], crop_data[best_guess_IDX * 7 + 3]), cv::Scalar(0, 255, 0));
-
-  //   for (int i = 0; i < num_rand_points; i++) {
-  //     if (vox_points_label[i] == 1) {
-
-  //       // Get 2D patch of cube's 2D project to image
-  //       cv::Rect curr_patch_ROI(vox_points_crop_2D[0 * num_rand_points + i], vox_points_crop_2D[1 * num_rand_points + i], vox_points_crop_2D[2 * num_rand_points + i], vox_points_crop_2D[3 * num_rand_points + i]);
-  //       // std::cout << std::round(cube_front_2D[2]) << " " << std::round(cube_front_2D[6]) << " " << std::round(cube_front_2D[1]-cube_front_2D[2]) << " " << std::round(cube_front_2D[4]-cube_front_2D[6]) << std::endl;
-  //       cv::Mat curr_patch = curr_frame_color(curr_patch_ROI);
-  //       cv::resize(curr_patch, curr_patch, cv::Size(227, 227));
-  //       cv::imshow("Valid Negative Patch", curr_patch);
-  //       cv::waitKey(0);
-  //     }
-  //   }
-  // }
-
-  // In GPU memory, crop cube from voxel volume
-
-  // Copy cube to CPU memory
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  // std::cout << closest_angle_bin << std::endl;
-
-
-
-
-
-
-  // std::string data_directory = "data";
-  // std::string sequence_directory = data_directory + "/glue.train.14";
-  // std::string processed_data_directory = data_directory + "/train";
-  // std::string object_name = "glue";
-
-  // std::cout << sequence_directory << std::endl;
-
-  // sys_command("mkdir -p " + processed_data_directory);
-
-  // // Get file list of color images
-  // std::vector<std::string> file_list_color;
-  // std::string color_regex = ".color.png";
-  // get_files_in_directory(sequence_directory, file_list_color, color_regex);
-  // std::sort(file_list_color.begin(), file_list_color.end());
-
-  // // Get file list of depth images
-  // std::vector<std::string> file_list_depth;
-  // std::string depth_regex = ".depth.png";
-  // get_files_in_directory(sequence_directory, file_list_depth, depth_regex);
-  // std::sort(file_list_depth.begin(), file_list_depth.end());
-
-  // // Get file list of intrinsics
-  // std::vector<std::string> file_list_intrinsics;
-  // std::string intrinsics_regex = ".K.txt";
-  // get_files_in_directory(sequence_directory, file_list_intrinsics, intrinsics_regex);
-  // std::sort(file_list_intrinsics.begin(), file_list_intrinsics.end());
-
-  // // Get file list of extrinsics
-  // std::vector<std::string> file_list_extrinsics;
-  // std::string extrinsics_regex = ".pose.txt";
-  // get_files_in_directory(sequence_directory, file_list_extrinsics, extrinsics_regex);
-  // std::sort(file_list_extrinsics.begin(), file_list_extrinsics.end());
-
-  // // Load intrinsics (3x3 matrix)
-  // std::string intrinsic_filename = sequence_directory + "/intrinsics.K.txt";
-  // std::vector<float> K = load_matrix_from_file(intrinsic_filename, 3, 3);
-
-  // // Load extrinsics (4x4 matrices)
-  // std::vector<std::vector<float>> extrinsics;
-  // for (std::string &curr_filename : file_list_extrinsics) {
-  //   std::string curr_extrinsic_filename = sequence_directory + "/" + curr_filename;
-  //   std::vector<float> curr_extrinsic = load_matrix_from_file(curr_extrinsic_filename, 4, 4);
-  //   extrinsics.push_back(curr_extrinsic);
-  // }
-
-  // // std::cout << sequence_directory + "/" + file_list_color[0] << std::endl;
-  // // std::string tmp_filename = sequence_directory + "/" + file_list_color[0];
-  // // cv::Mat image;
-  // // image = cv::imread( tmp_filename.c_str(), 1 );
-  // // cv::namedWindow("Display Image", CV_WINDOW_AUTOSIZE );
-  // // cv::imshow("Display Image", image);
-  // // cv::waitKey(0);
-
-  // // Init voxel volume params
-  // init_voxel_volume();
-
-  // // Set first frame of sequence as base coordinate frame
-  // int base_frame = 0;
-
-  // // Fuse frames
-  // for (int curr_frame = 0; curr_frame < file_list_depth.size(); curr_frame++) {
-  //   std::cerr << "Fusing frame " << curr_frame << "/" << file_list_depth.size() << "...";
-
-  //   // Load image/depth/extrinsic data for current frame
-  //   std::string curr_image_filename = sequence_directory + "/" + file_list_color[curr_frame];
-  //   cv::Mat curr_image = cv::imread(curr_image_filename.c_str(), 1);
-  //   unsigned short * depth_data = (unsigned short *) malloc(kImageRows * kImageCols * sizeof(unsigned short));
-  //   std::string curr_depth_filename = sequence_directory + "/" + file_list_depth[curr_frame];
-  //   read_depth_data(curr_depth_filename, depth_data);
-
-  //   // Compute relative camera pose transform between current frame and base frame
-  //   // Compute camera view frustum bounds within the voxel volume
-  //   float camera_relative_pose[16] = {0};
-  //   float view_bounds[6] = {0};
-  //   // get_frustum_bounds(K, extrinsics, base_frame, curr_frame, camera_relative_pose, view_bounds);
-  //   get_frustum_bounds(K, extrinsics, 0, 0, camera_relative_pose, view_bounds); // Note: set relative pose to identity for single frame fusion
-
-  //   // Integrate
-  //   integrate(K, depth_data, view_bounds, camera_relative_pose);
-
-  //   // Read bounding box of object
-  //   std::string obj_bbox_filename = sequence_directory + "/object.bbox.txt";
-  //   std::vector<float> obj_bbox = load_matrix_from_file(obj_bbox_filename, 3, 2);
-
-  //   // Convert bounding box of object from world coordinates to current camera coordinates to grid coordinates
-  //   std::vector<float> curr_pose = extrinsics[curr_frame];
-  //   std::vector<float> obj_bbox_cam = obj_bbox;
-  //   std::vector<float> obj_bbox_grid = obj_bbox_cam;
-  //   float * curr_pose_arr = &curr_pose[0];
-  //   float curr_pose_inv[16] = {0};
-  //   invert_matrix(curr_pose_arr, curr_pose_inv);
-  //   for (int i = 0; i < 2; i++) {
-  //     float tmp_arr[3] = {0};
-  //     tmp_arr[0] = curr_pose_inv[0 * 4 + 0] * obj_bbox[0 * 2 + i] + curr_pose_inv[0 * 4 + 1] * obj_bbox[1 * 2 + i] + curr_pose_inv[0 * 4 + 2] * obj_bbox[2 * 2 + i];
-  //     tmp_arr[1] = curr_pose_inv[1 * 4 + 0] * obj_bbox[0 * 2 + i] + curr_pose_inv[1 * 4 + 1] * obj_bbox[1 * 2 + i] + curr_pose_inv[1 * 4 + 2] * obj_bbox[2 * 2 + i];
-  //     tmp_arr[2] = curr_pose_inv[2 * 4 + 0] * obj_bbox[0 * 2 + i] + curr_pose_inv[2 * 4 + 1] * obj_bbox[1 * 2 + i] + curr_pose_inv[2 * 4 + 2] * obj_bbox[2 * 2 + i];
-  //     obj_bbox_cam[0 * 2 + i] = tmp_arr[0] + curr_pose_inv[3];
-  //     obj_bbox_cam[1 * 2 + i] = tmp_arr[1] + curr_pose_inv[7];
-  //     obj_bbox_cam[2 * 2 + i] = tmp_arr[2] + curr_pose_inv[11];
-  //   }
-  //   for (int i = 0; i < 3; i++) {
-  //     if (obj_bbox_cam[i * 2 + 0] > obj_bbox_cam[i * 2 + 1]) {
-  //       float tmp_swap = obj_bbox_cam[i * 2 + 0];
-  //       obj_bbox_cam[i * 2 + 0] = obj_bbox_cam[i * 2 + 1];
-  //       obj_bbox_cam[i * 2 + 1] = tmp_swap;
-  //     }
-  //   }
-  //   for (int i = 0; i < 2; i++) {
-  //     obj_bbox_grid[0 * 2 + i] = (obj_bbox_cam[0 * 2 + i] - voxel_volume.range[0][0]) / voxel_volume.unit - 1;
-  //     obj_bbox_grid[1 * 2 + i] = (obj_bbox_cam[1 * 2 + i] - voxel_volume.range[1][0]) / voxel_volume.unit - 1;
-  //     obj_bbox_grid[2 * 2 + i] = (obj_bbox_cam[2 * 2 + i] - voxel_volume.range[2][0]) / voxel_volume.unit - 1;
-  //   }
-
-  //   // Compute center of object's bounding box
-  //   std::vector<float> obj_bbox_mid_cam;
-  //   obj_bbox_mid_cam.push_back((obj_bbox_cam[0] + obj_bbox_cam[1]) / 2);
-  //   obj_bbox_mid_cam.push_back((obj_bbox_cam[2] + obj_bbox_cam[3]) / 2);
-  //   obj_bbox_mid_cam.push_back((obj_bbox_cam[4] + obj_bbox_cam[5]) / 2);
-
-  //   // Get bounds of TSDF volume
-  //   float grid_bounds[6] = {0};
-  //   grid_bounds[0] = 512; grid_bounds[2] = 512; grid_bounds[4] = 1024;
-  //   for (int i = 0; i < 512 * 512 * 1024; i++) {
-  //     if (std::abs(voxel_volume.tsdf[i]) < 1.0f) {
-  //       float z = (float) (floor(i / (512 * 512)));
-  //       float y = (float) (floor((i - (z * 512 * 512)) / 512));
-  //       float x = (float) (i - (z * 512 * 512) - (y * 512));
-  //       grid_bounds[0] = std::min(x, grid_bounds[0]); grid_bounds[1] = std::max(x, grid_bounds[1]);
-  //       grid_bounds[2] = std::min(y, grid_bounds[2]); grid_bounds[3] = std::max(y, grid_bounds[3]);
-  //       grid_bounds[4] = std::min(z, grid_bounds[4]); grid_bounds[5] = std::max(z, grid_bounds[5]);
-  //     }
-  //   }
-
-  //   // cv::namedWindow("Display Image", CV_WINDOW_AUTOSIZE );
-  //   // cv::imshow("Display Image", curr_image);
-  //   // cv::waitKey(0);
-
-  //   // Data structure to store crop information of hypothesis cubes
-  //   std::vector<std::string> crop_data;
-
-  //   // Create hypothesis cubes that are valid (non-empty and with color)
-  //   float tsdf_threshold = 0.2f;
-  //   float cube_incr = 0.01f;
-  //   int cube_dim = 30;
-  //   int cube_incr_grid = (int) round(cube_incr / voxel_volume.unit);
-  //   std::vector<std::vector<int>> valid_cube_loc;
-  //   for (int x = grid_bounds[0] + cube_dim / 2; x < grid_bounds[1] - cube_dim / 2; x = x + cube_incr_grid)
-  //     for (int y = grid_bounds[2] + cube_dim / 2; y < grid_bounds[3] - cube_dim / 2; y = y + cube_incr_grid)
-  //       for (int z = grid_bounds[4] + cube_dim / 2; z < grid_bounds[5] - cube_dim / 2; z = z + cube_incr_grid) {
-
-  //         // Get 3D cube
-  //         int cube_occ = 0;
-  //         // float * curr_cube = new float[30 * 30 * 30];
-  //         for (int i = -15; i < 15; i++) {
-  //           for (int j = -15; j < 15; j++) {
-  //             for (int k = -15; k < 15; k++) {
-  //               int volumeIDX = (z + k) * 512 * 512 + (y + j) * 512 + (x + i);
-  //               // curr_cube[(k + 15) * 30 * 30 + (j + 15) * 30 + (i + 15)] = voxel_volume.tsdf[volumeIDX];
-  //               if (voxel_volume.tsdf[volumeIDX] < tsdf_threshold)
-  //                 cube_occ++;
-  //             }
-  //           }
-  //         }
-
-  //         // Skip empty cubes
-  //         if (cube_occ == 0)
-  //           continue;
-
-  //         // Convert cube location from grid to camera coordinates
-  //         float x_cam = ((float)x + 1) * voxel_volume.unit + voxel_volume.range[0][0];
-  //         float y_cam = ((float)y + 1) * voxel_volume.unit + voxel_volume.range[1][0];
-  //         float z_cam = ((float)z + 1) * voxel_volume.unit + voxel_volume.range[2][0];
-
-  //         // If cube 2D projection is not in image bounds, cube is invalid
-  //         float cube_rad = ((float) cube_dim) * voxel_volume.unit / 2;
-  //         float cube_front[12] = {(x_cam + cube_rad), (x_cam + cube_rad), (x_cam - cube_rad), (x_cam - cube_rad),
-  //                                 (y_cam + cube_rad), (y_cam - cube_rad), (y_cam - cube_rad), (y_cam + cube_rad),
-  //                                 (z_cam - cube_rad), (z_cam - cube_rad), (z_cam - cube_rad), (z_cam - cube_rad)
-  //                                };
-  //         float cube_front_2D[8] = {};
-  //         for (int i = 0; i < 4; i++) {
-  //           cube_front_2D[0 * 4 + i] = cube_front[0 * 4 + i] * K[0] / cube_front[2 * 4 + i] + K[2];
-  //           cube_front_2D[1 * 4 + i] = cube_front[1 * 4 + i] * K[4] / cube_front[2 * 4 + i] + K[5];
-  //         }
-  //         for (int i = 0; i < 12; i++)
-  //           cube_front_2D[i] = std::round(cube_front_2D[i]);
-  //         if (std::min(std::min(cube_front_2D[0], cube_front_2D[1]), std::min(cube_front_2D[2], cube_front_2D[3])) < 0 ||
-  //             std::max(std::max(cube_front_2D[0], cube_front_2D[1]), std::max(cube_front_2D[2], cube_front_2D[3])) >= 640 ||
-  //             std::min(std::min(cube_front_2D[4], cube_front_2D[5]), std::min(cube_front_2D[6], cube_front_2D[7])) < 0 ||
-  //             std::max(std::max(cube_front_2D[4], cube_front_2D[5]), std::max(cube_front_2D[6], cube_front_2D[7])) >= 480)
-  //           continue;
-
-  //         // Get 2D patch of cube's 2D project to image
-  //         cv::Rect curr_patch_ROI(std::round(cube_front_2D[2]), std::round(cube_front_2D[6]), std::round(cube_front_2D[1] - cube_front_2D[2]), std::round(cube_front_2D[4] - cube_front_2D[6]));
-  //         // std::cout << std::round(cube_front_2D[2]) << " " << std::round(cube_front_2D[6]) << " " << std::round(cube_front_2D[1]-cube_front_2D[2]) << " " << std::round(cube_front_2D[4]-cube_front_2D[6]) << std::endl;
-  //         cv::Mat curr_patch = curr_image(curr_patch_ROI);
-  //         cv::resize(curr_patch, curr_patch, cv::Size(227, 227));
-
-  //         // Check overlap of cube with object bbox
-  //         float overlap = 0;
-  //         std::vector<float> cube_bbox_grid;
-  //         cube_bbox_grid.push_back((float)x - 15); cube_bbox_grid.push_back((float)x + 14);
-  //         cube_bbox_grid.push_back((float)y - 15); cube_bbox_grid.push_back((float)y + 14);
-  //         cube_bbox_grid.push_back((float)z - 15); cube_bbox_grid.push_back((float)z + 14);
-  //         if (((cube_bbox_grid[0] > obj_bbox_grid[0] && cube_bbox_grid[0] < obj_bbox_grid[1]) || (cube_bbox_grid[1] > obj_bbox_grid[0] && cube_bbox_grid[1] < obj_bbox_grid[1])) &&
-  //             ((cube_bbox_grid[2] > obj_bbox_grid[2] && cube_bbox_grid[2] < obj_bbox_grid[3]) || (cube_bbox_grid[3] > obj_bbox_grid[2] && cube_bbox_grid[3] < obj_bbox_grid[3])) &&
-  //             ((cube_bbox_grid[4] > obj_bbox_grid[4] && cube_bbox_grid[4] < obj_bbox_grid[5]) || (cube_bbox_grid[5] > obj_bbox_grid[4] && cube_bbox_grid[5] < obj_bbox_grid[5]))) {
-  //           float overlapX = std::min(std::abs(obj_bbox_grid[0] - cube_bbox_grid[1]), std::abs(obj_bbox_grid[1] - cube_bbox_grid[0]));
-  //           float overlapY = std::min(std::abs(obj_bbox_grid[2] - cube_bbox_grid[3]), std::abs(obj_bbox_grid[3] - cube_bbox_grid[2]));
-  //           float overlapZ = std::min(std::abs(obj_bbox_grid[4] - cube_bbox_grid[5]), std::abs(obj_bbox_grid[5] - cube_bbox_grid[4]));
-  //           float overlap_intersect = overlapX * overlapY * overlapZ;
-  //           float obj_bbox_area = (obj_bbox_grid[1] - obj_bbox_grid[0]) * (obj_bbox_grid[3] - obj_bbox_grid[2]) * (obj_bbox_grid[5] - obj_bbox_grid[4]);
-  //           overlap = overlap_intersect / obj_bbox_area;
-  //         }
-
-  //         // Check distance between center of cube to center of object bbox
-  //         float obj_dist = std::sqrt((obj_bbox_mid_cam[0] - x_cam) * (obj_bbox_mid_cam[0] - x_cam) +
-  //                                    (obj_bbox_mid_cam[1] - y_cam) * (obj_bbox_mid_cam[1] - y_cam) +
-  //                                    (obj_bbox_mid_cam[2] - z_cam) * (obj_bbox_mid_cam[2] - z_cam));
-
-  //         int class_idx = 0;
-  //         if (obj_dist < 0.02) {
-  //           // std::cout << overlap << std::endl;
-  //           // std::string scene_ply_name = "test.ply";
-  //           // save_volume_to_ply_highlighted(scene_ply_name, cube_bbox_grid);
-  //           class_idx = 1;
-
-  //           // // Show 2D patch
-  //           // std::cout << obj_dist << std::endl;
-  //           // cv::namedWindow("Patch", CV_WINDOW_AUTOSIZE );
-  //           // cv::imshow("Patch", curr_patch);
-  //           // cv::waitKey(0);
-  //           // std::cout << std::endl;
-  //           // std::cout << std::endl;
-  //         }
-
-  //         // if (overlap > 0.3 && overlap < 0.7)
-  //         //   continue;
-
-  //         // for (int i = 0; i < 8; i++)
-  //         //   std::cout << cube_front_2D[i] << " ";
-  //         // std::cout << std::endl;
-  //         // for (int i = 0; i < 6; i++)
-  //         //   std::cout << cube_bbox_grid[i] << " ";
-  //         // std::cout << std::endl;
-
-  //         // Class (idx), 2D patch bbox (x1 x2 y1 y2), 3D tsdf bbox (x1 x2 y1 y2 z1 z2)
-  //         std::string data_string = std::to_string(class_idx) + " " + std::to_string((int)cube_front_2D[2]) + " " + std::to_string((int)cube_front_2D[1]) + " " +
-  //                                   std::to_string((int)cube_front_2D[5]) + " " + std::to_string((int)cube_front_2D[4]) + " " +
-  //                                   std::to_string((int)cube_bbox_grid[0] - (int)grid_bounds[0]) + " " + std::to_string((int)cube_bbox_grid[1] - (int)grid_bounds[0]) + " " +
-  //                                   std::to_string((int)cube_bbox_grid[2] - (int)grid_bounds[2]) + " " + std::to_string((int)cube_bbox_grid[3] - (int)grid_bounds[2]) + " " +
-  //                                   std::to_string((int)cube_bbox_grid[4] - (int)grid_bounds[4]) + " " + std::to_string((int)cube_bbox_grid[5] - (int)grid_bounds[4]);
-  //         // std::cout << data_string << std::endl;
-  //         crop_data.push_back(data_string);
-
-  //         // // Create name for data point
-  //         // std::string hash_id = gen_rand_str(16);
-  //         // std::string data_point_name = class_name + "." + hash_id;
-
-  //         // // Save 2D patch to processed folder
-  //         // cv::imwrite(processed_data_directory + "/" + data_point_name + ".color.png", curr_patch);
-
-  //         // // Save 3D TSDF cube to processed folder
-  //         // // std::string tsdf_filename = processed_data_directory + "/" + data_point_name + ".tsdf.bin";
-  //         // std::ofstream tmp_out(processed_data_directory + "/" + data_point_name + ".tsdf.bin", std::ios::binary | std::ios::out);
-  //         // for (int i = 0; i < 30*30*30; i++)
-  //         //   tmp_out.write((char*)&curr_cube[i], sizeof(float));
-  //         // tmp_out.close();
-
-  //         // Clear memory
-  //         // delete [] curr_cube;
-  //       }
-
-  //   // Give current frame a hash id
-  //   std::string curr_frame_hash = gen_rand_str(16);
-
-  //   // Save image
-  //   std::string curr_frame_color_filename = processed_data_directory + "/" + curr_frame_hash + ".color.png";
-  //   cv::imwrite(curr_frame_color_filename, curr_image);
-
-  //   // Save volume
-  //   std::string curr_frame_tsdf_filename = processed_data_directory + "/" + curr_frame_hash + "." + std::to_string((int)grid_bounds[1] - (int)grid_bounds[0]) + "." + std::to_string((int)grid_bounds[3] - (int)grid_bounds[2]) + "." + std::to_string((int)grid_bounds[5] - (int)grid_bounds[4]) + ".tsdf.bin";
-  //   std::ofstream tmp_out(curr_frame_tsdf_filename, std::ios::binary | std::ios::out);
-  //   for (int z = grid_bounds[4]; z < grid_bounds[5]; z++)
-  //     for (int y = grid_bounds[2]; y < grid_bounds[3]; y++)
-  //       for (int x = grid_bounds[0]; x < grid_bounds[1]; x++) {
-  //         int volumeIDX = z * 512 * 512 + y * 512 + x;
-  //         tmp_out.write((char*)&voxel_volume.tsdf[volumeIDX], sizeof(float));
-  //       }
-  //   tmp_out.close();
-
-  //   // Save crop information
-  //   std::string curr_frame_crop_filename = processed_data_directory + "/" + curr_frame_hash + "." + std::to_string(crop_data.size()) + ".crop.txt";
-  //   FILE *fp = fopen(curr_frame_crop_filename.c_str(), "w");
-  //   for (int i = 0; i < crop_data.size(); i++)
-  //     fprintf(fp, "%s\n", crop_data[i].c_str());
-  //   fclose(fp);
-
-
-  //   // Clear memory
-  //   free(depth_data);
-  //   std::cerr << " done!" << std::endl;
-
-  //   // Save curr volume to file
-  //   // std::string scene_ply_name = "test.ply";
-  //   // save_volume_to_ply(scene_ply_name);
-  //   // save_volume_to_ply_highlighted(scene_ply_name, obj_bbox_grid);
-
-  //   // Init new volume
-  //   memset(voxel_volume.weight, 0, sizeof(float) * 512 * 512 * 1024);
-  //   for (int i = 0; i < 512 * 512 * 1024; i++)
-  //     voxel_volume.tsdf[i] = 1.0f;
-
-  // }
   return 0;
 }
 
