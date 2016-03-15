@@ -353,9 +353,6 @@ void generate_train_labels(const std::string &sequence_directory) {
     checkCUDA(__LINE__, cudaMemcpy(hypothesis_labels, d_hypothesis_labels, num_hypothesis * sizeof(char), cudaMemcpyDeviceToHost));
     checkCUDA(__LINE__, cudaMemcpy(hypothesis_crop_2D, d_hypothesis_crop_2D, 4 * num_hypothesis * sizeof(unsigned short), cudaMemcpyDeviceToHost));
 
-    // Sort hypothesis lists
-    std::vector<int> hypothesis_sort_idx_positive;
-    std::vector<int> hypothesis_sort_idx_negative;
     int num_invalid_hypotheses = 0;
     int num_positive_hypotheses = 0;
     int num_negative_hypotheses = 0;
@@ -364,7 +361,6 @@ void generate_train_labels(const std::string &sequence_directory) {
         num_invalid_hypotheses++;
       if (((int)hypothesis_labels[i]) == 1) {
         num_positive_hypotheses++;
-        hypothesis_sort_idx_positive.push_back(i);
         // std::cout << (int)hypothesis_locations[0 * num_hypothesis + i] << " " << (int)hypothesis_locations[1 * num_hypothesis + i] << " " << (int)hypothesis_locations[2 * num_hypothesis + i] << std::endl;
         // std::cout << (int)hypothesis_crop_2D[0 * num_hypothesis + i] << " " << (int)hypothesis_crop_2D[1 * num_hypothesis + i] << " " << (int)hypothesis_crop_2D[2 * num_hypothesis + i] << " " << (int)hypothesis_crop_2D[3 * num_hypothesis + i] << std::endl;
         // std::cout << std::endl;
@@ -374,47 +370,39 @@ void generate_train_labels(const std::string &sequence_directory) {
         // cv::imshow("Patch", curr_patch);
         // cv::waitKey(0);
       }
-      if (((int)hypothesis_labels[i]) == 2) {
+      if (((int)hypothesis_labels[i]) == 2)
         num_negative_hypotheses++;
-        hypothesis_sort_idx_negative.push_back(i);
-      }
     }
     int num_valid_hypotheses = num_positive_hypotheses + num_negative_hypotheses;
-    std::cout << "    Number of positive hypotheses found: " << hypothesis_sort_idx_positive.size() << std::endl;
-    std::cout << "    Number of negative hypotheses found: " << hypothesis_sort_idx_negative.size() << std::endl;
+    std::cout << "    Number of positive hypotheses found: " << num_positive_hypotheses << std::endl;
+    std::cout << "    Number of negative hypotheses found: " << num_negative_hypotheses << std::endl;
 
-    // Save to binary file: 8 x num_valid_hypotheses (int) (label, grid location (x,y,z), hypothesis 2D patch (x,y,width,height)), positive first then negative
+    // Save to binary file: 8 x num_valid_hypotheses (int) (label, grid location (x,y,z), hypothesis 2D patch (x,y,width,height))
     std::string labels_filename = sequence_directory + "/" + curr_frame_name + ".labels.bin";
+    int * train_labels = new int[num_valid_hypotheses * 8 + 1];
+    train_labels[0] = num_valid_hypotheses;
+    int train_idx = 0;
+    for (int i = 0; i < num_hypothesis; i++) {
+      if (((int)hypothesis_labels[i]) > 0) {
+        train_labels[0 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_labels[i];
+        train_labels[1 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_locations[0 * num_hypothesis + i];
+        train_labels[2 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_locations[1 * num_hypothesis + i];
+        train_labels[3 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_locations[2 * num_hypothesis + i];
+        train_labels[4 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_crop_2D[0 * num_hypothesis + i];
+        train_labels[5 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_crop_2D[1 * num_hypothesis + i];
+        train_labels[6 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_crop_2D[2 * num_hypothesis + i];
+        train_labels[7 * num_valid_hypotheses + train_idx + 1] = (int)hypothesis_crop_2D[3 * num_hypothesis + i];
+        train_idx++;
+      }
+    }
+    // for (int i = 0; i < num_valid_hypotheses; i++) {
+    //   for (int j = 0; j < 8; j++)
+    //     std::cout << train_labels[j * num_valid_hypotheses + i + 1] << " ";
+    //   std::cout << std::endl;
+    // }
     std::ofstream tmp_out(labels_filename, std::ios::binary | std::ios::out);
-    tmp_out.write((char*)&num_valid_hypotheses, sizeof(int));
-    tmp_out.write((char*)&num_positive_hypotheses, sizeof(int));
-    tmp_out.write((char*)&num_negative_hypotheses, sizeof(int));
-    for (int i = 0; i < num_positive_hypotheses; i++) {
-      unsigned short tmp_var[8];
-      tmp_var[0] = (unsigned short)hypothesis_labels[hypothesis_sort_idx_positive[i]];
-      tmp_var[1] = (unsigned short)hypothesis_locations[0 * num_hypothesis + hypothesis_sort_idx_positive[i]];
-      tmp_var[2] = (unsigned short)hypothesis_locations[1 * num_hypothesis + hypothesis_sort_idx_positive[i]];
-      tmp_var[3] = (unsigned short)hypothesis_locations[2 * num_hypothesis + hypothesis_sort_idx_positive[i]];
-      tmp_var[4] = (unsigned short)hypothesis_crop_2D[0 * num_hypothesis + hypothesis_sort_idx_positive[i]];
-      tmp_var[5] = (unsigned short)hypothesis_crop_2D[1 * num_hypothesis + hypothesis_sort_idx_positive[i]];
-      tmp_var[6] = (unsigned short)hypothesis_crop_2D[2 * num_hypothesis + hypothesis_sort_idx_positive[i]];
-      tmp_var[7] = (unsigned short)hypothesis_crop_2D[3 * num_hypothesis + hypothesis_sort_idx_positive[i]];
-      for (int j = 0; j < 8; j++)
-        tmp_out.write((char*)&tmp_var[j], sizeof(unsigned short));
-    }
-    for (int i = 0; i < num_negative_hypotheses; i++) {
-      unsigned short tmp_var[8];
-      tmp_var[0] = (unsigned short)hypothesis_labels[hypothesis_sort_idx_negative[i]];
-      tmp_var[1] = (unsigned short)hypothesis_locations[0 * num_hypothesis + hypothesis_sort_idx_negative[i]];
-      tmp_var[2] = (unsigned short)hypothesis_locations[1 * num_hypothesis + hypothesis_sort_idx_negative[i]];
-      tmp_var[3] = (unsigned short)hypothesis_locations[2 * num_hypothesis + hypothesis_sort_idx_negative[i]];
-      tmp_var[4] = (unsigned short)hypothesis_crop_2D[0 * num_hypothesis + hypothesis_sort_idx_negative[i]];
-      tmp_var[5] = (unsigned short)hypothesis_crop_2D[1 * num_hypothesis + hypothesis_sort_idx_negative[i]];
-      tmp_var[6] = (unsigned short)hypothesis_crop_2D[2 * num_hypothesis + hypothesis_sort_idx_negative[i]];
-      tmp_var[7] = (unsigned short)hypothesis_crop_2D[3 * num_hypothesis + hypothesis_sort_idx_negative[i]];
-      for (int j = 0; j < 8; j++)
-        tmp_out.write((char*)&tmp_var[j], sizeof(unsigned short));
-    }
+    for (int i = 0; i < num_valid_hypotheses * 8 + 1; i++)
+      tmp_out.write((char*)&train_labels[i], sizeof(int));
     tmp_out.close();
 
     // Reset volume in GPU
@@ -428,6 +416,7 @@ void generate_train_labels(const std::string &sequence_directory) {
     delete [] hypothesis_locations;
     delete [] hypothesis_labels;
     delete [] hypothesis_crop_2D;
+    delete [] train_labels;
 
     checkCUDA(__LINE__, cudaFree(d_hypothesis_locations));
     checkCUDA(__LINE__, cudaFree(d_hypothesis_labels));
@@ -436,13 +425,265 @@ void generate_train_labels(const std::string &sequence_directory) {
   }
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char **argv) {
 
   init_fusion_GPU();
-  generate_train_labels("data/train/glue/seq01");
+
+  std::string data_directory = "data/train";
+  std::string object_name = "glue";
+  std::string object_directory = data_directory + "/" + object_name;
+
+  // Pick a random RGB-D sequence
+  std::vector<std::string> sequence_names;
+  get_files_in_directory(object_directory, sequence_names, "");
+  int rand_sequence_idx = (int)floor(gen_random_float(0, (float)sequence_names.size()));
+  std::string curr_sequence_name = sequence_names[rand_sequence_idx];
+  std::string curr_sequence_directory = object_directory + "/" + curr_sequence_name;
+  // std::cout << curr_sequence_directory << std::endl;
+
+  // Pick a random RGB-D frame
+  std::vector<std::string> frame_names;
+  get_files_in_directory(curr_sequence_directory, frame_names, ".color.png");
+  // for (int i = 0; i < frame_names.size(); i++)
+  //   std::cout << frame_names[i] << std::endl;
+  int rand_frame_idx = (int)floor(gen_random_float(0, (float)frame_names.size()));
+  std::string curr_frame_name = frame_names[rand_frame_idx];
+  curr_frame_name = curr_frame_name.substr(0, curr_frame_name.length() - 10);
+  std::cout << "Preparing Training Frame: " << curr_sequence_directory << "/" << curr_frame_name << std::endl;
+
+  // Load intrinsics (3x3 matrix)
+  std::string intrinsic_filename = curr_sequence_directory + "/intrinsics.K.txt";
+  std::vector<float> K_vec = load_matrix_from_file(intrinsic_filename, 3, 3);
+  // float K[9];
+  // for (int i = 0; i < 9; i++)
+  //   K[i] = K_vec[i];
+  float * K = &K_vec[0];
+  // for (int i = 0; i < 9; i++)
+  //   std::cout << K[i] << std::endl;
+
+  // Load RGB-D frame
+  std::string curr_frame_color_filename = curr_sequence_directory + "/" + curr_frame_name + ".color.png";
+  cv::Mat curr_frame_color = cv::imread(curr_frame_color_filename.c_str(), 1);
+  std::string curr_frame_depth_filename = curr_sequence_directory + "/" + curr_frame_name + ".depth.png";
+  cv::Mat curr_frame_depth = cv::imread(curr_frame_depth_filename.c_str(), CV_LOAD_IMAGE_UNCHANGED);
+
+  // Read ground truth object pose from file
+  std::string object_pose_filename = curr_sequence_directory + "/object.pose.txt";
+  std::vector<float> object_pose_raw = load_matrix_from_file(object_pose_filename, 4, 4);
+  float * object_pose_arr = &object_pose_raw[0];
+  // for (int i = 0; i < 12; i++)
+  //   std::cout << object_pose[i] << std::endl;
+
+  // Compute ground truth object pose w.r.t. current camera pose
+  std::string curr_cam_pose_filename = curr_sequence_directory + "/" + curr_frame_name + ".pose.txt";
+  std::vector<float> curr_cam_pose_raw = load_matrix_from_file(curr_cam_pose_filename, 4, 4);
+  float * curr_cam_pose_arr = &curr_cam_pose_raw[0];
+  // for (int i = 0; i < 16; i++)
+  //   std::cout << curr_cam_pose_arr[i] << std::endl;
+  float curr_cam_pose_inv[16] = {0};
+  invert_matrix(curr_cam_pose_arr, curr_cam_pose_inv);
+  // for (int i = 0; i < 16; i++)
+  //   std::cout << curr_cam_pose_inv[i] << std::endl;
+  float object_pose[16] = {0};
+  multiply_matrix(curr_cam_pose_inv, object_pose_arr, object_pose);
+  // for (int i = 0; i < 4; i++) {
+  //   for (int j = 0; j < 4; j++)
+  //     std::cout << object_pose[i * 4 + j] << " ";
+  //   std::cout << std::endl;
+  // }
+
+  // Display ground truth object pose
+  show_object_pose(K, object_pose, curr_frame_color);
+  // cv::waitKey(0);
+
+  // Compute center of ground truth object in 3D camera coordinates
+  float object_center_cam[3] = {0};
+  for (int i = 0; i < 3; i++)
+    object_center_cam[i] = object_pose[i * 4 + 3];
+
+  // Convert pose from rotation matrix to axis/angle (radians) representation (x, y, z, theta)
+  float object_pose_axis[3] = {0};
+  float object_pose_angle = std::acos(0.5f * (object_pose[0] + object_pose[5] + object_pose[10] - 1));
+  object_pose_axis[0] = (object_pose[9] - object_pose[6]) / (2 * std::sin(object_pose_angle));
+  object_pose_axis[1] = (object_pose[2] - object_pose[8]) / (2 * std::sin(object_pose_angle));
+  object_pose_axis[2] = (object_pose[4] - object_pose[1]) / (2 * std::sin(object_pose_angle));
+  // for (int i = 0; i < 3; i++)
+  //   std::cout << object_pose_axis[i] << std::endl;
+
+  // Convert axis/angle to pose
+  float object_pose_rotation[9] = {0};
+  object_pose_rotation[0 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[0] + std::cos(object_pose_angle);
+  object_pose_rotation[0 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[1] - object_pose_axis[2] * std::sin(object_pose_angle);
+  object_pose_rotation[0 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[2] + object_pose_axis[1] * std::sin(object_pose_angle);
+  object_pose_rotation[1 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[0] + object_pose_axis[2] * std::sin(object_pose_angle);
+  object_pose_rotation[1 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[1] + std::cos(object_pose_angle);
+  object_pose_rotation[1 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[2] - object_pose_axis[0] * std::sin(object_pose_angle);
+  object_pose_rotation[2 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[0] - object_pose_axis[1] *  std::sin(object_pose_angle);
+  object_pose_rotation[2 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[1] + object_pose_axis[0] * std::sin(object_pose_angle);
+  object_pose_rotation[2 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[2] + std::cos(object_pose_angle);
+  // for (int i = 0; i < 3; i++) {
+  //   for (int j = 0; j < 3; j++)
+  //     std::cout << object_pose_rotation[i * 3 + j] << " ";
+  //   std::cout << std::endl;
+  // }
+
+  // Bin axis into one of 42 bins
+  float axis_sphere_bin[42 * 3] = { -0.85065, -1, -0.85065, -0.80902, -0.80902, -0.80902, -0.80902, -0.52573, -0.52573, -0.5, -0.5, -0.5, -0.5, -0.30902, -0.30902, -0.30902, -0.30902, 0, 0, 0, 0, 0, 0, 0, 0, 0.30902, 0.30902, 0.30902, 0.30902, 0.5, 0.5, 0.5, 0.5, 0.52573, 0.52573, 0.80902, 0.80902, 0.80902, 0.80902, 0.85065, 1, 0.85065,
+                                    0, 0, 0, -0.5, -0.5, 0.5, 0.5, -0.85065, 0.85065, -0.30902, -0.30902, 0.30902, 0.30902, -0.80902, -0.80902, 0.80902, 0.80902, -1, -0.52573, -0.52573, 0, 0, 0.52573, 0.52573, 1, -0.80902, -0.80902, 0.80902, 0.80902, -0.30902, -0.30902, 0.30902, 0.30902, -0.85065, 0.85065, -0.5, -0.5, 0.5, 0.5, 0, 0, 0,
+                                    -0.52573, 0, 0.52573, -0.30902, 0.30902, -0.30902, 0.30902, 0, 0, -0.80902, 0.80902, -0.80902, 0.80902, -0.5, 0.5, -0.5, 0.5, 0, -0.85065, 0.85065, -1, 1, -0.85065, 0.85065, 0, -0.5, 0.5, -0.5, 0.5, -0.80902, 0.80902, -0.80902, 0.80902, 0, 0, -0.30902, 0.30902, -0.30902, 0.30902, -0.52573, 0, 0.52573
+                                  };
+  int closest_axis_bin = 0;
+  float closest_axis_dist = 100;
+  for (int i = 0; i < 42; i++) {
+    float curr_axis_dist = std::sqrt((axis_sphere_bin[0 * 42 + i] - object_pose_axis[0]) * (axis_sphere_bin[0 * 42 + i] - object_pose_axis[0]) +
+                                     (axis_sphere_bin[1 * 42 + i] - object_pose_axis[1]) * (axis_sphere_bin[1 * 42 + i] - object_pose_axis[1]) +
+                                     (axis_sphere_bin[2 * 42 + i] - object_pose_axis[2]) * (axis_sphere_bin[2 * 42 + i] - object_pose_axis[2]));
+    if (curr_axis_dist < closest_axis_dist) {
+      closest_axis_dist = curr_axis_dist;
+      closest_axis_bin = i;
+    }
+  }
+  // std::cout << closest_axis_bin << std::endl;
+  // std::cout << closest_axis_dist << std::endl;
+
+  // Bin angle into one of 18 bins (10 degrees)
+  float closest_angle_bin = floor(object_pose_angle / (3.14159265 / 18));
+  if (closest_angle_bin > 17 || closest_axis_bin > 41) {
+    std::cout << "AXIS/ANGLE BINS INCORRECTLY SET UP" << std::endl;
+    exit(1);
+  }
+
+  // Read binary files containing labels
+  std::string labels_filename = curr_sequence_directory + "/" + curr_frame_name + ".labels.bin";
+  std::ifstream inFile(labels_filename.c_str(), std::ios::binary | std::ios::in);
+  int num_valid_hypothesis = 0;
+  int num_positive_hypotheses = 0;
+  int num_negative_hypotheses = 0;
+  inFile.read((char*)&num_valid_hypothesis, sizeof(int));
+  inFile.read((char*)&num_positive_hypotheses, sizeof(int));
+  inFile.read((char*)&num_negative_hypotheses, sizeof(int));
+  // int * train_labels = new int[num_valid_hypothesis * 8];
+  // for (int i = 0; i < num_valid_hypothesis * 8; i++) {
+  //   // inFile.read((char*)&train_labels[i], sizeof(int));
+  //   unsigned short tmp_label;
+  //   inFile.read((char*)&tmp_label, sizeof(unsigned short));
+  //   train_labels[i] = (int) tmp_label;
+  // }
+  // for (int i = 0; i < num_valid_hypothesis; i++) {
+  //   for (int j = 0; j < 8; j++)
+  //     std::cout << train_labels[i * 8 + j] << " ";
+  //   std::cout << std::endl;
+  // }
+  // for (int i = 0; i < 8; i++)
+  //   std::cout << train_labels[rand_positive_idx * 8 + i] << std::endl;
+  // for (int i = 0; i < 8; i++)
+  //   std::cout << train_labels[(num_positive_hypotheses + rand_negative_idx) * 8 + i] << std::endl;
+  
+  // If no positive hypotheses, exit
+  if (num_positive_hypotheses == 0 || num_negative_hypotheses == 0)
+    return 0;
+
+  // Randomly select a positive and a negative case
+  int rand_positive_idx = (int)floor(gen_random_float(0, (float)num_positive_hypotheses));
+  int rand_negative_idx = (int)floor(gen_random_float(0, (float)num_negative_hypotheses));
+  int positive_hypothesis_crop_info[8] = {0};
+  int negative_hypothesis_crop_info[8] = {0};
+  inFile.seekg(3 * sizeof(int) + rand_positive_idx * 8 * sizeof(unsigned short));
+  for (int i = 0; i < 8; i++) {
+    unsigned short tmp_label;
+    inFile.read((char*)&tmp_label, sizeof(unsigned short));
+    positive_hypothesis_crop_info[i] = (int) tmp_label;
+  }
+  inFile.seekg(3 * sizeof(int) + num_positive_hypotheses * 8 * sizeof(unsigned short) + rand_negative_idx * 8 * sizeof(unsigned short));
+  for (int i = 0; i < 8; i++) {
+    unsigned short tmp_label;
+    inFile.read((char*)&tmp_label, sizeof(unsigned short));
+    negative_hypothesis_crop_info[i] = (int) tmp_label;
+  }
+  inFile.close();
+
+  for (int i = 0; i < 8; i++)
+    std::cout << positive_hypothesis_crop_info[i] << " ";
+  std::cout << std::endl;
+  for (int i = 0; i < 8; i++)
+    std::cout << negative_hypothesis_crop_info[i] << " ";
+  std::cout << std::endl;
+
+
+
+
+
+
+
+
+
+  // Load image/depth/extrinsic data for current frame
+  unsigned short * depth_data = (unsigned short *) malloc(480 * 640 * sizeof(unsigned short));
+  for (int i = 0; i < 480 * 640; i++)
+    depth_data[i] = (((unsigned short) curr_frame_depth.data[i * 2 + 1]) << 8) + ((unsigned short) curr_frame_depth.data[i * 2 + 0]);
+
+  // Compute relative camera pose transform between current frame and base frame
+  // Compute camera view frustum bounds within the voxel volume
+  float camera_relative_pose[16] = {0};
+  float view_bounds[6] = {0};
+  std::vector<float> curr_extrinsic;
+  for (int i = 0; i < 3; i++) {
+    curr_extrinsic.push_back(1.0f);
+    for (int i = 0; i < 4; i++) {
+      curr_extrinsic.push_back(0.0f);
+    }
+  }
+  curr_extrinsic.push_back(1.0f);
+  std::vector<std::vector<float>> extrinsics;
+  extrinsics.push_back(curr_extrinsic);
+  get_frustum_bounds(K, extrinsics, 0, 0, camera_relative_pose, view_bounds,
+                     vox_unit, vox_size, vox_range_cam);
+
+  // std::cout << view_bounds[0] << " " << view_bounds[1] << std::endl;
+  // std::cout << view_bounds[2] << " " << view_bounds[3] << std::endl;
+  // std::cout << view_bounds[4] << " " << view_bounds[5] << std::endl;
+
+  // Copy fusion params to GPU
+  checkCUDA(__LINE__, cudaMemcpy(d_K, K, 9 * sizeof(float), cudaMemcpyHostToDevice));
+  checkCUDA(__LINE__, cudaMemcpy(d_depth_data, depth_data, 480 * 640 * sizeof(unsigned short), cudaMemcpyHostToDevice));
+  checkCUDA(__LINE__, cudaMemcpy(d_view_bounds, view_bounds, 6 * sizeof(float), cudaMemcpyHostToDevice));
+  checkCUDA(__LINE__, cudaMemcpy(d_camera_relative_pose, camera_relative_pose, 16 * sizeof(float), cudaMemcpyHostToDevice));
+  checkCUDA(__LINE__, cudaMemcpy(d_vox_range_cam, vox_range_cam, 6 * sizeof(float), cudaMemcpyHostToDevice));
+
+  // Integrate
+  int CUDA_NUM_BLOCKS = vox_size[2];
+  int CUDA_NUM_THREADS = vox_size[1];
+  integrate<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS>>>(d_K, d_depth_data, d_view_bounds, d_camera_relative_pose,
+      vox_unit, vox_mu, d_vox_size, d_vox_range_cam, d_vox_tsdf, d_vox_weight);
+  checkCUDA(__LINE__, cudaGetLastError());
+  // checkCUDA(__LINE__, cudaDeviceSynchronize());
+
+  // Copy data back to memory
+  checkCUDA(__LINE__, cudaMemcpy(vox_tsdf, d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
+  checkCUDA(__LINE__, cudaMemcpy(vox_weight, d_vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
+
+  // Save curr volume to file
+  std::string scene_ply_name = "volume.pointcloud.ply";
+  save_volume_to_ply(scene_ply_name, vox_size, vox_tsdf, vox_weight);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   return 0;
 }
