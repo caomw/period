@@ -105,13 +105,13 @@ __global__
 void integrate(float* tmp_K, unsigned short* tmp_depth_data, float* tmp_view_bounds, float* tmp_camera_relative_pose,
                float tmp_vox_unit, float tmp_vox_mu, int* tmp_vox_size, float* tmp_vox_range_cam, float* tmp_vox_tsdf, float* tmp_vox_weight) {
 
-  int z = blockIdx.x;
-  int y = threadIdx.x;
+  int z = (int)tmp_view_bounds[2 * 2 + 0] + blockIdx.x;
+  int y = (int)tmp_view_bounds[1 * 2 + 0] + threadIdx.x;
 
-  if (z < (int)tmp_view_bounds[2 * 2 + 0] || z >= (int)tmp_view_bounds[2 * 2 + 1])
-    return;
-  if (y < (int)tmp_view_bounds[1 * 2 + 0] || y >= (int)tmp_view_bounds[1 * 2 + 1])
-    return;
+  // if (z < (int)tmp_view_bounds[2 * 2 + 0] || z >= (int)tmp_view_bounds[2 * 2 + 1])
+  //   return;
+  // if (y < (int)tmp_view_bounds[1 * 2 + 0] || y >= (int)tmp_view_bounds[1 * 2 + 1])
+  //   return;
   for (int x = tmp_view_bounds[0 * 2 + 0]; x < tmp_view_bounds[0 * 2 + 1]; x++) {
 
     // grid to world coords
@@ -210,11 +210,19 @@ float * d_view_bounds;
 float * d_camera_relative_pose;
 float * d_vox_range_cam;
 
+// Training data in GPU memory
+float * d_pos_crop_2D;
+float * d_neg_crop_2D;
+float * d_pos_crop_3D;
+float * d_neg_crop_3D;
+
 // Initialize existing TSDF volume in GPU memory
 __global__
-void reset_vox_GPU(int* tmp_vox_size, float* tmp_vox_tsdf, float* tmp_vox_weight) {
-  int z = blockIdx.x;
-  int y = threadIdx.x;
+void reset_vox_GPU(float* tmp_view_bounds, int* tmp_vox_size, float* tmp_vox_tsdf, float* tmp_vox_weight) {
+  // int z = blockIdx.x;
+  // int y = threadIdx.x;
+  int z = (int)tmp_view_bounds[2 * 2 + 0] + blockIdx.x;
+  int y = (int)tmp_view_bounds[1 * 2 + 0] + threadIdx.x;
   for (int x = 0; x < tmp_vox_size[0]; x++) {
     tmp_vox_tsdf[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 1.0f;
     tmp_vox_weight[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 0;
@@ -242,9 +250,9 @@ void init_fusion_GPU() {
   vox_tsdf = new float[vox_size[0] * vox_size[1] * vox_size[2]];
   vox_weight = new float[vox_size[0] * vox_size[1] * vox_size[2]];
   memset(vox_weight, 0, sizeof(float) * vox_size[0] * vox_size[1] * vox_size[2]);
-  memset(vox_tsdf, 0, sizeof(float) * vox_size[0] * vox_size[1] * vox_size[2]);
-  // for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
-  //   vox_tsdf[i] = 1.0f;
+  // memset(vox_tsdf, 0, sizeof(float) * vox_size[0] * vox_size[1] * vox_size[2]);
+  for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
+    vox_tsdf[i] = 1.0f;
 
   // Copy voxel volume to GPU
   cudaMalloc(&d_vox_size, 3 * sizeof(float));
@@ -256,19 +264,22 @@ void init_fusion_GPU() {
   cudaMemcpy(d_vox_weight, vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyHostToDevice);
   checkCUDA(__LINE__, cudaGetLastError());
 
-  // Init volume in GPU
-  int CUDA_NUM_BLOCKS = vox_size[2];
-  int CUDA_NUM_THREADS = vox_size[1];
-  reset_vox_GPU <<< CUDA_NUM_BLOCKS, CUDA_NUM_THREADS >>>(d_vox_size, d_vox_tsdf, d_vox_weight);
-  checkCUDA(__LINE__, cudaGetLastError());
+  // // Init volume in GPU
+  // int CUDA_NUM_BLOCKS = vox_size[2];
+  // int CUDA_NUM_THREADS = vox_size[1];
+  // reset_vox_GPU <<< CUDA_NUM_BLOCKS, CUDA_NUM_THREADS >>>(d_vox_size, d_vox_tsdf, d_vox_weight);
+  // checkCUDA(__LINE__, cudaGetLastError());
 
-  // Allocate GPU to hold fusion params
+  // Allocate GPU memory to hold fusion params
   cudaMalloc(&d_K, 9 * sizeof(float));
   cudaMalloc(&d_depth_data, 480 * 640 * sizeof(unsigned short));
   cudaMalloc(&d_view_bounds, 6 * sizeof(float));
   cudaMalloc(&d_camera_relative_pose, 16 * sizeof(float));
   cudaMalloc(&d_vox_range_cam, 6 * sizeof(float));
   checkCUDA(__LINE__, cudaGetLastError());
+
+  // Allocate GPU memory to hold training data
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
