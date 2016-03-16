@@ -55,15 +55,15 @@ void get_frustum_bounds(float* K, std::vector<std::vector<float>> &extrinsic_pos
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void save_volume_to_ply(const std::string &file_name, int* vox_size, float* vox_tsdf, float* vox_weight) {
+void save_volume_to_ply(const std::string &file_name, int* vox_size, float* vox_tsdf) {
   float tsdf_threshold = 0.2f;
-  float weight_threshold = 1.0f;
+  // float weight_threshold = 1.0f;
   // float radius = 5.0f;
 
   // Count total number of points in point cloud
   int num_points = 0;
   for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
-    if (std::abs(vox_tsdf[i]) < tsdf_threshold && vox_weight[i] >= weight_threshold)
+    if (std::abs(vox_tsdf[i]) < tsdf_threshold)
       num_points++;
 
   // Create header for ply file
@@ -80,7 +80,7 @@ void save_volume_to_ply(const std::string &file_name, int* vox_size, float* vox_
   for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++) {
 
     // If TSDF value of voxel is less than some threshold, add voxel coordinates to point cloud
-    if (std::abs(vox_tsdf[i]) < tsdf_threshold && vox_weight[i] >= weight_threshold) {
+    if (std::abs(vox_tsdf[i]) < tsdf_threshold) {
 
       // Compute voxel indices in int for higher positive number range
       int z = floor(i / (vox_size[0] * vox_size[1]));
@@ -223,7 +223,7 @@ void reset_vox_GPU(float* tmp_view_bounds, int* tmp_vox_size, float* tmp_vox_tsd
   // int y = threadIdx.x;
   int z = (int)tmp_view_bounds[2 * 2 + 0] + blockIdx.x;
   int y = (int)tmp_view_bounds[1 * 2 + 0] + threadIdx.x;
-  for (int x = 0; x < tmp_vox_size[0]; x++) {
+  for (int x = tmp_view_bounds[0 * 2 + 0]; x < tmp_view_bounds[0 * 2 + 1]; x++) {
     tmp_vox_tsdf[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 1.0f;
     tmp_vox_weight[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 0;
   }

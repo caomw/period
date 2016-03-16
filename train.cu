@@ -123,7 +123,29 @@ void gen_hypothesis_labels(int num_hypothesis, unsigned short* tmp_hypothesis_lo
 
 ////////////////////////////////////////////////////////////////////////////////
 
-std::vector<cv::Mat> gen_train_hypothesis_pair(const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label) {
+void patch2tensor(cv::Mat curr_patch, float* patch_data) {
+  for (int tmp_row = 0; tmp_row < 227; tmp_row++)
+    for (int tmp_col = 0; tmp_col < 227; tmp_col++) {
+      patch_data[0 * 227 * 227 + tmp_row * 227 + tmp_col] = ((float) curr_patch.at<cv::Vec3b>(tmp_row,tmp_col)[0]) - 102.9801f; // B
+      patch_data[1 * 227 * 227 + tmp_row * 227 + tmp_col] = ((float) curr_patch.at<cv::Vec3b>(tmp_row,tmp_col)[1]) - 115.9465f; // G
+      patch_data[2 * 227 * 227 + tmp_row * 227 + tmp_col] = ((float) curr_patch.at<cv::Vec3b>(tmp_row,tmp_col)[2]) - 122.7717f; // R
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+__global__
+void process_3D_patch(int batch_idx, float* tmp_batch_3D, int crop_x, int crop_y, int crop_z, int* tmp_vox_size, float* tmp_vox_tsdf) {
+  int z = crop_z - 15 + blockIdx.x;
+  int y = crop_y - 15 + threadIdx.x;
+  for (int x = crop_x - 15; x < crop_x + 15; x++) {
+    tmp_batch_3D[(batch_idx * 30 * 30 * 30) + blockIdx.x * 30 * 30 + threadIdx.x * 30 + (x - (crop_x - 15))] = tmp_vox_tsdf[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x];
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D, const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label) {
 
   bool is_hypothesis_pair_found = false;
   std::vector<cv::Mat> patches_2D;
@@ -352,14 +374,17 @@ std::vector<cv::Mat> gen_train_hypothesis_pair(const std::string &object_directo
     // Integrate
     // int CUDA_NUM_BLOCKS = vox_size[2];
     // int CUDA_NUM_THREADS = vox_size[1];
-    integrate<<<30,30>>>(d_K, d_depth_data, d_view_bounds, d_camera_relative_pose,
-        vox_unit, vox_mu, d_vox_size, d_vox_range_cam, d_vox_tsdf, d_vox_weight);
+    integrate<<<30,30>>>(d_K, d_depth_data, d_view_bounds, d_camera_relative_pose, vox_unit, vox_mu, d_vox_size, d_vox_range_cam, d_vox_tsdf, d_vox_weight);
     checkCUDA(__LINE__, cudaGetLastError());
     // checkCUDA(__LINE__, cudaDeviceSynchronize());
 
     // // Copy data back to memory
     // checkCUDA(__LINE__, cudaMemcpy(vox_tsdf, d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
     // checkCUDA(__LINE__, cudaMemcpy(vox_weight, d_vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
+
+    // Crop out 3D patch from TSDF volume
+    process_3D_patch<<<30,30>>>(batch_idx * 2, d_batch_3D, positive_hypothesis_crop_info[1], positive_hypothesis_crop_info[2], positive_hypothesis_crop_info[3], d_vox_size, d_vox_tsdf);
+    checkCUDA(__LINE__, cudaGetLastError());
 
     // Reset voxel volume
     reset_vox_GPU<<<30,30>>>(d_view_bounds, d_vox_size, d_vox_tsdf, d_vox_weight);
@@ -386,14 +411,17 @@ std::vector<cv::Mat> gen_train_hypothesis_pair(const std::string &object_directo
     checkCUDA(__LINE__, cudaMemcpy(d_view_bounds, view_bounds, 6 * sizeof(float), cudaMemcpyHostToDevice));
 
     // Integrate
-    integrate<<<30,30>>>(d_K, d_depth_data, d_view_bounds, d_camera_relative_pose,
-        vox_unit, vox_mu, d_vox_size, d_vox_range_cam, d_vox_tsdf, d_vox_weight);
+    integrate<<<30,30>>>(d_K, d_depth_data, d_view_bounds, d_camera_relative_pose, vox_unit, vox_mu, d_vox_size, d_vox_range_cam, d_vox_tsdf, d_vox_weight);
     checkCUDA(__LINE__, cudaGetLastError());
     // checkCUDA(__LINE__, cudaDeviceSynchronize());
 
     // // Copy data back to memory
     // checkCUDA(__LINE__, cudaMemcpy(vox_tsdf, d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
     // checkCUDA(__LINE__, cudaMemcpy(vox_weight, d_vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
+    
+    // Crop out 3D patch from TSDF volume
+    process_3D_patch<<<30,30>>>(batch_idx * 2 + 1, d_batch_3D, negative_hypothesis_crop_info[1], negative_hypothesis_crop_info[2], negative_hypothesis_crop_info[3], d_vox_size, d_vox_tsdf);
+    checkCUDA(__LINE__, cudaGetLastError());
     
     // Reset voxel volume
     reset_vox_GPU<<<30,30>>>(d_view_bounds, d_vox_size, d_vox_tsdf, d_vox_weight);
@@ -413,15 +441,6 @@ std::vector<cv::Mat> gen_train_hypothesis_pair(const std::string &object_directo
   return patches_2D;
 }
 
-void patch2tensor(cv::Mat curr_patch, float* patch_data) {
-  for (int tmp_row = 0; tmp_row < 227; tmp_row++)
-    for (int tmp_col = 0; tmp_col < 227; tmp_col++) {
-      patch_data[0 * 227 * 227 + tmp_row * 227 + tmp_col] = ((float) curr_patch.at<cv::Vec3b>(tmp_row,tmp_col)[0]) - 102.9801f; // B
-      patch_data[1 * 227 * 227 + tmp_row * 227 + tmp_col] = ((float) curr_patch.at<cv::Vec3b>(tmp_row,tmp_col)[1]) - 115.9465f; // G
-      patch_data[2 * 227 * 227 + tmp_row * 227 + tmp_col] = ((float) curr_patch.at<cv::Vec3b>(tmp_row,tmp_col)[2]) - 122.7717f; // R
-    }
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char **argv) {
@@ -429,6 +448,11 @@ int main(int argc, char **argv) {
   init_fusion_GPU();
   int positive_hypothesis_crop_info[8] = {0};
   int negative_hypothesis_crop_info[8] = {0};
+
+  float * d_batch_2D;
+  float * d_batch_3D;
+  checkCUDA(__LINE__, cudaMalloc(&d_batch_2D, 32 * 3 * 227 * 227 * sizeof(float)));
+  checkCUDA(__LINE__, cudaMalloc(&d_batch_3D, 32 * 30 * 30 * 30 * sizeof(float)));
 
   tic();
   for (int i = 0; i < 16; i++) {
@@ -438,7 +462,7 @@ int main(int argc, char **argv) {
     std::string object_name = "glue";
     std::string object_directory = data_directory + "/" + object_name;
     int axis_angle_label[2] = {0};
-    std::vector<cv::Mat> patches_2D = gen_train_hypothesis_pair(object_directory, positive_hypothesis_crop_info, negative_hypothesis_crop_info, axis_angle_label);
+    std::vector<cv::Mat> patches_2D = gen_train_hypothesis_pair(i, d_batch_3D, object_directory, positive_hypothesis_crop_info, negative_hypothesis_crop_info, axis_angle_label);
 
     // // Show image patches
     // cv::namedWindow("Positive Patch", CV_WINDOW_AUTOSIZE);
@@ -452,19 +476,38 @@ int main(int argc, char **argv) {
     float * neg_patch_data = new float[3 * 227 * 227];
     patch2tensor(patches_2D[0], pos_patch_data);
     patch2tensor(patches_2D[1], neg_patch_data);
+    checkCUDA(__LINE__, cudaMemcpy(&d_batch_2D[(i * 2) * 3 * 227 * 227], pos_patch_data, 3 * 227 * 227 * sizeof(float), cudaMemcpyHostToDevice));
+    checkCUDA(__LINE__, cudaMemcpy(&d_batch_2D[(i * 2 + 1) * 3 * 227 * 227], neg_patch_data, 3 * 227 * 227 * sizeof(float), cudaMemcpyHostToDevice));
 
     // Copy axis/angle label
     std::cout << axis_angle_label[0] << " " << axis_angle_label[1] << std::endl;
 
-    // Copy over 3D patch in GPU
-
-
-
-
-
-
   }
   toc();
+
+  float * batch_2D = new float[32 * 3 * 227 * 227];
+  float * batch_3D = new float[32 * 30 * 30 * 30];
+  memset(batch_2D, 0, sizeof(float) * 32 * 3 * 227 * 227);
+  memset(batch_3D, 0, sizeof(float) * 32 * 30 * 30 * 30);
+  checkCUDA(__LINE__, cudaMemcpy(batch_2D, d_batch_2D, 32 * 3 * 227 * 227 * sizeof(float), cudaMemcpyDeviceToHost));
+  checkCUDA(__LINE__, cudaMemcpy(batch_3D, d_batch_3D, 32 * 30 * 30 * 30 * sizeof(float), cudaMemcpyDeviceToHost));
+
+  // for (int i = 0; i < 32 * 3 * 227 * 227; i++)
+  //   std::cout << "2D batch data: " << batch_2D[i] << std::endl;
+
+  // for (int i = 0; i < 32 * 30 * 30 * 30; i++)
+  //   std::cout << "3D batch data: " << batch_3D[i] << std::endl;
+
+  // // Save curr volumes to file
+  // int patch3D_size[3];
+  // patch3D_size[0] = 30;
+  // patch3D_size[1] = 30;
+  // patch3D_size[2] = 30;
+  // for (int i = 0; i < 32; i++) {
+  //   std::string scene_ply_name = "patch." + std::to_string(i) + ".ply";
+  //   save_volume_to_ply(scene_ply_name, patch3D_size, &batch_3D[i * 30 * 30 * 30]);
+  // }
+
 
   return 0;
 }
