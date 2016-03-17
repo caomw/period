@@ -15,38 +15,40 @@
     "display_iter": 1,
     "test_iter": 5,
     "test_interval": 100,
-    "GPU": 1
+    "GPU": 0
   },
   "test": {
     "GPU": 0
   },
   "layers": [
     {
-      "type":"PeriodData",
-      "name":"data3DTrain",
+      "type":"PeriodTrainData",
+      "name":"dataTrain",
       "phase":"Training",
-      "file_data":["../../data/tensors/data2DTrain.tensor","../../data/tensors/data3DTrain.tensor"],
-      "file_label":["../../data/tensors/labelsTrain.tensor"],
+      "file_data":["../../data/train"],
       "batch_size":32,
       "size_crop":[30,30,30],
       "out":[
         "data2D",
         "data3D",
-        "label"
+        "label_class",
+        "label_axis",
+        "label_angle"
       ]
     },
     {
-      "type":"PeriodData",
-      "name":"data3DTest",
+      "type":"PeriodTrainData",
+      "name":"dataTest",
       "phase":"Testing",
-      "file_data":["../../TMPdata2D.tensor","../../TMPdata3D.tensor"],
-      "file_label":["../../TMPlabels.tensor"],
+      "file_data":["../../data/train"],
       "batch_size":32,
       "size_crop":[30,30,30],
       "out":[
         "data2D",
         "data3D",
-        "label"
+        "label_class",
+        "label_axis",
+        "label_angle"
       ]
     },
     {
@@ -774,18 +776,78 @@
     {
       "in": [
         "class_score",
-        "label"
+        "label_class"
       ],
       "type": "Loss",
       "name": "loss_class",
       "mode": "MultinomialLogistic_StableSoftmax",
       "loss_weight": 1
+    },
+    {
+      "in": ["Cfc2"],
+      "type": "InnerProduct",
+      "name": "fc_axis",
+      "num_output": 42,
+      "weight_lr_mult": 1,
+      "weight_decay_mult": 1,
+      "weight_filler": "Gaussian",
+      "weight_filler_param": 0.01,
+      "bias_lr_mult": 2,
+      "bias_decay_mult": 0,
+      "bias_filler": "Constant",
+      "bias_filler_param": 0,
+      "train_me": true,
+      "out": ["axis_score"]
+    },
+    {
+      "in": ["axis_score"],
+      "type": "Softmax",
+      "stable_gradient": true,
+      "name": "axis_score",
+      "out": ["axis_score"]
+    },
+    {
+      "in": [
+        "axis_score",
+        "label_axis"
+      ],
+      "type": "Loss",
+      "name": "loss_axis",
+      "mode": "MultinomialLogistic_StableSoftmax",
+      "loss_weight": 1
+    },
+    {
+      "in": ["Cfc2"],
+      "type": "InnerProduct",
+      "name": "fc_angle",
+      "num_output": 18,
+      "weight_lr_mult": 1,
+      "weight_decay_mult": 1,
+      "weight_filler": "Gaussian",
+      "weight_filler_param": 0.01,
+      "bias_lr_mult": 2,
+      "bias_decay_mult": 0,
+      "bias_filler": "Constant",
+      "bias_filler_param": 0,
+      "train_me": true,
+      "out": ["angle_score"]
+    },
+    {
+      "in": ["angle_score"],
+      "type": "Softmax",
+      "stable_gradient": true,
+      "name": "angle_score",
+      "out": ["angle_score"]
+    },
+    {
+      "in": [
+        "angle_score",
+        "label_angle"
+      ],
+      "type": "Loss",
+      "name": "loss_angle",
+      "mode": "MultinomialLogistic_StableSoftmax",
+      "loss_weight": 1
     }
-
-
-
-
-
-
   ]
 }

@@ -167,7 +167,7 @@ std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D,
     int rand_frame_idx = (int)floor(gen_random_float(0, (float)frame_names.size()));
     std::string curr_frame_name = frame_names[rand_frame_idx];
     curr_frame_name = curr_frame_name.substr(0, curr_frame_name.length() - 10);
-    std::cout << "Preparing Training Frame: " << curr_sequence_directory << "/" << curr_frame_name << std::endl;
+    // std::cout << "Preparing Training Frame: " << curr_sequence_directory << "/" << curr_frame_name << std::endl;
 
     // Load intrinsics (3x3 matrix)
     std::string intrinsic_filename = curr_sequence_directory + "/intrinsics.K.txt";
@@ -321,12 +321,12 @@ std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D,
       negative_hypothesis_crop_info[i] = (int) tmp_label;
     }
     inFile.close();
-    for (int i = 0; i < 8; i++)
-      std::cout << positive_hypothesis_crop_info[i] << " ";
-    std::cout << std::endl;
-    for (int i = 0; i < 8; i++)
-      std::cout << negative_hypothesis_crop_info[i] << " ";
-    std::cout << std::endl;
+    // for (int i = 0; i < 8; i++)
+    //   std::cout << positive_hypothesis_crop_info[i] << " ";
+    // std::cout << std::endl;
+    // for (int i = 0; i < 8; i++)
+    //   std::cout << negative_hypothesis_crop_info[i] << " ";
+    // std::cout << std::endl;
 
     // Load image/depth/extrinsic data for current frame
     unsigned short * depth_data = (unsigned short *) malloc(480 * 640 * sizeof(unsigned short));

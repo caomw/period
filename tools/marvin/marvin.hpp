@@ -6,54 +6,54 @@
  */
 
 #if DATATYPE==0
-    #pragma message "Compiling using StorageT=half ComputeT=float"
-    #define StorageT half
-    #define ComputeT float
-    #define sizeofStorageT 2
-    #define sizeofComputeT 4
-    #define CUDNNStorageT CUDNN_DATA_HALF
-    #define CUDNNConvComputeT CUDNN_DATA_FLOAT
-    #define CPUStorage2ComputeT(x) (cpu_half2float(x))
-    #define CPUCompute2StorageT(x) (cpu_float2half(x))
-    #define GPUStorage2ComputeT(x) (__half2float(x))
-    #define GPUCompute2StorageT(x) (__float2half(x))
-    #define GPUgemm Hgemm
-    #define GPUasum Hasum
-    #define ISNAN(x) (ishnan(x))
-    #define ComputeT_MIN FLT_MIN
-    #include <cuda_fp16.h>
+#pragma message "Compiling using StorageT=half ComputeT=float"
+#define StorageT half
+#define ComputeT float
+#define sizeofStorageT 2
+#define sizeofComputeT 4
+#define CUDNNStorageT CUDNN_DATA_HALF
+#define CUDNNConvComputeT CUDNN_DATA_FLOAT
+#define CPUStorage2ComputeT(x) (cpu_half2float(x))
+#define CPUCompute2StorageT(x) (cpu_float2half(x))
+#define GPUStorage2ComputeT(x) (__half2float(x))
+#define GPUCompute2StorageT(x) (__float2half(x))
+#define GPUgemm Hgemm
+#define GPUasum Hasum
+#define ISNAN(x) (ishnan(x))
+#define ComputeT_MIN FLT_MIN
+#include <cuda_fp16.h>
 #elif DATATYPE==1
-    #pragma message "Compiling using StorageT=float ComputeT=float"
-    #define StorageT float
-    #define ComputeT float
-    #define sizeofStorageT 4
-    #define sizeofComputeT 4
-    #define CUDNNStorageT CUDNN_DATA_FLOAT
-    #define CUDNNConvComputeT CUDNN_DATA_FLOAT
-    #define CPUStorage2ComputeT(x) (x)
-    #define CPUCompute2StorageT(x) (x)
-    #define GPUStorage2ComputeT(x) (x)
-    #define GPUCompute2StorageT(x) (x)
-    #define GPUgemm cublasSgemm
-    #define GPUasum cublasSasum
-    #define ISNAN(x) (std::isnan(x))
-    #define ComputeT_MIN FLT_MIN
+#pragma message "Compiling using StorageT=float ComputeT=float"
+#define StorageT float
+#define ComputeT float
+#define sizeofStorageT 4
+#define sizeofComputeT 4
+#define CUDNNStorageT CUDNN_DATA_FLOAT
+#define CUDNNConvComputeT CUDNN_DATA_FLOAT
+#define CPUStorage2ComputeT(x) (x)
+#define CPUCompute2StorageT(x) (x)
+#define GPUStorage2ComputeT(x) (x)
+#define GPUCompute2StorageT(x) (x)
+#define GPUgemm cublasSgemm
+#define GPUasum cublasSasum
+#define ISNAN(x) (std::isnan(x))
+#define ComputeT_MIN FLT_MIN
 #elif DATATYPE==2
-    #pragma message "Compiling using StorageT=double ComputeT=double"
-    #define StorageT double
-    #define ComputeT double
-    #define sizeofStorageT 8
-    #define sizeofComputeT 8
-    #define CUDNNStorageT CUDNN_DATA_DOUBLE
-    #define CUDNNConvComputeT CUDNN_DATA_DOUBLE
-    #define CPUStorage2ComputeT(x) (x)
-    #define CPUCompute2StorageT(x) (x)
-    #define GPUStorage2ComputeT(x) (x)
-    #define GPUCompute2StorageT(x) (x)
-    #define GPUgemm cublasDgemm
-    #define GPUasum cublasDasum
-    #define ISNAN(x) (std::isnan(x))
-    #define ComputeT_MIN DBL_MIN
+#pragma message "Compiling using StorageT=double ComputeT=double"
+#define StorageT double
+#define ComputeT double
+#define sizeofStorageT 8
+#define sizeofComputeT 8
+#define CUDNNStorageT CUDNN_DATA_DOUBLE
+#define CUDNNConvComputeT CUDNN_DATA_DOUBLE
+#define CPUStorage2ComputeT(x) (x)
+#define CPUCompute2StorageT(x) (x)
+#define GPUStorage2ComputeT(x) (x)
+#define GPUCompute2StorageT(x) (x)
+#define GPUgemm cublasDgemm
+#define GPUasum cublasDasum
+#define ISNAN(x) (std::isnan(x))
+#define ComputeT_MIN DBL_MIN
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -114,9 +114,9 @@ const ComputeT* zeroComputeT = &zeroval;
 // Debugging utility
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-void FatalError(const int lineNumber=0) {
+void FatalError(const int lineNumber = 0) {
     std::cerr << "FatalError";
-    if (lineNumber!=0) std::cerr<<" at LINE "<<lineNumber;
+    if (lineNumber != 0) std::cerr << " at LINE " << lineNumber;
     std::cerr << ". Program Terminated." << std::endl;
     cudaDeviceReset();
     exit(EXIT_FAILURE);
@@ -133,41 +133,41 @@ void checkCUDNN(const int lineNumber, cudnnStatus_t status) {
     if (status != CUDNN_STATUS_SUCCESS) {
         std::cerr << "CUDNN failure at LINE " << lineNumber << ": ";
         switch (status) {
-            case CUDNN_STATUS_SUCCESS:              std::cerr << "CUDNN_STATUS_SUCCESS" << std::endl; break;
-            case CUDNN_STATUS_NOT_INITIALIZED:      std::cerr << "CUDNN_STATUS_NOT_INITIALIZED" << std::endl; break;
-            case CUDNN_STATUS_ALLOC_FAILED:         std::cerr << "CUDNN_STATUS_ALLOC_FAILED" << std::endl; break;
-            case CUDNN_STATUS_BAD_PARAM:            std::cerr << "CUDNN_STATUS_BAD_PARAM" << std::endl; break;
-            case CUDNN_STATUS_INTERNAL_ERROR:       std::cerr << "CUDNN_STATUS_INTERNAL_ERROR" << std::endl; break;
-            case CUDNN_STATUS_INVALID_VALUE:        std::cerr << "CUDNN_STATUS_INVALID_VALUE" << std::endl; break;
-            case CUDNN_STATUS_ARCH_MISMATCH:        std::cerr << "CUDNN_STATUS_ARCH_MISMATCH" << std::endl; break;
-            case CUDNN_STATUS_MAPPING_ERROR:        std::cerr << "CUDNN_STATUS_MAPPING_ERROR" << std::endl; break;
-            case CUDNN_STATUS_EXECUTION_FAILED:     std::cerr << "CUDNN_STATUS_EXECUTION_FAILED" << std::endl; break;
-            case CUDNN_STATUS_NOT_SUPPORTED:        std::cerr << "CUDNN_STATUS_NOT_SUPPORTED" << std::endl; break;
-            case CUDNN_STATUS_LICENSE_ERROR:        std::cerr << "CUDNN_STATUS_LICENSE_ERROR" << std::endl; break;
+        case CUDNN_STATUS_SUCCESS:              std::cerr << "CUDNN_STATUS_SUCCESS" << std::endl; break;
+        case CUDNN_STATUS_NOT_INITIALIZED:      std::cerr << "CUDNN_STATUS_NOT_INITIALIZED" << std::endl; break;
+        case CUDNN_STATUS_ALLOC_FAILED:         std::cerr << "CUDNN_STATUS_ALLOC_FAILED" << std::endl; break;
+        case CUDNN_STATUS_BAD_PARAM:            std::cerr << "CUDNN_STATUS_BAD_PARAM" << std::endl; break;
+        case CUDNN_STATUS_INTERNAL_ERROR:       std::cerr << "CUDNN_STATUS_INTERNAL_ERROR" << std::endl; break;
+        case CUDNN_STATUS_INVALID_VALUE:        std::cerr << "CUDNN_STATUS_INVALID_VALUE" << std::endl; break;
+        case CUDNN_STATUS_ARCH_MISMATCH:        std::cerr << "CUDNN_STATUS_ARCH_MISMATCH" << std::endl; break;
+        case CUDNN_STATUS_MAPPING_ERROR:        std::cerr << "CUDNN_STATUS_MAPPING_ERROR" << std::endl; break;
+        case CUDNN_STATUS_EXECUTION_FAILED:     std::cerr << "CUDNN_STATUS_EXECUTION_FAILED" << std::endl; break;
+        case CUDNN_STATUS_NOT_SUPPORTED:        std::cerr << "CUDNN_STATUS_NOT_SUPPORTED" << std::endl; break;
+        case CUDNN_STATUS_LICENSE_ERROR:        std::cerr << "CUDNN_STATUS_LICENSE_ERROR" << std::endl; break;
         }
         FatalError();
     }
-    checkCUDA(lineNumber,cudaGetLastError());
+    checkCUDA(lineNumber, cudaGetLastError());
 
 }
 void checkCUBLAS(const int lineNumber, cublasStatus_t status) {
     if (status != CUBLAS_STATUS_SUCCESS) {
         std::cerr << "CUBLAS failure at LINE " << lineNumber << ": ";
         switch (status) {
-            case CUBLAS_STATUS_SUCCESS:             std::cerr << "CUBLAS_STATUS_SUCCESS" << std::endl; break;
-            case CUBLAS_STATUS_NOT_INITIALIZED:     std::cerr << "CUBLAS_STATUS_NOT_INITIALIZED" << std::endl; break;
-            case CUBLAS_STATUS_ALLOC_FAILED:        std::cerr << "CUBLAS_STATUS_ALLOC_FAILED" << std::endl; break;
-            case CUBLAS_STATUS_INVALID_VALUE:       std::cerr << "CUBLAS_STATUS_INVALID_VALUE" << std::endl; break;
-            case CUBLAS_STATUS_ARCH_MISMATCH:       std::cerr << "CUBLAS_STATUS_ARCH_MISMATCH" << std::endl; break;
-            case CUBLAS_STATUS_MAPPING_ERROR:       std::cerr << "CUBLAS_STATUS_MAPPING_ERROR" << std::endl; break;
-            case CUBLAS_STATUS_EXECUTION_FAILED:    std::cerr << "CUBLAS_STATUS_EXECUTION_FAILED" << std::endl; break;
-            case CUBLAS_STATUS_INTERNAL_ERROR:      std::cerr << "CUBLAS_STATUS_INTERNAL_ERROR" << std::endl; break;
-            case CUBLAS_STATUS_NOT_SUPPORTED:       std::cerr << "CUBLAS_STATUS_NOT_SUPPORTED" << std::endl; break;
-            case CUBLAS_STATUS_LICENSE_ERROR:       std::cerr << "CUBLAS_STATUS_LICENSE_ERROR" << std::endl; break;
+        case CUBLAS_STATUS_SUCCESS:             std::cerr << "CUBLAS_STATUS_SUCCESS" << std::endl; break;
+        case CUBLAS_STATUS_NOT_INITIALIZED:     std::cerr << "CUBLAS_STATUS_NOT_INITIALIZED" << std::endl; break;
+        case CUBLAS_STATUS_ALLOC_FAILED:        std::cerr << "CUBLAS_STATUS_ALLOC_FAILED" << std::endl; break;
+        case CUBLAS_STATUS_INVALID_VALUE:       std::cerr << "CUBLAS_STATUS_INVALID_VALUE" << std::endl; break;
+        case CUBLAS_STATUS_ARCH_MISMATCH:       std::cerr << "CUBLAS_STATUS_ARCH_MISMATCH" << std::endl; break;
+        case CUBLAS_STATUS_MAPPING_ERROR:       std::cerr << "CUBLAS_STATUS_MAPPING_ERROR" << std::endl; break;
+        case CUBLAS_STATUS_EXECUTION_FAILED:    std::cerr << "CUBLAS_STATUS_EXECUTION_FAILED" << std::endl; break;
+        case CUBLAS_STATUS_INTERNAL_ERROR:      std::cerr << "CUBLAS_STATUS_INTERNAL_ERROR" << std::endl; break;
+        case CUBLAS_STATUS_NOT_SUPPORTED:       std::cerr << "CUBLAS_STATUS_NOT_SUPPORTED" << std::endl; break;
+        case CUBLAS_STATUS_LICENSE_ERROR:       std::cerr << "CUBLAS_STATUS_LICENSE_ERROR" << std::endl; break;
         }
         FatalError();
     }
-    checkCUDA(lineNumber,cudaGetLastError());
+    checkCUDA(lineNumber, cudaGetLastError());
 }
 
 unsigned long long get_timestamp() {
@@ -186,7 +186,7 @@ unsigned long long tic() {
 unsigned long long toc() {
     unsigned long long ticEnd = get_timestamp();
     unsigned long long delta = ticEnd - ticBegin;
-    std::cout << "Time passes " << delta << " microseconds" <<std::endl;
+    std::cout << "Time passes " << delta << " microseconds" << std::endl;
     ticBegin = ticEnd;
     return delta;
 }
@@ -302,199 +302,199 @@ std::ostream& operator<< (std::ostream& stream, const half& x) {
 enum JSONType { JSON_String, JSON_Bool, JSON_Null, JSON_Number, JSON_Object, JSON_ObjectArray};
 
 // plain object
-class JSON{
+class JSON {
 public:
     JSONType type;
     std::vector<void*> array;
     std::map<std::string, JSON*> member;
 
-    ~JSON(){
-        for (int i=0;i<array.size();++i){
-            if (array[i]!=NULL){
-                switch(type){
-                    case JSON_String:
-                        delete ((std::string*)(array[i]));
+    ~JSON() {
+        for (int i = 0; i < array.size(); ++i) {
+            if (array[i] != NULL) {
+                switch (type) {
+                case JSON_String:
+                    delete ((std::string*)(array[i]));
                     break;
-                    case JSON_Bool:
-                        delete ((bool*)(array[i]));
+                case JSON_Bool:
+                    delete ((bool*)(array[i]));
                     break;
-                    case JSON_Null:
+                case JSON_Null:
                     break;
-                    case JSON_Number:
-                        delete ((ComputeT*)(array[i]));
+                case JSON_Number:
+                    delete ((ComputeT*)(array[i]));
                     break;
-                    case JSON_Object:
+                case JSON_Object:
                     break;
-                    case JSON_ObjectArray:
-                        delete ((JSON*)(array[i]));
+                case JSON_ObjectArray:
+                    delete ((JSON*)(array[i]));
                     break;
                 }
             }
         }
-        for (std::map<std::string, JSON*>::iterator it = member.begin(); it != member.end(); it++ ){
+        for (std::map<std::string, JSON*>::iterator it = member.begin(); it != member.end(); it++ ) {
             if (it->second != NULL)
                 delete it->second;
         }
     };
 
-    std::string returnString(){
-        if (type!=JSON_String) FatalError(__LINE__);
+    std::string returnString() {
+        if (type != JSON_String) FatalError(__LINE__);
         return *((std::string*)(array[0]));
     };
 
-    bool returnBool(){
-        if (type!=JSON_Bool) FatalError(__LINE__);
+    bool returnBool() {
+        if (type != JSON_Bool) FatalError(__LINE__);
         return *((bool*)(array[0]));
     };
 
-    ComputeT returnReal(){
-        if (type!=JSON_Number) FatalError(__LINE__);
+    ComputeT returnReal() {
+        if (type != JSON_Number) FatalError(__LINE__);
         return *((ComputeT*)(array[0]));
     };
 
-    std::vector<int> returnIntVector(){
-        if (type!=JSON_Number) FatalError(__LINE__);
+    std::vector<int> returnIntVector() {
+        if (type != JSON_Number) FatalError(__LINE__);
         std::vector<int> v(array.size());
-        for (int i=0;i<array.size();++i){
+        for (int i = 0; i < array.size(); ++i) {
             v[i] = (int)(*((ComputeT*)(array[i])));
         }
         return v;
     };
 
-    std::vector<ComputeT> returnRealVector(){
-        if (type!=JSON_Number) FatalError(__LINE__);
+    std::vector<ComputeT> returnRealVector() {
+        if (type != JSON_Number) FatalError(__LINE__);
         std::vector<ComputeT> v(array.size());
-        for (int i=0;i<array.size();++i){
+        for (int i = 0; i < array.size(); ++i) {
             v[i] = (ComputeT)(*((ComputeT*)(array[i])));
         }
         return v;
     };
 
-    std::vector<std::string> returnStringVector(){
-        if (type!=JSON_String) FatalError(__LINE__);
+    std::vector<std::string> returnStringVector() {
+        if (type != JSON_String) FatalError(__LINE__);
         std::vector<std::string> v(array.size());
-        for (int i=0;i<array.size();++i){
+        for (int i = 0; i < array.size(); ++i) {
             v[i] = *((std::string*)(array[i]));
         }
         return v;
     };
 
-    void setOrDie(std::string name, unsigned int &variable){
-        if (this->member.find(name) == this->member.end()){
+    void setOrDie(std::string name, unsigned int &variable) {
+        if (this->member.find(name) == this->member.end()) {
             FatalError(__LINE__);
         }
         else variable = (unsigned int)this->member[name]->returnReal();
     };
 
-    void setOrDie(std::string name, bool &variable){
-        if (this->member.find(name) == this->member.end()){
+    void setOrDie(std::string name, bool &variable) {
+        if (this->member.find(name) == this->member.end()) {
             FatalError(__LINE__);
         }
         else variable = this->member[name]->returnBool();
     };
 
-    void setOrDie(std::string name, std::vector<ComputeT> &variable){
+    void setOrDie(std::string name, std::vector<ComputeT> &variable) {
         if (this->member.find(name) == this->member.end())
             FatalError(__LINE__);
         else variable = this->member[name]->returnRealVector();
     };
 
-    void set(std::string name, bool &variable, bool default_value){
+    void set(std::string name, bool &variable, bool default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else variable = this->member[name]->returnBool();
     };
 
-    void set(std::string name, ComputeT &variable, ComputeT default_value){
+    void set(std::string name, ComputeT &variable, ComputeT default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else variable = (ComputeT)(this->member[name]->returnReal());
     };
 
-    void setOrDie(std::string name, ComputeT &variable){
+    void setOrDie(std::string name, ComputeT &variable) {
         if (this->member.find(name) == this->member.end())                              FatalError(__LINE__);
         else variable = (ComputeT)(this->member[name]->returnReal());
     };
 
-    void set(std::string name, int &variable, int default_value){
+    void set(std::string name, int &variable, int default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else variable = (int)(this->member[name]->returnReal());
     };
 
-    void set(std::string name, double &variable, double default_value){
+    void set(std::string name, double &variable, double default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else variable = (double)(this->member[name]->returnReal());
     };
 
-    void set(std::string name, unsigned int &variable, unsigned int default_value){
+    void set(std::string name, unsigned int &variable, unsigned int default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else variable = (unsigned int)(this->member[name]->returnReal());
     };
 
-    void setOrDie(std::string name, int &variable){
+    void setOrDie(std::string name, int &variable) {
         if (this->member.find(name) == this->member.end())                              FatalError(__LINE__);
         else variable = (int)(this->member[name]->returnReal());
     };
 
-    void set(std::string name, std::vector<int> &variable, std::vector<int> default_value){
+    void set(std::string name, std::vector<int> &variable, std::vector<int> default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else variable = this->member[name]->returnIntVector();
     };
 
-    void set(std::string name, std::vector<ComputeT> &variable, std::vector<ComputeT> default_value){
+    void set(std::string name, std::vector<ComputeT> &variable, std::vector<ComputeT> default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else variable = this->member[name]->returnRealVector();
     };
 
-    void set(std::string name, std::vector<std::string> &variable, std::vector<std::string> default_value){
+    void set(std::string name, std::vector<std::string> &variable, std::vector<std::string> default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else variable = this->member[name]->returnStringVector();
     };
 
-    void setOrDie(std::string name, std::vector<std::string> &variable){
+    void setOrDie(std::string name, std::vector<std::string> &variable) {
         if (this->member.find(name) == this->member.end())                              FatalError(__LINE__);
         else variable = this->member[name]->returnStringVector();
     };
 
-    void setOrDie(std::string name, std::vector<int> &variable){
+    void setOrDie(std::string name, std::vector<int> &variable) {
         if (this->member.find(name) == this->member.end())                              FatalError(__LINE__);
         else variable = this->member[name]->returnIntVector();
     };
 
-    void set(std::string name, std::string &variable, std::string default_value){
+    void set(std::string name, std::string &variable, std::string default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else variable = this->member[name]->returnString();
     };
 
-    void setOrDie(std::string name, std::string &variable){
+    void setOrDie(std::string name, std::string &variable) {
         if (this->member.find(name) == this->member.end())                              FatalError(__LINE__);
         else variable = this->member[name]->returnString();
     };
 
-    void setOrDie(std::string name, ElementWiseOp &variable){
+    void setOrDie(std::string name, ElementWiseOp &variable) {
         if (this->member.find(name) == this->member.end())                                  FatalError(__LINE__);
         else if (0 == this->member[name]->returnString().compare("ElementWise_EQL"))        variable = ElementWise_EQL;
         else if (0 == this->member[name]->returnString().compare("ElementWise_MUL"))        variable = ElementWise_MUL;
         else if (0 == this->member[name]->returnString().compare("ElementWise_SUM"))        variable = ElementWise_SUM;
         else if (0 == this->member[name]->returnString().compare("ElementWise_MAX"))        variable = ElementWise_MAX;
-        else{ std::cout<<"Unsupported "<<name<<" = "<<this->member[name]->returnString()<<std::endl; FatalError(__LINE__); }
+        else { std::cout << "Unsupported " << name << " = " << this->member[name]->returnString() << std::endl; FatalError(__LINE__); }
     };
 
-    void set(std::string name, Filler &variable, Filler default_value){
+    void set(std::string name, Filler &variable, Filler default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else if (0 == this->member[name]->returnString().compare("Xavier"))             variable = Xavier;
         else if (0 == this->member[name]->returnString().compare("Gaussian"))           variable = Gaussian;
         else if (0 == this->member[name]->returnString().compare("Constant"))           variable = Constant;
-        else{ std::cout<<"Unsupported "<<name<<" = "<<this->member[name]->returnString()<<std::endl; FatalError(__LINE__); }
+        else { std::cout << "Unsupported " << name << " = " << this->member[name]->returnString() << std::endl; FatalError(__LINE__); }
     };
 
-    void set(std::string name, Pool &variable, Pool default_value){
+    void set(std::string name, Pool &variable, Pool default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else if (0 == this->member[name]->returnString().compare("Max"))                variable = Max;
         else if (0 == this->member[name]->returnString().compare("Average"))            variable = Average;
         else if (0 == this->member[name]->returnString().compare("Sum"))                variable = Sum;
-        else{ std::cout<<"Unsupported "<<name<<" = "<<this->member[name]->returnString()<<std::endl; FatalError(__LINE__); }
+        else { std::cout << "Unsupported " << name << " = " << this->member[name]->returnString() << std::endl; FatalError(__LINE__); }
     };
 
-    void setOrDie(std::string name, LossObjective &variable){
+    void setOrDie(std::string name, LossObjective &variable) {
         if (this->member.find(name) == this->member.end())                                                  FatalError(__LINE__);
         else if (0 == this->member[name]->returnString().compare("MultinomialLogistic_StableSoftmax"))      variable = MultinomialLogistic_StableSoftmax;
         else if (0 == this->member[name]->returnString().compare("MultinomialLogistic"))                    variable = MultinomialLogistic;
@@ -505,18 +505,18 @@ public:
         else if (0 == this->member[name]->returnString().compare("HingeL2"))                                variable = HingeL2;
         else if (0 == this->member[name]->returnString().compare("SigmoidCrossEntropy"))                    variable = SigmoidCrossEntropy;
         else if (0 == this->member[name]->returnString().compare("Infogain"))                               variable = Infogain;
-        else{ std::cout<<"Unsupported "<<name<<" = "<<this->member[name]->returnString()<<std::endl; FatalError(__LINE__); }
+        else { std::cout << "Unsupported " << name << " = " << this->member[name]->returnString() << std::endl; FatalError(__LINE__); }
     };
 
-    void set(std::string name, Phase &variable, Phase default_value){
+    void set(std::string name, Phase &variable, Phase default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else if (0 == this->member[name]->returnString().compare("Training"))           variable = Training;
         else if (0 == this->member[name]->returnString().compare("Testing"))            variable = Testing;
         else if (0 == this->member[name]->returnString().compare("TrainingTesting"))    variable = TrainingTesting;
-        else{ std::cout<<"Unsupported "<<name<<" = "<<this->member[name]->returnString()<<std::endl; FatalError(__LINE__); }
+        else { std::cout << "Unsupported " << name << " = " << this->member[name]->returnString() << std::endl; FatalError(__LINE__); }
     };
 
-    void set(std::string name, LRPolicy &variable, LRPolicy default_value){
+    void set(std::string name, LRPolicy &variable, LRPolicy default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else if (0 == this->member[name]->returnString().compare("LR_fixed"))           variable = LR_fixed;
         else if (0 == this->member[name]->returnString().compare("LR_step"))            variable = LR_step;
@@ -526,10 +526,10 @@ public:
         else if (0 == this->member[name]->returnString().compare("LR_poly"))            variable = LR_poly;
         else if (0 == this->member[name]->returnString().compare("LR_sigmoid"))         variable = LR_sigmoid;
         else if (0 == this->member[name]->returnString().compare("LR_cyclical"))        variable = LR_cyclical;
-        else{ std::cout<<"Unsupported "<<name<<" = "<<this->member[name]->returnString()<<std::endl; FatalError(__LINE__); }
+        else { std::cout << "Unsupported " << name << " = " << this->member[name]->returnString() << std::endl; FatalError(__LINE__); }
     };
 
-    void set(std::string name, SolverAlgorithm &variable, SolverAlgorithm default_value){
+    void set(std::string name, SolverAlgorithm &variable, SolverAlgorithm default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else if (0 == this->member[name]->returnString().compare("SGD"))                variable = SGD;
         else if (0 == this->member[name]->returnString().compare("AdaDelta"))           variable = AdaDelta;
@@ -537,212 +537,212 @@ public:
         else if (0 == this->member[name]->returnString().compare("Adam"))               variable = Adam;
         else if (0 == this->member[name]->returnString().compare("NAG"))                variable = NAG;
         else if (0 == this->member[name]->returnString().compare("RMSprop"))            variable = RMSprop;
-        else{ std::cout<<"Unsupported "<<name<<" = "<<this->member[name]->returnString()<<std::endl; FatalError(__LINE__); }
+        else { std::cout << "Unsupported " << name << " = " << this->member[name]->returnString() << std::endl; FatalError(__LINE__); }
     };
 
-    void set(std::string name, Regularizer &variable, Regularizer default_value){
+    void set(std::string name, Regularizer &variable, Regularizer default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else if (0 == this->member[name]->returnString().compare("L2"))                 variable = L2;
         else if (0 == this->member[name]->returnString().compare("L1"))                 variable = L1;
-        else{ std::cout<<"Unsupported "<<name<<" = "<<this->member[name]->returnString()<<std::endl; FatalError(__LINE__); }
+        else { std::cout << "Unsupported " << name << " = " << this->member[name]->returnString() << std::endl; FatalError(__LINE__); }
     };
 
-    void set(std::string name, LRN &variable, LRN default_value){
+    void set(std::string name, LRN &variable, LRN default_value) {
         if (this->member.find(name) == this->member.end())                                  variable = default_value;
         else if (0 == this->member[name]->returnString().compare("CrossChannel"))           variable = CrossChannel;
         else if (0 == this->member[name]->returnString().compare("DivisiveNormalization"))  variable = DivisiveNormalization;
-        else{ std::cout<<"Unsupported "<<name<<" = "<<this->member[name]->returnString()<<std::endl; FatalError(__LINE__); }
+        else { std::cout << "Unsupported " << name << " = " << this->member[name]->returnString() << std::endl; FatalError(__LINE__); }
     };
 
-    void set(std::string name, cudnnBatchNormMode_t &variable, cudnnBatchNormMode_t default_value){
+    void set(std::string name, cudnnBatchNormMode_t &variable, cudnnBatchNormMode_t default_value) {
         if (this->member.find(name) == this->member.end())                                  variable = default_value;
         else if (0 == this->member[name]->returnString().compare("Spatial"))                variable = CUDNN_BATCHNORM_SPATIAL;
         else if (0 == this->member[name]->returnString().compare("PerActivation"))          variable = CUDNN_BATCHNORM_PER_ACTIVATION;
-        else{ std::cout<<"Unsupported "<<name<<" = "<<this->member[name]->returnString()<<std::endl; FatalError(__LINE__); }
+        else { std::cout << "Unsupported " << name << " = " << this->member[name]->returnString() << std::endl; FatalError(__LINE__); }
     };
 
-    void set(std::string name, cudnnPoolingMode_t &variable, cudnnPoolingMode_t default_value){
+    void set(std::string name, cudnnPoolingMode_t &variable, cudnnPoolingMode_t default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else if (0 == this->member[name]->returnString().compare("max"))                variable = CUDNN_POOLING_MAX;
         else if (0 == this->member[name]->returnString().compare("average_include"))    variable = CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
         else if (0 == this->member[name]->returnString().compare("average_exclude"))    variable = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
-        else{ std::cout<<"Unsupported "<<name<<" = "<<this->member[name]->returnString()<<std::endl; FatalError(__LINE__); }
+        else { std::cout << "Unsupported " << name << " = " << this->member[name]->returnString() << std::endl; FatalError(__LINE__); }
     };
 
-    void set(std::string name, cudnnActivationMode_t &variable, cudnnActivationMode_t default_value){
+    void set(std::string name, cudnnActivationMode_t &variable, cudnnActivationMode_t default_value) {
         if (this->member.find(name) == this->member.end())                              variable = default_value;
         else if (0 == this->member[name]->returnString().compare("Sigmoid"))            variable = CUDNN_ACTIVATION_SIGMOID;
         else if (0 == this->member[name]->returnString().compare("ReLU"))               variable = CUDNN_ACTIVATION_RELU;
         else if (0 == this->member[name]->returnString().compare("TanH"))               variable = CUDNN_ACTIVATION_TANH;
-        else{ std::cout<<"Unsupported "<<name<<" = "<<this->member[name]->returnString()<<std::endl; FatalError(__LINE__); }
+        else { std::cout << "Unsupported " << name << " = " << this->member[name]->returnString() << std::endl; FatalError(__LINE__); }
     };
 
 
-    void print(){
-        switch(type){
-            case JSON_String:
-                if (array.size()>1) std::cout<<"[";
-                for (int i=0;i<array.size();++i){
-                    if (i>0) std::cout<< ",";
-                    std::cout << "\"" << *((std::string*)(array[i])) << "\""  ;
-                }
-                if (array.size()>1) std::cout<<"]";
-                std::cout<<std::endl;
+    void print() {
+        switch (type) {
+        case JSON_String:
+            if (array.size() > 1) std::cout << "[";
+            for (int i = 0; i < array.size(); ++i) {
+                if (i > 0) std::cout << ",";
+                std::cout << "\"" << *((std::string*)(array[i])) << "\""  ;
+            }
+            if (array.size() > 1) std::cout << "]";
+            std::cout << std::endl;
             break;
-            case JSON_Bool:
-                if (array.size()>1) std::cout<<"[";
-                for (int i=0;i<array.size();++i){
-                    if (i>0) std::cout<< ",";
-                    std::cout << ((*((bool*)(array[i])))? "true": "false");
-                }
-                if (array.size()>1) std::cout<<"]";
-                std::cout<<std::endl;
+        case JSON_Bool:
+            if (array.size() > 1) std::cout << "[";
+            for (int i = 0; i < array.size(); ++i) {
+                if (i > 0) std::cout << ",";
+                std::cout << ((*((bool*)(array[i]))) ? "true" : "false");
+            }
+            if (array.size() > 1) std::cout << "]";
+            std::cout << std::endl;
             break;
-            case JSON_Null:
-                if (array.size()>1) std::cout<<"[";
-                for (int i=0;i<array.size();++i){
-                    if (i>0) std::cout<< ",";
-                    std::cout << "null";
-                }
-                if (array.size()>1) std::cout<<"]";
-                std::cout<<std::endl;
+        case JSON_Null:
+            if (array.size() > 1) std::cout << "[";
+            for (int i = 0; i < array.size(); ++i) {
+                if (i > 0) std::cout << ",";
+                std::cout << "null";
+            }
+            if (array.size() > 1) std::cout << "]";
+            std::cout << std::endl;
             break;
-            case JSON_Number:
-                if (array.size()>1) std::cout<<"[";
-                for (int i=0;i<array.size();++i){
-                    if (i>0) std::cout<< ",";
-                    std::cout << *((ComputeT*)(array[i]));
-                }
-                if (array.size()>1) std::cout<<"]";
-                std::cout<<std::endl;
+        case JSON_Number:
+            if (array.size() > 1) std::cout << "[";
+            for (int i = 0; i < array.size(); ++i) {
+                if (i > 0) std::cout << ",";
+                std::cout << *((ComputeT*)(array[i]));
+            }
+            if (array.size() > 1) std::cout << "]";
+            std::cout << std::endl;
             break;
-            case JSON_Object:
-                std::cout<<"{"<<std::endl;
-                for (std::map<std::string, JSON*>::iterator it = member.begin(); it != member.end(); it++ ){
-                    std::cout << "\t" << it->first << ": ";
-                    it->second->print();
-                }
-                std::cout<<"}";
+        case JSON_Object:
+            std::cout << "{" << std::endl;
+            for (std::map<std::string, JSON*>::iterator it = member.begin(); it != member.end(); it++ ) {
+                std::cout << "\t" << it->first << ": ";
+                it->second->print();
+            }
+            std::cout << "}";
             break;
-            case JSON_ObjectArray:
-                std::cout<<"["<<std::endl;
-                for (int i=0;i<array.size();++i){
-                    JSON* p = (JSON*)(array[i]);
-                    p->print();
-                    if (i<array.size()-1) std::cout<<","<<std::endl;
-                }
-                std::cout<<"]"<<std::endl;
+        case JSON_ObjectArray:
+            std::cout << "[" << std::endl;
+            for (int i = 0; i < array.size(); ++i) {
+                JSON* p = (JSON*)(array[i]);
+                p->print();
+                if (i < array.size() - 1) std::cout << "," << std::endl;
+            }
+            std::cout << "]" << std::endl;
             break;
         }
     };
 
-    void parseNumberOrTextArray(std::string input){
-        while (input.size()>0){
+    void parseNumberOrTextArray(std::string input) {
+        while (input.size() > 0) {
             int e = input.find(",");
-            if (e==std::string::npos){
+            if (e == std::string::npos) {
                 e = input.size();
             }
-            std::string first = input.substr(0,e);
-            if (first[0]=='\"'){
+            std::string first = input.substr(0, e);
+            if (first[0] == '\"') {
                 type = JSON_String;
-                std::string* p = new std::string(first.substr(1,first.size()-2));
+                std::string* p = new std::string(first.substr(1, first.size() - 2));
                 array.push_back((void*)p);
-            }else if (first[0]=='t'){
+            } else if (first[0] == 't') {
                 type = JSON_Bool;
                 bool* p = new bool(true);
                 array.push_back((void*)p);
-            }else if (first[0]=='f'){
+            } else if (first[0] == 'f') {
                 type = JSON_Bool;
                 bool* p = new bool(false);
                 array.push_back((void*)p);
-            }else if (first[0]=='n'){
+            } else if (first[0] == 'n') {
                 type = JSON_Null;
                 void* p = NULL;
                 array.push_back((void*)p);
-            }else{
+            } else {
                 type = JSON_Number;
                 ComputeT* p = new ComputeT(stof(first));
                 array.push_back((void*)p);
             }
-            if(e+1<input.size())
-                input=input.substr(e+1);
+            if (e + 1 < input.size())
+                input = input.substr(e + 1);
             else
                 break;
         }
     };
 
-    void parseObject(std::string input){
+    void parseObject(std::string input) {
         type = JSON_Object;
-        int b,m,e;
+        int b, m, e;
         JSON* p;
         b = input.find("{");
         e = input.find("}");
-        input = input.substr(b+1,e-b-1);
+        input = input.substr(b + 1, e - b - 1);
 
-        while (true){
-            m= input.find(":");
-            if (std::string::npos==m) break;
+        while (true) {
+            m = input.find(":");
+            if (std::string::npos == m) break;
 
-            std::string name = input.substr(0,m);
-            name = name.substr(1,m-2);
-            input = input.substr(m+1);
-            if (input[0]=='\"'){
-                e=input.find("\"",1);
+            std::string name = input.substr(0, m);
+            name = name.substr(1, m - 2);
+            input = input.substr(m + 1);
+            if (input[0] == '\"') {
+                e = input.find("\"", 1);
                 p = new JSON;
-                p->parseNumberOrTextArray(input.substr(0,e+1));
+                p->parseNumberOrTextArray(input.substr(0, e + 1));
                 this->member[name] = p;
 
-                if (e+2<input.size())
-                    input = input.substr(e+2);
+                if (e + 2 < input.size())
+                    input = input.substr(e + 2);
                 else
                     break;
-            }else if (input[0]=='['){
+            } else if (input[0] == '[') {
                 // assume no nested array
                 input = input.substr(1);
                 e = input.find("]");
                 p = new JSON;
-                p->parseNumberOrTextArray(input.substr(0,e));
+                p->parseNumberOrTextArray(input.substr(0, e));
                 this->member[name] = p;
 
-                if (e+1<input.size())
-                    input = input.substr(e+2);
+                if (e + 1 < input.size())
+                    input = input.substr(e + 2);
                 else
                     break;
-            }else if (input[0]=='f' || input[0]=='t' || input[0]=='.' || input[0]=='-' || ('0'<=input[0] && input[0]<='9')){
-                e=input.find(",");
-                if (e==std::string::npos){
+            } else if (input[0] == 'f' || input[0] == 't' || input[0] == '.' || input[0] == '-' || ('0' <= input[0] && input[0] <= '9')) {
+                e = input.find(",");
+                if (e == std::string::npos) {
                     e = input.size();
                 }
                 p = new JSON;
-                p->parseNumberOrTextArray(input.substr(0,e));
+                p->parseNumberOrTextArray(input.substr(0, e));
                 this->member[name] = p;
 
-                if (e+1<input.size())
-                    input = input.substr(e+1);
+                if (e + 1 < input.size())
+                    input = input.substr(e + 1);
                 else
                     break;
-            }else{
+            } else {
                 FatalError(__LINE__);
             }
         }
     };
-    void parseObjectArray(std::string input){
+    void parseObjectArray(std::string input) {
         type = JSON_ObjectArray;
 
-        input = input.substr(1,input.size()-2);
+        input = input.substr(1, input.size() - 2);
 
-        while (input.size()>0){
-            int e = input.find("}")+1;
-            if (e==std::string::npos){
+        while (input.size() > 0) {
+            int e = input.find("}") + 1;
+            if (e == std::string::npos) {
                 e = input.size();
             }
-            std::string first = input.substr(0,e);
+            std::string first = input.substr(0, e);
             JSON* pObj = new JSON;
             pObj->parseObject(first);
             array.push_back((void*)pObj);
 
-            if(e+1<input.size())
-                input=input.substr(e+1);
+            if (e + 1 < input.size())
+                input = input.substr(e + 1);
             else
                 break;
         }
@@ -753,31 +753,31 @@ public:
 #define SetOrDie(obj,attribute)       obj->setOrDie(#attribute,attribute);
 
 
-void parseNetworkJSON(std::string filename, JSON* train_obj, JSON* test_obj, JSON* architecture_obj){
+void parseNetworkJSON(std::string filename, JSON* train_obj, JSON* test_obj, JSON* architecture_obj) {
     std::ifstream t(filename);
     std::string str((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
     str.erase(remove_if(str.begin(), str.end(), (int(*)(int))isspace), str.end());
     std::string input = str;
-    int b,e;
+    int b, e;
 
     b = input.find("\"train\"");
-    std::string train_str = input.substr(b+7);
+    std::string train_str = input.substr(b + 7);
     b = train_str.find("{");
     e = train_str.find("}");
-    train_str=train_str.substr(b,e-b+1);
-    if (train_obj!=NULL) train_obj->parseObject(train_str);
+    train_str = train_str.substr(b, e - b + 1);
+    if (train_obj != NULL) train_obj->parseObject(train_str);
 
     b = input.find("\"test\"");
-    std::string test_str = input.substr(b+6);
+    std::string test_str = input.substr(b + 6);
     b = test_str.find("{");
     e = test_str.find("}");
-    test_str=test_str.substr(b,e-b+1);
-    if (test_obj!=NULL) test_obj->parseObject(test_str);
+    test_str = test_str.substr(b, e - b + 1);
+    if (test_obj != NULL) test_obj->parseObject(test_str);
 
-    b=input.find("\"layers\"");
-    input = input.substr(b+9);
-    e=input.find("}]");
-    if (architecture_obj!=NULL) architecture_obj->parseObjectArray(input);
+    b = input.find("\"layers\"");
+    input = input.substr(b + 9);
+    e = input.find("}]");
+    if (architecture_obj != NULL) architecture_obj->parseObjectArray(input);
 
 }
 
@@ -786,175 +786,175 @@ void parseNetworkJSON(std::string filename, JSON* train_obj, JSON* test_obj, JSO
 // Utility
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool is_file_exist(const std::string& fileName){
+bool is_file_exist(const std::string& fileName) {
     std::ifstream infile(fileName);
     return infile.good();
 }
 
-void memorySizePrint(size_t bytes){
-    if (bytes<512){
-        std::cout<<bytes<<" Bytes";
-    }else if (bytes<512.0*1024){
-        std::cout<<(bytes/1024.0)<<" KB";
-    }else if (bytes<512.0*1024*1024){
-        std::cout<<(bytes/(1024.0*1024.0))<<" MB";
-    }else if (bytes<512.0*1024*1024*1024){
-        std::cout<<(bytes/(1024.0*1024.0*1024.0))<<" GB";
-    }else if (bytes<512.0*1024*1024*1024*1024){
-        std::cout<<(bytes/(1024.0*1024.0*1024.0*1024.0))<<" TB";
-    }else{
-        std::cout<<(bytes/(1024.0*1024.0*1024.0*1024.0*1024.0))<<" PB";
+void memorySizePrint(size_t bytes) {
+    if (bytes < 512) {
+        std::cout << bytes << " Bytes";
+    } else if (bytes < 512.0 * 1024) {
+        std::cout << (bytes / 1024.0) << " KB";
+    } else if (bytes < 512.0 * 1024 * 1024) {
+        std::cout << (bytes / (1024.0 * 1024.0)) << " MB";
+    } else if (bytes < 512.0 * 1024 * 1024 * 1024) {
+        std::cout << (bytes / (1024.0 * 1024.0 * 1024.0)) << " GB";
+    } else if (bytes < 512.0 * 1024 * 1024 * 1024 * 1024) {
+        std::cout << (bytes / (1024.0 * 1024.0 * 1024.0 * 1024.0)) << " TB";
+    } else {
+        std::cout << (bytes / (1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0)) << " PB";
     }
 }
 
-void veciPrint(const std::vector<int>& v){
-    std::cout<<"["<<v.size()<<"]={";
-    if (v.size()>0) std::cout<<v[0];
-    if (v.size()>1){
-        for (int i=1;i<v.size();++i){
-            std::cout<<","<<v[i];
+void veciPrint(const std::vector<int>& v) {
+    std::cout << "[" << v.size() << "]={";
+    if (v.size() > 0) std::cout << v[0];
+    if (v.size() > 1) {
+        for (int i = 1; i < v.size(); ++i) {
+            std::cout << "," << v[i];
         }
     }
-    std::cout<<"}";
+    std::cout << "}";
 }
 
-void vecfPrint(const std::vector<ComputeT>& v){
-    std::cout<<"[";
-    if (v.size()>0) std::cout<<v[0];
-    if (v.size()>1){
-        for (int i=1;i<v.size();++i){
-            std::cout<<","<<v[i];
+void vecfPrint(const std::vector<ComputeT>& v) {
+    std::cout << "[";
+    if (v.size() > 0) std::cout << v[0];
+    if (v.size() > 1) {
+        for (int i = 1; i < v.size(); ++i) {
+            std::cout << "," << v[i];
         }
     }
-    std::cout<<"]";
+    std::cout << "]";
 }
 
-std::vector<int> veci(int n, ...){
+std::vector<int> veci(int n, ...) {
     std::vector<int> v;
-    if (n==0) return v;
+    if (n == 0) return v;
     va_list ap;
     va_start(ap, n);
-    for(int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         v.push_back(va_arg(ap, int));
     }
     va_end(ap);
     return v;
 }
 
-std::vector<std::string> vecs(int n, ...){
+std::vector<std::string> vecs(int n, ...) {
     std::vector<std::string> v;
-    if (n==0) return v;
+    if (n == 0) return v;
     va_list ap;
     va_start(ap, n);
-    for(int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         v.push_back(std::string(va_arg(ap, char*)));
     }
     va_end(ap);
     return v;
 }
 
-std::vector<std::string> getStringVector(std::string input){
+std::vector<std::string> getStringVector(std::string input) {
     std::vector<std::string> ret;
-    while (input.size()>0){
+    while (input.size() > 0) {
         int e = input.find(",");
-        if (e==std::string::npos){
+        if (e == std::string::npos) {
             e = input.size();
         }
-        std::string first = input.substr(0,e);
+        std::string first = input.substr(0, e);
         ret.push_back(first);
-        if(e+1<input.size())
-            input=input.substr(e+1);
+        if (e + 1 < input.size())
+            input = input.substr(e + 1);
         else
             break;
     }
     return ret;
 }
 
-std::vector<std::vector<int> > getIntVectorVector(std::string input){
+std::vector<std::vector<int> > getIntVectorVector(std::string input) {
     //remove all space
     input.erase(remove_if(input.begin(), input.end(), (int(*)(int))isspace), input.end());
 
     std::vector<std::vector<int> > ret;
-    while (input.size()>0){
+    while (input.size() > 0) {
         int e;
-        if (input[0]=='['){
-            ret.resize(ret.size()+1);
-            e=0;
-        }else if (input[0]==','){
-            e=0;
-        }else if (input[0]==']'){
-            e=0;
-        }else{
+        if (input[0] == '[') {
+            ret.resize(ret.size() + 1);
+            e = 0;
+        } else if (input[0] == ',') {
+            e = 0;
+        } else if (input[0] == ']') {
+            e = 0;
+        } else {
             e = input.find(",");
-            if (e==std::string::npos){
+            if (e == std::string::npos) {
                 e = input.size();
             }
             int f = input.find("]");
-            if (f==std::string::npos){
+            if (f == std::string::npos) {
                 f = input.size();
             }
-            e = min(e,f);
-            std::string first = input.substr(0,e);
-            ret[ret.size()-1].push_back(stoi(first));
+            e = min(e, f);
+            std::string first = input.substr(0, e);
+            ret[ret.size() - 1].push_back(stoi(first));
         }
-        if(e+1<input.size())
-            input=input.substr(e+1);
+        if (e + 1 < input.size())
+            input = input.substr(e + 1);
         else
             break;
     }
     return ret;
 }
 
-size_t numel(const std::vector<int>& dim){
+size_t numel(const std::vector<int>& dim) {
     size_t res = 1;
-    for (int i=0;i<dim.size();++i) res *= (size_t)(dim[i]);
+    for (int i = 0; i < dim.size(); ++i) res *= (size_t)(dim[i]);
     return res;
 }
 
-size_t sizeofitem(const std::vector<int>& dim){
+size_t sizeofitem(const std::vector<int>& dim) {
     size_t res = 1;
-    for (int i=1;i<dim.size();++i) res *= (size_t)(dim[i]);
+    for (int i = 1; i < dim.size(); ++i) res *= (size_t)(dim[i]);
     return res;
 }
 
-size_t numspel(const std::vector<int>& dim){
+size_t numspel(const std::vector<int>& dim) {
     size_t res = 1;
-    for (int i=2;i<dim.size();++i) res *= (size_t)(dim[i]);
+    for (int i = 2; i < dim.size(); ++i) res *= (size_t)(dim[i]);
     return res;
 }
 
-bool same_dim(const std::vector<int>& dimA, const std::vector<int>& dimB){
-    if (dimA.size()!=dimB.size()) return false;
-    for (int i=0;i<dimA.size();++i){
-        if (dimA[i]!=dimB[i]) return false;
+bool same_dim(const std::vector<int>& dimA, const std::vector<int>& dimB) {
+    if (dimA.size() != dimB.size()) return false;
+    for (int i = 0; i < dimA.size(); ++i) {
+        if (dimA[i] != dimB[i]) return false;
     }
     return true;
 }
 
-bool same_dim_EC(const std::vector<int>& dimA, const std::vector<int>& dimB){
-    if (dimA.size()!=dimB.size()) return false;
-    if (dimA[0]!=dimB[0]) return false;
-    for (int i=2;i<dimA.size();++i)
-        if (dimA[i]!=dimB[i])
+bool same_dim_EC(const std::vector<int>& dimA, const std::vector<int>& dimB) {
+    if (dimA.size() != dimB.size()) return false;
+    if (dimA[0] != dimB[0]) return false;
+    for (int i = 2; i < dimA.size(); ++i)
+        if (dimA[i] != dimB[i])
             return false;
     return true;
 }
 
-size_t checkNaN(StorageT* dataGPU, size_t n){
+size_t checkNaN(StorageT* dataGPU, size_t n) {
     StorageT* CPUmem = new StorageT[n];
-    cudaMemcpy(CPUmem, dataGPU, n*sizeofStorageT, cudaMemcpyDeviceToHost);
+    cudaMemcpy(CPUmem, dataGPU, n * sizeofStorageT, cudaMemcpyDeviceToHost);
     size_t countNaN = 0;
-    for (size_t i=0;i<n;++i) if (ISNAN(CPUmem[i])) ++countNaN;
-    if (countNaN>0){
-        std::cout<<"        checkNaN result: "<<countNaN<<" out of "<<n<<" ("<< 100*ComputeT(countNaN)/n<< "\045) values are NaN, "<<n-countNaN<<" are not NaN."; //<<std::endl;
+    for (size_t i = 0; i < n; ++i) if (ISNAN(CPUmem[i])) ++countNaN;
+    if (countNaN > 0) {
+        std::cout << "        checkNaN result: " << countNaN << " out of " << n << " (" << 100 * ComputeT(countNaN) / n << "\045) values are NaN, " << n - countNaN << " are not NaN."; //<<std::endl;
     }
     delete [] CPUmem;
     return countNaN;
 }
 
-std::vector<size_t> randperm(size_t n, std::mt19937& rng){
+std::vector<size_t> randperm(size_t n, std::mt19937& rng) {
     std::vector<size_t> v(n);
-    for (size_t i=0;i<n;++i) v[i]=i;
+    for (size_t i = 0; i < n; ++i) v[i] = i;
 
     shuffle ( v.begin(), v.end(), rng );
     return v;
@@ -990,8 +990,8 @@ inline int CUDA_GET_BLOCKS(const size_t N) {
 }
 
 inline size_t CUDA_GET_LOOPS(const size_t N) {
-    size_t total_threads = CUDA_GET_BLOCKS(N)*CUDA_NUM_THREADS;
-    return (N + total_threads -1)/ total_threads;
+    size_t total_threads = CUDA_GET_BLOCKS(N) * CUDA_NUM_THREADS;
+    return (N + total_threads - 1) / total_threads;
 }
 
 __global__ void Accuracy_MultinomialLogistic(
@@ -1063,7 +1063,7 @@ __global__ void LossGrad_MultinomialLogistic(
         if (weightTensor != NULL)
             scale *= GPUStorage2ComputeT(weightTensor[elementID % wN]);
         diff[elementID] = GPUCompute2StorageT(
-            GPUStorage2ComputeT(diff[elementID]) + scale / prob);
+                              GPUStorage2ComputeT(diff[elementID]) + scale / prob);
     }
 }
 
@@ -1094,7 +1094,7 @@ __global__ void LossGrad_MultinomialLogistic_StableSoftmax(
                                               GPUStorage2ComputeT(pred[k]));
             }
             diff[elementID] = GPUCompute2StorageT(
-                GPUStorage2ComputeT(diff[elementID]) - scale);
+                                  GPUStorage2ComputeT(diff[elementID]) - scale);
         } else {
             for (int d = 0; d < C; ++d) {
                 int k = baseID + d * M;
@@ -1105,8 +1105,8 @@ __global__ void LossGrad_MultinomialLogistic_StableSoftmax(
                                                   weightTensor[k % wN]));
             }
             diff[elementID] = GPUCompute2StorageT(
-                GPUStorage2ComputeT(diff[elementID]) -
-                scale * GPUStorage2ComputeT(weightTensor[elementID % wN]));
+                                  GPUStorage2ComputeT(diff[elementID]) -
+                                  scale * GPUStorage2ComputeT(weightTensor[elementID % wN]));
         }
     }
 }
@@ -1156,11 +1156,11 @@ __global__ void LossGrad_SmoothL1(
         ComputeT abs_val = abs(val);
         if (abs_val < 1) {
             diff[idx] = GPUCompute2StorageT(
-                GPUStorage2ComputeT(diff[idx]) + scale * val);
+                            GPUStorage2ComputeT(diff[idx]) + scale * val);
         } else {
             diff[idx] = GPUCompute2StorageT(GPUStorage2ComputeT(diff[idx]) +
                                             scale * ((ComputeT(0) < val) -
-                                                     (val < ComputeT(0))));
+                                                    (val < ComputeT(0))));
         }
     }
 }
@@ -1183,7 +1183,7 @@ __global__ void Loss_Contrastive(
         ComputeT y_n = GPUStorage2ComputeT(y[idx]);
         ComputeT p = max(margin - sqrt(d), ComputeT(0));
         loss[idx] = GPUCompute2StorageT(
-            ComputeT(0.5) * (y_n * d + (ComputeT(1) - y_n) * p * p));
+                        ComputeT(0.5) * (y_n * d + (ComputeT(1) - y_n) * p * p));
     }
 }
 
@@ -1204,9 +1204,9 @@ __global__ void LossGrad_Contrastive(
 
                 ComputeT beta = scale * diff_i;
                 a_diff[i] = GPUCompute2StorageT(
-                    GPUStorage2ComputeT(a_diff[i]) + beta);
+                                GPUStorage2ComputeT(a_diff[i]) + beta);
                 b_diff[i] = GPUCompute2StorageT(
-                    GPUStorage2ComputeT(b_diff[i]) - beta);
+                                GPUStorage2ComputeT(b_diff[i]) - beta);
             }
         } else {
             ComputeT dist_sq = 0.0;
@@ -1227,9 +1227,9 @@ __global__ void LossGrad_Contrastive(
                     ComputeT beta =
                         -scale * mdist / (dist + ComputeT(1e-4)) * diff_i;
                     a_diff[i] = GPUCompute2StorageT(
-                        GPUStorage2ComputeT(a_diff[i]) + beta);
+                                    GPUStorage2ComputeT(a_diff[i]) + beta);
                     b_diff[i] = GPUCompute2StorageT(
-                        GPUStorage2ComputeT(b_diff[i]) - beta);
+                                    GPUStorage2ComputeT(b_diff[i]) - beta);
                 }
             }
         }
@@ -1239,290 +1239,290 @@ __global__ void LossGrad_Contrastive(
 
 __global__ void Kernel_convert_to_StorageT_subtract(size_t CUDA_NUM_LOOPS, size_t N, size_t sizeofitem, const half* pIn, const StorageT* pMean, StorageT* pOut) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x)); if (idxBase >= N) return;
-    if (pMean==NULL) for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(__half2float(pIn[idx])) );
-    else for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(__half2float(pIn[idx])) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
+    if (pMean == NULL) for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(__half2float(pIn[idx])) );
+    else for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(__half2float(pIn[idx])) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
 }
 __global__ void Kernel_convert_to_StorageT_subtract(size_t CUDA_NUM_LOOPS, size_t N, size_t sizeofitem, const float* pIn, const StorageT* pMean, StorageT* pOut) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x)); if (idxBase >= N) return;
-    if (pMean==NULL) for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
-    else for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
+    if (pMean == NULL) for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
+    else for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
 }
 __global__ void Kernel_convert_to_StorageT_subtract(size_t CUDA_NUM_LOOPS, size_t N, size_t sizeofitem, const double* pIn, const StorageT* pMean, StorageT* pOut) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x)); if (idxBase >= N) return;
-    if (pMean==NULL) for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
-    else for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
+    if (pMean == NULL) for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
+    else for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
 }
 __global__ void Kernel_convert_to_StorageT_subtract(size_t CUDA_NUM_LOOPS, size_t N, size_t sizeofitem, const uint8_t* pIn, const StorageT* pMean, StorageT* pOut) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x)); if (idxBase >= N) return;
-    if (pMean==NULL) for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
-    else for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
+    if (pMean == NULL) for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
+    else for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
 }
 __global__ void Kernel_convert_to_StorageT_subtract(size_t CUDA_NUM_LOOPS, size_t N, size_t sizeofitem, const uint16_t* pIn, const StorageT* pMean, StorageT* pOut) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x)); if (idxBase >= N) return;
-    if (pMean==NULL) for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
-    else for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
+    if (pMean == NULL) for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
+    else for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
 }
 __global__ void Kernel_convert_to_StorageT_subtract(size_t CUDA_NUM_LOOPS, size_t N, size_t sizeofitem, const uint32_t* pIn, const StorageT* pMean, StorageT* pOut) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x)); if (idxBase >= N) return;
-    if (pMean==NULL) for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
-    else for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
+    if (pMean == NULL) for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
+    else for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
 }
 __global__ void Kernel_convert_to_StorageT_subtract(size_t CUDA_NUM_LOOPS, size_t N, size_t sizeofitem, const uint64_t* pIn, const StorageT* pMean, StorageT* pOut) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x)); if (idxBase >= N) return;
-    if (pMean==NULL) for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
-    else for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
+    if (pMean == NULL) for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
+    else for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
 }
 __global__ void Kernel_convert_to_StorageT_subtract(size_t CUDA_NUM_LOOPS, size_t N, size_t sizeofitem, const int8_t* pIn, const StorageT* pMean, StorageT* pOut) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x)); if (idxBase >= N) return;
-    if (pMean==NULL) for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
-    else for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
+    if (pMean == NULL) for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
+    else for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
 }
 __global__ void Kernel_convert_to_StorageT_subtract(size_t CUDA_NUM_LOOPS, size_t N, size_t sizeofitem, const int16_t* pIn, const StorageT* pMean, StorageT* pOut) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x)); if (idxBase >= N) return;
-    if (pMean==NULL) for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
-    else for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
+    if (pMean == NULL) for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
+    else for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
 }
 __global__ void Kernel_convert_to_StorageT_subtract(size_t CUDA_NUM_LOOPS, size_t N, size_t sizeofitem, const int32_t* pIn, const StorageT* pMean, StorageT* pOut) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x)); if (idxBase >= N) return;
-    if (pMean==NULL) for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
-    else for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
+    if (pMean == NULL) for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
+    else for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
 }
 __global__ void Kernel_convert_to_StorageT_subtract(size_t CUDA_NUM_LOOPS, size_t N, size_t sizeofitem, const int64_t* pIn, const StorageT* pMean, StorageT* pOut) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x)); if (idxBase >= N) return;
-    if (pMean==NULL) for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
-    else for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
+    if (pMean == NULL) for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
+    else for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
 }
 __global__ void Kernel_convert_to_StorageT_subtract(size_t CUDA_NUM_LOOPS, size_t N, size_t sizeofitem, const char* pIn, const StorageT* pMean, StorageT* pOut) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x)); if (idxBase >= N) return;
-    if (pMean==NULL) for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
-    else for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
+    if (pMean == NULL) for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
+    else for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
 }
 __global__ void Kernel_convert_to_StorageT_subtract(size_t CUDA_NUM_LOOPS, size_t N, size_t sizeofitem, const bool* pIn, const StorageT* pMean, StorageT* pOut) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x)); if (idxBase >= N) return;
-    if (pMean==NULL) for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
-    else for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
+    if (pMean == NULL) for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) );
+    else for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx )    pOut[idx] = GPUCompute2StorageT( ComputeT(pIn[idx]) - GPUStorage2ComputeT(pMean[idx % sizeofitem]) );
 }
 
-__global__ void Kernel_set_one_hot(size_t CUDA_NUM_LOOPS, size_t N, StorageT* GPUdst, size_t idx2hot){
+__global__ void Kernel_set_one_hot(size_t CUDA_NUM_LOOPS, size_t N, StorageT* GPUdst, size_t idx2hot) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         GPUdst[idx] = GPUCompute2StorageT( ComputeT(idx == idx2hot) );
     }
 }
 
-void GPU_set_one_hot(size_t N, StorageT* GPUdst, size_t idx2hot){
-    Kernel_set_one_hot<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,GPUdst,idx2hot);
-    checkCUDA(__LINE__,cudaGetLastError());
+void GPU_set_one_hot(size_t N, StorageT* GPUdst, size_t idx2hot) {
+    Kernel_set_one_hot <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, GPUdst, idx2hot);
+    checkCUDA(__LINE__, cudaGetLastError());
 }
 
-__global__ void Kernel_set_value(size_t CUDA_NUM_LOOPS, size_t N, StorageT* GPUdst, StorageT value){
+__global__ void Kernel_set_value(size_t CUDA_NUM_LOOPS, size_t N, StorageT* GPUdst, StorageT value) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         GPUdst[idx] = value;
     }
 }
 
-void GPU_set_value(size_t N, StorageT* GPUdst, StorageT value){
-    Kernel_set_value<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,GPUdst,value);
-    checkCUDA(__LINE__,cudaGetLastError());
+void GPU_set_value(size_t N, StorageT* GPUdst, StorageT value) {
+    Kernel_set_value <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, GPUdst, value);
+    checkCUDA(__LINE__, cudaGetLastError());
 }
 
-void GPU_set_ones(size_t N, StorageT* GPUdst){
+void GPU_set_ones(size_t N, StorageT* GPUdst) {
     GPU_set_value(N, GPUdst, CPUCompute2StorageT(1));
 }
 
-void GPU_set_zeros(size_t N, StorageT* GPUdst){
+void GPU_set_zeros(size_t N, StorageT* GPUdst) {
     GPU_set_value(N, GPUdst, CPUCompute2StorageT(0));
 }
 
-__global__ void Kernel_dropout_forward(size_t CUDA_NUM_LOOPS, size_t N, StorageT* GPUdst, const unsigned int* GPUmask, const StorageT* GPUsrc, unsigned int threshold, ComputeT scale){
+__global__ void Kernel_dropout_forward(size_t CUDA_NUM_LOOPS, size_t N, StorageT* GPUdst, const unsigned int* GPUmask, const StorageT* GPUsrc, unsigned int threshold, ComputeT scale) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
-        GPUdst[idx] = GPUCompute2StorageT( (GPUmask[idx]>threshold) * scale * GPUStorage2ComputeT(GPUsrc[idx]));
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
+        GPUdst[idx] = GPUCompute2StorageT( (GPUmask[idx] > threshold) * scale * GPUStorage2ComputeT(GPUsrc[idx]));
     }
 }
 
-__global__ void Kernel_dropout_backward(size_t CUDA_NUM_LOOPS, size_t N, StorageT* GPUdst, const unsigned int* GPUmask, const StorageT* GPUsrc, unsigned int threshold, ComputeT scale){
+__global__ void Kernel_dropout_backward(size_t CUDA_NUM_LOOPS, size_t N, StorageT* GPUdst, const unsigned int* GPUmask, const StorageT* GPUsrc, unsigned int threshold, ComputeT scale) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
-        GPUdst[idx] = GPUCompute2StorageT( ((GPUmask[idx]>threshold) * scale * GPUStorage2ComputeT(GPUsrc[idx])) + GPUStorage2ComputeT(GPUdst[idx]) );
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
+        GPUdst[idx] = GPUCompute2StorageT( ((GPUmask[idx] > threshold) * scale * GPUStorage2ComputeT(GPUsrc[idx])) + GPUStorage2ComputeT(GPUdst[idx]) );
     }
 }
 
-__global__ void Kernel_elementwise_multiplication(size_t CUDA_NUM_LOOPS, size_t N, StorageT* GPUdst, const StorageT* GPUsrcA, const StorageT* GPUsrcB){
+__global__ void Kernel_elementwise_multiplication(size_t CUDA_NUM_LOOPS, size_t N, StorageT* GPUdst, const StorageT* GPUsrcA, const StorageT* GPUsrcB) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         GPUdst[idx] = GPUCompute2StorageT( GPUStorage2ComputeT(GPUsrcA[idx]) * GPUStorage2ComputeT(GPUsrcB[idx]));
     }
 }
 
-void GPU_elementwise_multiplication(size_t N, StorageT* GPUdst, const StorageT* GPUsrcA, const StorageT* GPUsrcB){
-    Kernel_elementwise_multiplication<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,GPUdst,GPUsrcA,GPUsrcB);
-    checkCUDA(__LINE__,cudaGetLastError());
+void GPU_elementwise_multiplication(size_t N, StorageT* GPUdst, const StorageT* GPUsrcA, const StorageT* GPUsrcB) {
+    Kernel_elementwise_multiplication <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, GPUdst, GPUsrcA, GPUsrcB);
+    checkCUDA(__LINE__, cudaGetLastError());
 }
 
-__global__ void Kernel_elementwise_comparison(size_t CUDA_NUM_LOOPS, size_t N, StorageT* GPUdst, const StorageT* GPUsrcA, const StorageT* GPUsrcB){
+__global__ void Kernel_elementwise_comparison(size_t CUDA_NUM_LOOPS, size_t N, StorageT* GPUdst, const StorageT* GPUsrcA, const StorageT* GPUsrcB) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         GPUdst[idx] = GPUCompute2StorageT(ComputeT(bool(GPUStorage2ComputeT(GPUdst[idx])) && (GPUStorage2ComputeT(GPUsrcA[idx]) == GPUStorage2ComputeT(GPUsrcB[idx]))));
     }
 }
 
-void GPU_elementwise_comparison(size_t N, StorageT* GPUdst, const StorageT* GPUsrcA, const StorageT* GPUsrcB){
-    Kernel_elementwise_comparison<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,GPUdst,GPUsrcA,GPUsrcB);
+void GPU_elementwise_comparison(size_t N, StorageT* GPUdst, const StorageT* GPUsrcA, const StorageT* GPUsrcB) {
+    Kernel_elementwise_comparison <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, GPUdst, GPUsrcA, GPUsrcB);
     //checkCUDA(__LINE__,cudaGetLastError());
 }
 
-__global__ void Kernel_copyGPUforward(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* in, StorageT* out, int sizeofitem_in, int sizeofitem_out, int offset){
+__global__ void Kernel_copyGPUforward(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* in, StorageT* out, int sizeofitem_in, int sizeofitem_out, int offset) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
-        int out_base = idx*sizeofitem_out+offset;
-        int in_base = idx*sizeofitem_in;
-        for(int i=0;i<sizeofitem_in; ++i){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
+        int out_base = idx * sizeofitem_out + offset;
+        int in_base = idx * sizeofitem_in;
+        for (int i = 0; i < sizeofitem_in; ++i) {
             out[out_base + i] = in[in_base + i];
         }
     }
 }
 
-void copyGPUforward(size_t N, const StorageT* in, StorageT* out, int sizeofitem_in, int sizeofitem_out, int offset){
-    Kernel_copyGPUforward<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,in,out,sizeofitem_in,sizeofitem_out,offset);
+void copyGPUforward(size_t N, const StorageT* in, StorageT* out, int sizeofitem_in, int sizeofitem_out, int offset) {
+    Kernel_copyGPUforward <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, in, out, sizeofitem_in, sizeofitem_out, offset);
 }
 
 
-__global__ void Kernel_copyGPUbackward(size_t CUDA_NUM_LOOPS, size_t N, StorageT* in, const StorageT* out, int sizeofitem_in, int sizeofitem_out, int offset){
+__global__ void Kernel_copyGPUbackward(size_t CUDA_NUM_LOOPS, size_t N, StorageT* in, const StorageT* out, int sizeofitem_in, int sizeofitem_out, int offset) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
-        int in_base = idx*sizeofitem_in;
-        int out_base = idx*sizeofitem_out+offset;
-        for(int i=0;i<sizeofitem_in; ++i){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
+        int in_base = idx * sizeofitem_in;
+        int out_base = idx * sizeofitem_out + offset;
+        for (int i = 0; i < sizeofitem_in; ++i) {
             in[in_base + i] = GPUCompute2StorageT( GPUStorage2ComputeT(in[in_base + i]) + GPUStorage2ComputeT(out[out_base + i]) );
         }
     }
 }
 
-void copyGPUbackward(size_t N, StorageT* in, const StorageT* out, int sizeofitem_in, int sizeofitem_out, int offset){
-    Kernel_copyGPUbackward<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,in,out,sizeofitem_in,sizeofitem_out,offset);
+void copyGPUbackward(size_t N, StorageT* in, const StorageT* out, int sizeofitem_in, int sizeofitem_out, int offset) {
+    Kernel_copyGPUbackward <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, in, out, sizeofitem_in, sizeofitem_out, offset);
 }
 
-__global__ void Kernel_elementwise_acc(size_t CUDA_NUM_LOOPS, size_t N, StorageT* GPUdst, const StorageT* GPUsrc){
+__global__ void Kernel_elementwise_acc(size_t CUDA_NUM_LOOPS, size_t N, StorageT* GPUdst, const StorageT* GPUsrc) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         GPUdst[idx] = GPUCompute2StorageT( GPUStorage2ComputeT(GPUdst[idx]) + GPUStorage2ComputeT(GPUsrc[idx]) );
     }
 }
 
-__global__ void Kernel_ROIforward_2D(size_t CUDA_NUM_LOOPS, size_t N, StorageT* out, const StorageT* in, const StorageT* start, int od1, int od2, int od3, int id1, int id2, int id3){
+__global__ void Kernel_ROIforward_2D(size_t CUDA_NUM_LOOPS, size_t N, StorageT* out, const StorageT* in, const StorageT* start, int od1, int od2, int od3, int id1, int id2, int id3) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t o = idxBase; o < min(N,idxBase+CUDA_NUM_LOOPS); ++o ){
-        int n  = (o / (od1*od2*od3));
-        int o1 = (o / (    od2*od3)) % od1;
+    for (size_t o = idxBase; o < min(N, idxBase + CUDA_NUM_LOOPS); ++o ) {
+        int n  = (o / (od1 * od2 * od3));
+        int o1 = (o / (    od2 * od3)) % od1;
         int o2 = (o /          od3 ) % od2;
         int o3 = (o                ) % od3;
-        int i1 = o1 + ((int)(GPUStorage2ComputeT(start[n*3+0])));
-        int i2 = o2 + ((int)(GPUStorage2ComputeT(start[n*3+1])));
-        int i3 = o3 + ((int)(GPUStorage2ComputeT(start[n*3+2])));
+        int i1 = o1 + ((int)(GPUStorage2ComputeT(start[n * 3 + 0])));
+        int i2 = o2 + ((int)(GPUStorage2ComputeT(start[n * 3 + 1])));
+        int i3 = o3 + ((int)(GPUStorage2ComputeT(start[n * 3 + 2])));
         int i = i3 + ( i2 + ( i1 + n * id1 ) * id2 ) * id3;
         out[o] = in[i];
     }
 }
 
-__global__ void Kernel_ROIforward_3D(size_t CUDA_NUM_LOOPS, size_t N, StorageT* out, const StorageT* in, const StorageT* start, int od1, int od2, int od3, int od4, int id1, int id2, int id3, int id4){
+__global__ void Kernel_ROIforward_3D(size_t CUDA_NUM_LOOPS, size_t N, StorageT* out, const StorageT* in, const StorageT* start, int od1, int od2, int od3, int od4, int id1, int id2, int id3, int id4) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t o = idxBase; o < min(N,idxBase+CUDA_NUM_LOOPS); ++o ){
-        int n  = (o / (od1*od2*od3*od4));
-        int o1 = (o / (    od2*od3*od4)) % od1;
-        int o2 = (o / (        od3*od4)) % od2;
+    for (size_t o = idxBase; o < min(N, idxBase + CUDA_NUM_LOOPS); ++o ) {
+        int n  = (o / (od1 * od2 * od3 * od4));
+        int o1 = (o / (    od2 * od3 * od4)) % od1;
+        int o2 = (o / (        od3 * od4)) % od2;
         int o3 = (o / (            od4)) % od3;
         int o4 = (o                    ) % od4;
-        int i1 = o1 + ((int)(GPUStorage2ComputeT(start[n*4+0])));
-        int i2 = o2 + ((int)(GPUStorage2ComputeT(start[n*4+1])));
-        int i3 = o3 + ((int)(GPUStorage2ComputeT(start[n*4+2])));
-        int i4 = o4 + ((int)(GPUStorage2ComputeT(start[n*4+3])));
+        int i1 = o1 + ((int)(GPUStorage2ComputeT(start[n * 4 + 0])));
+        int i2 = o2 + ((int)(GPUStorage2ComputeT(start[n * 4 + 1])));
+        int i3 = o3 + ((int)(GPUStorage2ComputeT(start[n * 4 + 2])));
+        int i4 = o4 + ((int)(GPUStorage2ComputeT(start[n * 4 + 3])));
         int i = i4 + (i3 + ( i2 + ( i1 + n * id1 ) * id2 ) * id3 ) * id4;
         out[o] = in[i];
     }
 }
 
-__global__ void Kernel_ROIforward_4D(size_t CUDA_NUM_LOOPS, size_t N, StorageT* out, const StorageT* in, const StorageT* start, int od1, int od2, int od3, int od4, int od5, int id1, int id2, int id3, int id4, int id5){
+__global__ void Kernel_ROIforward_4D(size_t CUDA_NUM_LOOPS, size_t N, StorageT* out, const StorageT* in, const StorageT* start, int od1, int od2, int od3, int od4, int od5, int id1, int id2, int id3, int id4, int id5) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t o = idxBase; o < min(N,idxBase+CUDA_NUM_LOOPS); ++o ){
-        int n  = (o / (od1*od2*od3*od4*od5));
-        int o1 = (o / (    od2*od3*od4*od5)) % od1;
-        int o2 = (o / (        od3*od4*od5)) % od2;
-        int o3 = (o / (            od4*od5)) % od3;
+    for (size_t o = idxBase; o < min(N, idxBase + CUDA_NUM_LOOPS); ++o ) {
+        int n  = (o / (od1 * od2 * od3 * od4 * od5));
+        int o1 = (o / (    od2 * od3 * od4 * od5)) % od1;
+        int o2 = (o / (        od3 * od4 * od5)) % od2;
+        int o3 = (o / (            od4 * od5)) % od3;
         int o4 = (o / (                od5)) % od4;
         int o5 = (o                        ) % od5;
-        int i1 = o1 + ((int)(GPUStorage2ComputeT(start[n*5+0])));
-        int i2 = o2 + ((int)(GPUStorage2ComputeT(start[n*5+1])));
-        int i3 = o3 + ((int)(GPUStorage2ComputeT(start[n*5+2])));
-        int i4 = o4 + ((int)(GPUStorage2ComputeT(start[n*5+3])));
-        int i5 = o5 + ((int)(GPUStorage2ComputeT(start[n*5+4])));
+        int i1 = o1 + ((int)(GPUStorage2ComputeT(start[n * 5 + 0])));
+        int i2 = o2 + ((int)(GPUStorage2ComputeT(start[n * 5 + 1])));
+        int i3 = o3 + ((int)(GPUStorage2ComputeT(start[n * 5 + 2])));
+        int i4 = o4 + ((int)(GPUStorage2ComputeT(start[n * 5 + 3])));
+        int i5 = o5 + ((int)(GPUStorage2ComputeT(start[n * 5 + 4])));
         int i = i5 + (i4 + (i3 + ( i2 + ( i1 + n * id1 ) * id2 ) * id3 ) * id4) * id5;
         out[o] = in[i];
     }
 }
 
-__global__ void Kernel_ROIbackward_2D(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* out, StorageT* in, const StorageT* start, int od1, int od2, int od3, int id1, int id2, int id3){
+__global__ void Kernel_ROIbackward_2D(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* out, StorageT* in, const StorageT* start, int od1, int od2, int od3, int id1, int id2, int id3) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t o = idxBase; o < min(N,idxBase+CUDA_NUM_LOOPS); ++o ){
-        int n  = (o / (od1*od2*od3));
-        int o1 = (o / (    od2*od3)) % od1;
+    for (size_t o = idxBase; o < min(N, idxBase + CUDA_NUM_LOOPS); ++o ) {
+        int n  = (o / (od1 * od2 * od3));
+        int o1 = (o / (    od2 * od3)) % od1;
         int o2 = (o /          od3 ) % od2;
         int o3 = (o                ) % od3;
-        int i1 = o1 + ((int)(GPUStorage2ComputeT(start[n*3+0])));
-        int i2 = o2 + ((int)(GPUStorage2ComputeT(start[n*3+1])));
-        int i3 = o3 + ((int)(GPUStorage2ComputeT(start[n*3+2])));
+        int i1 = o1 + ((int)(GPUStorage2ComputeT(start[n * 3 + 0])));
+        int i2 = o2 + ((int)(GPUStorage2ComputeT(start[n * 3 + 1])));
+        int i3 = o3 + ((int)(GPUStorage2ComputeT(start[n * 3 + 2])));
         int i = i3 + ( i2 + ( i1 + n * id1 ) * id2 ) * id3;
         in[i] = GPUCompute2StorageT( GPUStorage2ComputeT(in[i]) + GPUStorage2ComputeT(out[o]) );
     }
 }
 
-__global__ void Kernel_ROIbackward_3D(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* out, StorageT* in, const StorageT* start, int od1, int od2, int od3, int od4, int id1, int id2, int id3, int id4){
+__global__ void Kernel_ROIbackward_3D(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* out, StorageT* in, const StorageT* start, int od1, int od2, int od3, int od4, int id1, int id2, int id3, int id4) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t o = idxBase; o < min(N,idxBase+CUDA_NUM_LOOPS); ++o ){
-        int n  = (o / (od1*od2*od3*od4));
-        int o1 = (o / (    od2*od3*od4)) % od1;
-        int o2 = (o / (        od3*od4)) % od2;
+    for (size_t o = idxBase; o < min(N, idxBase + CUDA_NUM_LOOPS); ++o ) {
+        int n  = (o / (od1 * od2 * od3 * od4));
+        int o1 = (o / (    od2 * od3 * od4)) % od1;
+        int o2 = (o / (        od3 * od4)) % od2;
         int o3 = (o / (            od4)) % od3;
         int o4 = (o                    ) % od4;
-        int i1 = o1 + ((int)(GPUStorage2ComputeT(start[n*4+0])));
-        int i2 = o2 + ((int)(GPUStorage2ComputeT(start[n*4+1])));
-        int i3 = o3 + ((int)(GPUStorage2ComputeT(start[n*4+2])));
-        int i4 = o4 + ((int)(GPUStorage2ComputeT(start[n*4+3])));
+        int i1 = o1 + ((int)(GPUStorage2ComputeT(start[n * 4 + 0])));
+        int i2 = o2 + ((int)(GPUStorage2ComputeT(start[n * 4 + 1])));
+        int i3 = o3 + ((int)(GPUStorage2ComputeT(start[n * 4 + 2])));
+        int i4 = o4 + ((int)(GPUStorage2ComputeT(start[n * 4 + 3])));
         int i = i4 + (i3 + ( i2 + ( i1 + n * id1 ) * id2 ) * id3 ) * id4;
         in[i] = GPUCompute2StorageT( GPUStorage2ComputeT(in[i]) + GPUStorage2ComputeT(out[o]) );
     }
 }
 
-__global__ void Kernel_ROIbackward_4D(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* out, StorageT* in, const StorageT* start, int od1, int od2, int od3, int od4, int od5, int id1, int id2, int id3, int id4, int id5){
+__global__ void Kernel_ROIbackward_4D(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* out, StorageT* in, const StorageT* start, int od1, int od2, int od3, int od4, int od5, int id1, int id2, int id3, int id4, int id5) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t o = idxBase; o < min(N,idxBase+CUDA_NUM_LOOPS); ++o ){
-        int n  = (o / (od1*od2*od3*od4*od5));
-        int o1 = (o / (    od2*od3*od4*od5)) % od1;
-        int o2 = (o / (        od3*od4*od5)) % od2;
-        int o3 = (o / (            od4*od5)) % od3;
+    for (size_t o = idxBase; o < min(N, idxBase + CUDA_NUM_LOOPS); ++o ) {
+        int n  = (o / (od1 * od2 * od3 * od4 * od5));
+        int o1 = (o / (    od2 * od3 * od4 * od5)) % od1;
+        int o2 = (o / (        od3 * od4 * od5)) % od2;
+        int o3 = (o / (            od4 * od5)) % od3;
         int o4 = (o / (                od5)) % od4;
         int o5 = (o                        ) % od5;
-        int i1 = o1 + ((int)(GPUStorage2ComputeT(start[n*5+0])));
-        int i2 = o2 + ((int)(GPUStorage2ComputeT(start[n*5+1])));
-        int i3 = o3 + ((int)(GPUStorage2ComputeT(start[n*5+2])));
-        int i4 = o4 + ((int)(GPUStorage2ComputeT(start[n*5+3])));
-        int i5 = o5 + ((int)(GPUStorage2ComputeT(start[n*5+4])));
+        int i1 = o1 + ((int)(GPUStorage2ComputeT(start[n * 5 + 0])));
+        int i2 = o2 + ((int)(GPUStorage2ComputeT(start[n * 5 + 1])));
+        int i3 = o3 + ((int)(GPUStorage2ComputeT(start[n * 5 + 2])));
+        int i4 = o4 + ((int)(GPUStorage2ComputeT(start[n * 5 + 3])));
+        int i5 = o5 + ((int)(GPUStorage2ComputeT(start[n * 5 + 4])));
         int i = i5 + (i4 + (i3 + ( i2 + ( i1 + n * id1 ) * id2 ) * id3 ) * id4) * id5;
         in[i] = GPUCompute2StorageT( GPUStorage2ComputeT(in[i]) + GPUStorage2ComputeT(out[o]) );
     }
@@ -1531,7 +1531,7 @@ __global__ void Kernel_ROIbackward_4D(size_t CUDA_NUM_LOOPS, size_t N, const Sto
 __global__ void CoeffElementWiseSumReplace(size_t CUDA_NUM_LOOPS, size_t N, const ComputeT coeff, const StorageT* coeff_data, const size_t num_offset, const size_t dim, const StorageT* in, StorageT* out) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         const ComputeT final_coeff = coeff_data ? ( GPUStorage2ComputeT(coeff_data[num_offset + idx / dim]) * coeff) : coeff;
         out[idx] = GPUCompute2StorageT( GPUStorage2ComputeT(in[idx]) * final_coeff );
     }
@@ -1540,7 +1540,7 @@ __global__ void CoeffElementWiseSumReplace(size_t CUDA_NUM_LOOPS, size_t N, cons
 __global__ void CoeffElementWiseSumAccumulate(size_t CUDA_NUM_LOOPS, size_t N, const ComputeT coeff, const StorageT* coeff_data, const size_t num_offset, const size_t dim, const StorageT* in, StorageT* out) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         const ComputeT final_coeff = coeff_data ? ( GPUStorage2ComputeT(coeff_data[num_offset + idx / dim]) * coeff) : coeff;
         out[idx] = GPUCompute2StorageT(GPUStorage2ComputeT(out[idx]) + GPUStorage2ComputeT(in[idx]) * final_coeff );
     }
@@ -1555,23 +1555,23 @@ __global__ void CoeffElementWiseSumAccumulate(size_t CUDA_NUM_LOOPS, size_t N, c
  * License page: https://github.com/rbgirshick/fast-rcnn/blob/master/LICENSE
  * ----------------------------------------------------------------------------
  */
-__global__ void Kernel_ROIPoolForward_2D(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* in_data, const StorageT* in_rois, StorageT* out_data, size_t* argmax_data, const ComputeT spatial_scale, const int channels, const int height, const int width, const int pooled_height, const int pooled_width){
+__global__ void Kernel_ROIPoolForward_2D(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* in_data, const StorageT* in_rois, StorageT* out_data, size_t* argmax_data, const ComputeT spatial_scale, const int channels, const int height, const int width, const int pooled_height, const int pooled_width) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
 
-    for (size_t index = idxBase; index < min(N,idxBase+CUDA_NUM_LOOPS); ++index ){
+    for (size_t index = idxBase; index < min(N, idxBase + CUDA_NUM_LOOPS); ++index ) {
         // (n, c, ph, pw) is an element in the pooled output
         int pw = (index) % pooled_width;
         int ph = (index / pooled_width) % pooled_height;
         int  c = (index / pooled_width / pooled_height) % channels;
         int  n = (index / pooled_width / pooled_height / channels);
 
-        int roi_5n = n*5;
-        int roi_batch_ind = GPUStorage2ComputeT(in_rois[roi_5n+0]);
-        int roi_start_h = round(GPUStorage2ComputeT(in_rois[roi_5n+1]) * spatial_scale);
-        int roi_end_h = round(GPUStorage2ComputeT(in_rois[roi_5n+2]) * spatial_scale);
-        int roi_start_w = round(GPUStorage2ComputeT(in_rois[roi_5n+3]) * spatial_scale);
-        int roi_end_w = round(GPUStorage2ComputeT(in_rois[roi_5n+4]) * spatial_scale);
+        int roi_5n = n * 5;
+        int roi_batch_ind = GPUStorage2ComputeT(in_rois[roi_5n + 0]);
+        int roi_start_h = round(GPUStorage2ComputeT(in_rois[roi_5n + 1]) * spatial_scale);
+        int roi_end_h = round(GPUStorage2ComputeT(in_rois[roi_5n + 2]) * spatial_scale);
+        int roi_start_w = round(GPUStorage2ComputeT(in_rois[roi_5n + 3]) * spatial_scale);
+        int roi_end_w = round(GPUStorage2ComputeT(in_rois[roi_5n + 4]) * spatial_scale);
 
         // Force malformed ROIs to be 1x1
         int roi_width = max(roi_end_w - roi_start_w + 1, 1);
@@ -1609,15 +1609,15 @@ __global__ void Kernel_ROIPoolForward_2D(size_t CUDA_NUM_LOOPS, size_t N, const 
             }
         }
         out_data[index] = GPUCompute2StorageT(maxval);
-        if (argmax_data!=NULL)  argmax_data[index] = maxidx;
+        if (argmax_data != NULL)  argmax_data[index] = maxidx;
 
     }
 }
 
-__global__ void Kernel_ROIPoolForward_3D(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* in_data, const StorageT* in_rois, StorageT* out_data, size_t* argmax_data, const ComputeT spatial_scale, const int channels, const int depth, const int height, const int width, const int pooled_depth, const int pooled_height, const int pooled_width){
+__global__ void Kernel_ROIPoolForward_3D(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* in_data, const StorageT* in_rois, StorageT* out_data, size_t* argmax_data, const ComputeT spatial_scale, const int channels, const int depth, const int height, const int width, const int pooled_depth, const int pooled_height, const int pooled_width) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t index = idxBase; index < min(N,idxBase+CUDA_NUM_LOOPS); ++index ){
+    for (size_t index = idxBase; index < min(N, idxBase + CUDA_NUM_LOOPS); ++index ) {
 
         // (n, c, pd, ph, pw) is an element in the pooled output
         int pw = (index) % pooled_width;
@@ -1627,13 +1627,13 @@ __global__ void Kernel_ROIPoolForward_3D(size_t CUDA_NUM_LOOPS, size_t N, const 
         int  n = (index / pooled_width / pooled_height / pooled_depth / channels);
 
         int roi_7n = n * 7;
-        int roi_batch_ind = GPUStorage2ComputeT(in_rois[roi_7n+0]);
-        int roi_start_d = round(GPUStorage2ComputeT(in_rois[roi_7n+1]) * spatial_scale);
-        int roi_end_d = round(GPUStorage2ComputeT(in_rois[roi_7n+2]) * spatial_scale);
-        int roi_start_h = round(GPUStorage2ComputeT(in_rois[roi_7n+3]) * spatial_scale);
-        int roi_end_h = round(GPUStorage2ComputeT(in_rois[roi_7n+4]) * spatial_scale);
-        int roi_start_w = round(GPUStorage2ComputeT(in_rois[roi_7n+5]) * spatial_scale);
-        int roi_end_w = round(GPUStorage2ComputeT(in_rois[roi_7n+6]) * spatial_scale);
+        int roi_batch_ind = GPUStorage2ComputeT(in_rois[roi_7n + 0]);
+        int roi_start_d = round(GPUStorage2ComputeT(in_rois[roi_7n + 1]) * spatial_scale);
+        int roi_end_d = round(GPUStorage2ComputeT(in_rois[roi_7n + 2]) * spatial_scale);
+        int roi_start_h = round(GPUStorage2ComputeT(in_rois[roi_7n + 3]) * spatial_scale);
+        int roi_end_h = round(GPUStorage2ComputeT(in_rois[roi_7n + 4]) * spatial_scale);
+        int roi_start_w = round(GPUStorage2ComputeT(in_rois[roi_7n + 5]) * spatial_scale);
+        int roi_end_w = round(GPUStorage2ComputeT(in_rois[roi_7n + 6]) * spatial_scale);
 
 
         // Force malformed ROIs to be 1x1
@@ -1682,14 +1682,14 @@ __global__ void Kernel_ROIPoolForward_3D(size_t CUDA_NUM_LOOPS, size_t N, const 
             }
         }
         out_data[index] = GPUCompute2StorageT(maxval);
-        if (argmax_data!=NULL)  argmax_data[index] = maxidx;
+        if (argmax_data != NULL)  argmax_data[index] = maxidx;
     }
 }
 
 __global__ void Kernel_ROIPoolBackward_2D(size_t CUDA_NUM_LOOPS, size_t N, StorageT* in_diff, const StorageT* in_rois, const StorageT* out_diff, const size_t* argmax_data, const ComputeT spatial_scale, const int num_rois, const int channels, const int height, const int width, const int pooled_height, const int pooled_width) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t index = idxBase; index < min(N,idxBase+CUDA_NUM_LOOPS); ++index ){
+    for (size_t index = idxBase; index < min(N, idxBase + CUDA_NUM_LOOPS); ++index ) {
 
         // (n, c, h, w) coords in in data
         int w = index % width;
@@ -1700,17 +1700,17 @@ __global__ void Kernel_ROIPoolBackward_2D(size_t CUDA_NUM_LOOPS, size_t N, Stora
         ComputeT gradient = GPUStorage2ComputeT(in_diff[index]);
         // Accumulate gradient over all ROIs that pooled this element
         for (int roi_n = 0; roi_n < num_rois; ++roi_n) {
-            int roi_5n = roi_n*5;
-            int roi_batch_ind = (int)(GPUStorage2ComputeT(in_rois[roi_5n+0]));
+            int roi_5n = roi_n * 5;
+            int roi_batch_ind = (int)(GPUStorage2ComputeT(in_rois[roi_5n + 0]));
             // Skip if ROI's batch index doesn't match n
             if (n != roi_batch_ind) {
                 continue;
             }
 
-            int roi_start_h = round(GPUStorage2ComputeT(in_rois[roi_5n+1]) * spatial_scale);
-            int roi_end_h = round(GPUStorage2ComputeT(in_rois[roi_5n+2]) * spatial_scale);
-            int roi_start_w = round(GPUStorage2ComputeT(in_rois[roi_5n+3]) * spatial_scale);
-            int roi_end_w = round(GPUStorage2ComputeT(in_rois[roi_5n+4]) * spatial_scale);
+            int roi_start_h = round(GPUStorage2ComputeT(in_rois[roi_5n + 1]) * spatial_scale);
+            int roi_end_h = round(GPUStorage2ComputeT(in_rois[roi_5n + 2]) * spatial_scale);
+            int roi_start_w = round(GPUStorage2ComputeT(in_rois[roi_5n + 3]) * spatial_scale);
+            int roi_end_w = round(GPUStorage2ComputeT(in_rois[roi_5n + 4]) * spatial_scale);
 
             // Skip if ROI doesn't include (h, w)
             const bool in_roi = (w >= roi_start_w && w <= roi_end_w && h >= roi_start_h && h <= roi_end_h);
@@ -1756,7 +1756,7 @@ __global__ void Kernel_ROIPoolBackward_2D(size_t CUDA_NUM_LOOPS, size_t N, Stora
 __global__ void Kernel_ROIPoolBackward_3D(size_t CUDA_NUM_LOOPS, size_t N, StorageT* in_diff, const StorageT* in_rois, const StorageT* out_diff, const size_t* argmax_data, const ComputeT spatial_scale, const int num_rois, const int channels, const int depth, const int height, const int width, const int pooled_depth, const int pooled_height, const int pooled_width) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t index = idxBase; index < min(N,idxBase+CUDA_NUM_LOOPS); ++index ){
+    for (size_t index = idxBase; index < min(N, idxBase + CUDA_NUM_LOOPS); ++index ) {
 
         // (n, c, h, w) coords in in data
         int w = index % width;
@@ -1768,19 +1768,19 @@ __global__ void Kernel_ROIPoolBackward_3D(size_t CUDA_NUM_LOOPS, size_t N, Stora
         ComputeT gradient = GPUStorage2ComputeT(in_diff[index]);
         // Accumulate gradient over all ROIs that pooled this element
         for (int roi_n = 0; roi_n < num_rois; ++roi_n) {
-            int roi_7n = roi_n*7;
-            int roi_batch_ind = (int)(GPUStorage2ComputeT(in_rois[roi_7n+0]));
+            int roi_7n = roi_n * 7;
+            int roi_batch_ind = (int)(GPUStorage2ComputeT(in_rois[roi_7n + 0]));
             // Skip if ROI's batch index doesn't match n
             if (n != roi_batch_ind) {
                 continue;
             }
 
-            int roi_start_d = round(GPUStorage2ComputeT(in_rois[roi_7n+1]) * spatial_scale);
-            int roi_end_d = round(GPUStorage2ComputeT(in_rois[roi_7n+2]) * spatial_scale);
-            int roi_start_h = round(GPUStorage2ComputeT(in_rois[roi_7n+3]) * spatial_scale);
-            int roi_end_h = round(GPUStorage2ComputeT(in_rois[roi_7n+4]) * spatial_scale);
-            int roi_start_w = round(GPUStorage2ComputeT(in_rois[roi_7n+5]) * spatial_scale);
-            int roi_end_w = round(GPUStorage2ComputeT(in_rois[roi_7n+6]) * spatial_scale);
+            int roi_start_d = round(GPUStorage2ComputeT(in_rois[roi_7n + 1]) * spatial_scale);
+            int roi_end_d = round(GPUStorage2ComputeT(in_rois[roi_7n + 2]) * spatial_scale);
+            int roi_start_h = round(GPUStorage2ComputeT(in_rois[roi_7n + 3]) * spatial_scale);
+            int roi_end_h = round(GPUStorage2ComputeT(in_rois[roi_7n + 4]) * spatial_scale);
+            int roi_start_w = round(GPUStorage2ComputeT(in_rois[roi_7n + 5]) * spatial_scale);
+            int roi_end_w = round(GPUStorage2ComputeT(in_rois[roi_7n + 6]) * spatial_scale);
 
             // Skip if ROI doesn't include (h, w)
             const bool in_roi = (w >= roi_start_w && w <= roi_end_w && h >= roi_start_h && h <= roi_end_h && d >= roi_start_d && d <= roi_end_d);
@@ -1821,7 +1821,7 @@ __global__ void Kernel_ROIPoolBackward_3D(size_t CUDA_NUM_LOOPS, size_t N, Stora
                     for (int pw = pwstart; pw < pwend; ++pw) {
                         size_t out_index = (pd * pooled_height + ph) * pooled_width + pw;
                         if (argmax_data[offset + out_index] == ((d * height + h) * width + w)) {
-                            gradient += GPUStorage2ComputeT(out_diff[offset+out_index]);
+                            gradient += GPUStorage2ComputeT(out_diff[offset + out_index]);
                         }
                     }
                 }
@@ -1831,347 +1831,347 @@ __global__ void Kernel_ROIPoolBackward_3D(size_t CUDA_NUM_LOOPS, size_t N, Stora
     }
 }
 
-__global__ void Kernel_bsa2b(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* a, StorageT* b){
+__global__ void Kernel_bsa2b(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* a, StorageT* b) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         b[idx] = GPUCompute2StorageT(GPUStorage2ComputeT(b[idx]) - GPUStorage2ComputeT(a[idx]));
     }
 }
 
-void bsa2b(size_t N, const StorageT* a, StorageT* b){
-    Kernel_bsa2b<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,a,b);
+void bsa2b(size_t N, const StorageT* a, StorageT* b) {
+    Kernel_bsa2b <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, a, b);
 }
 
-__global__ void Kernel_update_SGDL1(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT lr, const StorageT* weights, StorageT* gradients){
+__global__ void Kernel_update_SGDL1(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT lr, const StorageT* weights, StorageT* gradients) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
         ComputeT h  = GPUStorage2ComputeT(gradients[idx]);
         ComputeT g;
-        if (w>0)        g = decay;
-        else if (w<0)   g = -decay;
+        if (w > 0)        g = decay;
+        else if (w < 0)   g = -decay;
         else            g = 0;
-        for (int k=1; k<nNets+1; ++k) g += GPUStorage2ComputeT(gradients[N*k+idx]);
+        for (int k = 1; k < nNets + 1; ++k) g += GPUStorage2ComputeT(gradients[N * k + idx]);
         gradients[idx] = GPUCompute2StorageT(momentum * h + lr * g);
     }
 }
 
-__global__ void Kernel_update_SGDL2(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT lr, const StorageT* weights, StorageT* gradients){
+__global__ void Kernel_update_SGDL2(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT lr, const StorageT* weights, StorageT* gradients) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
         ComputeT h  = GPUStorage2ComputeT(gradients[idx]);
         ComputeT g  = decay * w;     // L2 regularization
-        for (int k=1; k<nNets+1; ++k) g += GPUStorage2ComputeT(gradients[N*k+idx]);
+        for (int k = 1; k < nNets + 1; ++k) g += GPUStorage2ComputeT(gradients[N * k + idx]);
         gradients[idx] = GPUCompute2StorageT(momentum * h + lr * g);
     }
 }
 
-__global__ void Kernel_update_AdaDeltaL1(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients){
+__global__ void Kernel_update_AdaDeltaL1(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
         ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
-        size_t h_idx = N*(nNets+1)+idx;
+        size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
-        size_t h2_idx = N*(nNets+2)+idx;
+        size_t h2_idx = N * (nNets + 2) + idx;
         ComputeT h2  = GPUStorage2ComputeT(gradients[h2_idx]);
-        
-        ComputeT g;
-        if (w>0)        g = decay;
-        else if (w<0)   g = -decay;
-        else            g = 0;
-        for (int k=1; k<nNets+1; ++k) g += GPUStorage2ComputeT(gradients[N*k+idx]);
 
-        h = momentum * h + (1-momentum)*g*g;
-        g = g * sqrt( (delta+h2) / (delta+h) );
-        h2= momentum * h2+ (1-momentum)*g*g;
+        ComputeT g;
+        if (w > 0)        g = decay;
+        else if (w < 0)   g = -decay;
+        else            g = 0;
+        for (int k = 1; k < nNets + 1; ++k) g += GPUStorage2ComputeT(gradients[N * k + idx]);
+
+        h = momentum * h + (1 - momentum) * g * g;
+        g = g * sqrt( (delta + h2) / (delta + h) );
+        h2 = momentum * h2 + (1 - momentum) * g * g;
         gradients[h_idx] = GPUCompute2StorageT(h);
         gradients[h2_idx] = GPUCompute2StorageT(h2);
         gradients[idx] = GPUCompute2StorageT(lr * g);
     }
 }
 
-__global__ void Kernel_update_AdaDeltaL2(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients){
+__global__ void Kernel_update_AdaDeltaL2(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
         ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
-        size_t h_idx = N*(nNets+1)+idx;
+        size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
-        size_t h2_idx = N*(nNets+2)+idx;
+        size_t h2_idx = N * (nNets + 2) + idx;
         ComputeT h2  = GPUStorage2ComputeT(gradients[h2_idx]);
 
         ComputeT g  = decay * w;     // L2 regularization
-        for (int k=1; k<nNets+1; ++k) g += GPUStorage2ComputeT(gradients[N*k+idx]);
+        for (int k = 1; k < nNets + 1; ++k) g += GPUStorage2ComputeT(gradients[N * k + idx]);
 
-        h = momentum * h + (1-momentum)*g*g;
-        g = g * sqrt( (delta+h2) / (delta+h) );
-        h2= momentum * h2+ (1-momentum)*g*g;
+        h = momentum * h + (1 - momentum) * g * g;
+        g = g * sqrt( (delta + h2) / (delta + h) );
+        h2 = momentum * h2 + (1 - momentum) * g * g;
         gradients[h_idx] = GPUCompute2StorageT(h);
         gradients[h2_idx] = GPUCompute2StorageT(h2);
         gradients[idx] = GPUCompute2StorageT(lr * g);
     }
 }
 
-__global__ void Kernel_update_AdaGradL1(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients){
+__global__ void Kernel_update_AdaGradL1(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
         ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
-        size_t h_idx = N*(nNets+1)+idx;
+        size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
         ComputeT g;
-        if (w>0)        g = decay;
-        else if (w<0)   g = -decay;
+        if (w > 0)        g = decay;
+        else if (w < 0)   g = -decay;
         else            g = 0;
-        for (int k=1; k<nNets+1; ++k) g += GPUStorage2ComputeT(gradients[N*k+idx]);
+        for (int k = 1; k < nNets + 1; ++k) g += GPUStorage2ComputeT(gradients[N * k + idx]);
         h = g * g + h;
         gradients[h_idx] = GPUCompute2StorageT(h);
         gradients[idx] = GPUCompute2StorageT(momentum * u + lr * g / (sqrt(h) + delta));
     }
 }
 
-__global__ void Kernel_update_AdaGradL2(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients){
+__global__ void Kernel_update_AdaGradL2(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
         ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
-        size_t h_idx = N*(nNets+1)+idx;
+        size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
         ComputeT g  = decay * w;     // L2 regularization
-        for (int k=1; k<nNets+1; ++k) g += GPUStorage2ComputeT(gradients[N*k+idx]);
+        for (int k = 1; k < nNets + 1; ++k) g += GPUStorage2ComputeT(gradients[N * k + idx]);
         h = g * g + h;
         gradients[h_idx] = GPUCompute2StorageT(h);
         gradients[idx] = GPUCompute2StorageT(momentum * u + lr * g / (sqrt(h) + delta));
     }
 }
 
-__global__ void Kernel_update_AdamL1(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT momentum2, ComputeT delta, int iter, ComputeT lr, const StorageT* weights, StorageT* gradients){
+__global__ void Kernel_update_AdamL1(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT momentum2, ComputeT delta, int iter, ComputeT lr, const StorageT* weights, StorageT* gradients) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
         ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
-        size_t h_idx = N*(nNets+1)+idx;
+        size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
-        size_t h2_idx = N*(nNets+2)+idx;
+        size_t h2_idx = N * (nNets + 2) + idx;
         ComputeT h2  = GPUStorage2ComputeT(gradients[h2_idx]);
         ComputeT g;
-        if (w>0)        g = decay;
-        else if (w<0)   g = -decay;
+        if (w > 0)        g = decay;
+        else if (w < 0)   g = -decay;
         else            g = 0;
-        for (int k=1; k<nNets+1; ++k) g += GPUStorage2ComputeT(gradients[N*k+idx]);
-        h = momentum * h + (1-momentum )*g;
-        h2= momentum2* h2+ (1-momentum2)*g*g;
+        for (int k = 1; k < nNets + 1; ++k) g += GPUStorage2ComputeT(gradients[N * k + idx]);
+        h = momentum * h + (1 - momentum ) * g;
+        h2 = momentum2 * h2 + (1 - momentum2) * g * g;
         gradients[h_idx] = GPUCompute2StorageT(h);
         gradients[h2_idx] = GPUCompute2StorageT(h2);
-        gradients[idx] = GPUCompute2StorageT(lr * sqrt(1-pow(momentum2,iter)) / (1-pow(momentum,iter)) * h/ (sqrt(h2) + delta));
+        gradients[idx] = GPUCompute2StorageT(lr * sqrt(1 - pow(momentum2, iter)) / (1 - pow(momentum, iter)) * h / (sqrt(h2) + delta));
     }
 }
 
-__global__ void Kernel_update_AdamL2(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT momentum2, ComputeT delta, int iter, ComputeT lr, const StorageT* weights, StorageT* gradients){
+__global__ void Kernel_update_AdamL2(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT momentum2, ComputeT delta, int iter, ComputeT lr, const StorageT* weights, StorageT* gradients) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
         ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
-        size_t h_idx = N*(nNets+1)+idx;
+        size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
-        size_t h2_idx = N*(nNets+2)+idx;
+        size_t h2_idx = N * (nNets + 2) + idx;
         ComputeT h2  = GPUStorage2ComputeT(gradients[h2_idx]);
         ComputeT g  = decay * w;     // L2 regularization
-        for (int k=1; k<nNets+1; ++k) g += GPUStorage2ComputeT(gradients[N*k+idx]);
-        h = momentum * h + (1-momentum )*g;
-        h2= momentum2* h2+ (1-momentum2)*g*g;
+        for (int k = 1; k < nNets + 1; ++k) g += GPUStorage2ComputeT(gradients[N * k + idx]);
+        h = momentum * h + (1 - momentum ) * g;
+        h2 = momentum2 * h2 + (1 - momentum2) * g * g;
         gradients[h_idx] = GPUCompute2StorageT(h);
         gradients[h2_idx] = GPUCompute2StorageT(h2);
-        gradients[idx] = GPUCompute2StorageT(lr * sqrt(1-pow(momentum2,iter)) / (1-pow(momentum,iter)) * h/ (sqrt(h2) + delta));
+        gradients[idx] = GPUCompute2StorageT(lr * sqrt(1 - pow(momentum2, iter)) / (1 - pow(momentum, iter)) * h / (sqrt(h2) + delta));
     }
 }
 
-__global__ void Kernel_update_NAGL1(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients){
+__global__ void Kernel_update_NAGL1(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
         ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
-        size_t h_idx = N*(nNets+1)+idx;
+        size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
         ComputeT g;
-        if (w>0)        g = decay;
-        else if (w<0)   g = -decay;
+        if (w > 0)        g = decay;
+        else if (w < 0)   g = -decay;
         else            g = 0;
-        for (int k=1; k<nNets+1; ++k) g += GPUStorage2ComputeT(gradients[N*k+idx]);
+        for (int k = 1; k < nNets + 1; ++k) g += GPUStorage2ComputeT(gradients[N * k + idx]);
         ComputeT t  = h;
         h = momentum * h + lr * g;
         gradients[h_idx] = GPUCompute2StorageT(h);
-        gradients[idx] = GPUCompute2StorageT((1+momentum) * h - momentum * t);
+        gradients[idx] = GPUCompute2StorageT((1 + momentum) * h - momentum * t);
     }
 }
 
-__global__ void Kernel_update_NAGL2(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients){
+__global__ void Kernel_update_NAGL2(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
         ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
-        size_t h_idx = N*(nNets+1)+idx;
+        size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
         ComputeT g  = decay * w;     // L2 regularization
-        for (int k=1; k<nNets+1; ++k) g += GPUStorage2ComputeT(gradients[N*k+idx]);
+        for (int k = 1; k < nNets + 1; ++k) g += GPUStorage2ComputeT(gradients[N * k + idx]);
         ComputeT t  = h;
         h = momentum * h + lr * g;
         gradients[h_idx] = GPUCompute2StorageT(h);
-        gradients[idx] = GPUCompute2StorageT((1+momentum) * h - momentum * t);
+        gradients[idx] = GPUCompute2StorageT((1 + momentum) * h - momentum * t);
     }
 }
 
-__global__ void Kernel_update_RMSpropL1(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT rms_decay, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients){
+__global__ void Kernel_update_RMSpropL1(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT rms_decay, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
         ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
-        size_t h_idx = N*(nNets+1)+idx;
+        size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
         ComputeT g;
-        if (w>0)        g = decay;
-        else if (w<0)   g = -decay;
+        if (w > 0)        g = decay;
+        else if (w < 0)   g = -decay;
         else            g = 0;
-        for (int k=1; k<nNets+1; ++k) g += GPUStorage2ComputeT(gradients[N*k+idx]);
-        h = rms_decay * h + (1-rms_decay) * g * g;
+        for (int k = 1; k < nNets + 1; ++k) g += GPUStorage2ComputeT(gradients[N * k + idx]);
+        h = rms_decay * h + (1 - rms_decay) * g * g;
         gradients[h_idx] = GPUCompute2StorageT(h);
         gradients[idx] = GPUCompute2StorageT(lr * g / (sqrt(h) + delta));
     }
 }
 
-__global__ void Kernel_update_RMSpropL2(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT rms_decay, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients){
+__global__ void Kernel_update_RMSpropL2(size_t CUDA_NUM_LOOPS, size_t N, int nNets, ComputeT decay, ComputeT rms_decay, ComputeT delta, ComputeT lr, const StorageT* weights, StorageT* gradients) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
         ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
-        size_t h_idx = N*(nNets+1)+idx;
+        size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
         ComputeT g  = decay * w;     // L2 regularization
-        for (int k=1; k<nNets+1; ++k) g += GPUStorage2ComputeT(gradients[N*k+idx]);
-        h = rms_decay * h + (1-rms_decay) * g * g;
+        for (int k = 1; k < nNets + 1; ++k) g += GPUStorage2ComputeT(gradients[N * k + idx]);
+        h = rms_decay * h + (1 - rms_decay) * g * g;
         gradients[h_idx] = GPUCompute2StorageT(h);
         gradients[idx] = GPUCompute2StorageT(lr * g / (sqrt(h) + delta));
     }
 }
 
-void update_solver(SolverAlgorithm solver, Regularizer regularizer, int iter, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT momentum2, ComputeT delta, ComputeT rms_decay, ComputeT lr, const StorageT* weights, StorageT* gradients){
-    switch (solver){
-        case SGD:
-            if (regularizer==L1)
-                Kernel_update_SGDL1<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,nNets,decay,momentum,lr,weights,gradients);
-            else
-                Kernel_update_SGDL2<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,nNets,decay,momentum,lr,weights,gradients);
-            break;
-        case AdaDelta:
-            if (regularizer==L1)
-                Kernel_update_AdaDeltaL1<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,nNets,decay,momentum,delta,lr,weights,gradients);
-            else
-                Kernel_update_AdaDeltaL2<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,nNets,decay,momentum,delta,lr,weights,gradients);
-            break;
-        case AdaGrad:
-            if (regularizer==L1)
-                Kernel_update_AdaGradL1<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,nNets,decay,momentum,delta,lr,weights,gradients);
-            else
-                Kernel_update_AdaGradL2<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,nNets,decay,momentum,delta,lr,weights,gradients);
-            break;
-        case Adam:
-            if (regularizer==L1)
-                Kernel_update_AdamL1<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,nNets,decay,momentum,momentum2,delta,iter+1,lr,weights,gradients);
-            else
-                Kernel_update_AdamL2<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,nNets,decay,momentum,momentum2,delta,iter+1,lr,weights,gradients);
-            break;
-        case NAG:
-            if (regularizer==L1)
-                Kernel_update_NAGL1<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,nNets,decay,momentum,delta,lr,weights,gradients);
-            else
-                Kernel_update_NAGL2<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,nNets,decay,momentum,delta,lr,weights,gradients);
-            break;
-        case RMSprop:
-            if (regularizer==L1)
-                Kernel_update_RMSpropL1<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,nNets,decay,rms_decay,delta,lr,weights,gradients);
-            else
-                Kernel_update_RMSpropL2<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,nNets,decay,rms_decay,delta,lr,weights,gradients);
-            break;
+void update_solver(SolverAlgorithm solver, Regularizer regularizer, int iter, size_t N, int nNets, ComputeT decay, ComputeT momentum, ComputeT momentum2, ComputeT delta, ComputeT rms_decay, ComputeT lr, const StorageT* weights, StorageT* gradients) {
+    switch (solver) {
+    case SGD:
+        if (regularizer == L1)
+            Kernel_update_SGDL1 <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, nNets, decay, momentum, lr, weights, gradients);
+        else
+            Kernel_update_SGDL2 <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, nNets, decay, momentum, lr, weights, gradients);
+        break;
+    case AdaDelta:
+        if (regularizer == L1)
+            Kernel_update_AdaDeltaL1 <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, nNets, decay, momentum, delta, lr, weights, gradients);
+        else
+            Kernel_update_AdaDeltaL2 <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, nNets, decay, momentum, delta, lr, weights, gradients);
+        break;
+    case AdaGrad:
+        if (regularizer == L1)
+            Kernel_update_AdaGradL1 <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, nNets, decay, momentum, delta, lr, weights, gradients);
+        else
+            Kernel_update_AdaGradL2 <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, nNets, decay, momentum, delta, lr, weights, gradients);
+        break;
+    case Adam:
+        if (regularizer == L1)
+            Kernel_update_AdamL1 <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, nNets, decay, momentum, momentum2, delta, iter + 1, lr, weights, gradients);
+        else
+            Kernel_update_AdamL2 <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, nNets, decay, momentum, momentum2, delta, iter + 1, lr, weights, gradients);
+        break;
+    case NAG:
+        if (regularizer == L1)
+            Kernel_update_NAGL1 <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, nNets, decay, momentum, delta, lr, weights, gradients);
+        else
+            Kernel_update_NAGL2 <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, nNets, decay, momentum, delta, lr, weights, gradients);
+        break;
+    case RMSprop:
+        if (regularizer == L1)
+            Kernel_update_RMSpropL1 <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, nNets, decay, rms_decay, delta, lr, weights, gradients);
+        else
+            Kernel_update_RMSpropL2 <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, nNets, decay, rms_decay, delta, lr, weights, gradients);
+        break;
     }
-    checkCUDA(__LINE__,cudaGetLastError());
+    checkCUDA(__LINE__, cudaGetLastError());
 }
 
-__global__ void Kernel_xpy(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* x, StorageT* y){
+__global__ void Kernel_xpy(size_t CUDA_NUM_LOOPS, size_t N, const StorageT* x, StorageT* y) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t idx = idxBase; idx < min(N,idxBase+CUDA_NUM_LOOPS); ++idx ){
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         y[idx] = GPUCompute2StorageT( GPUStorage2ComputeT(y[idx]) + GPUStorage2ComputeT(x[idx]));
     }
 }
 
-void xpy(size_t N, const StorageT* x, StorageT* y){
-    Kernel_xpy<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N),N,x,y);
-    checkCUDA(__LINE__,cudaGetLastError());
+void xpy(size_t N, const StorageT* x, StorageT* y) {
+    Kernel_xpy <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, x, y);
+    checkCUDA(__LINE__, cudaGetLastError());
 }
 
-__global__ void Kernel_maxElement(size_t N, const StorageT *x, size_t* pMaxID, ComputeT* pMaxValue){
+__global__ void Kernel_maxElement(size_t N, const StorageT *x, size_t* pMaxID, ComputeT* pMaxValue) {
     const size_t idx = CUDA_NUM_THREADS * blockIdx.x + threadIdx.x;
     if (idx > 0) return;
     //printf("%d %f\n", 0, GPUStorage2ComputeT(x[0]) );
     ComputeT maxValue = GPUStorage2ComputeT(x[0]);
     size_t maxID = 0;
-    for (size_t i=1;i<N;++i){
-        if (GPUStorage2ComputeT(x[i])>maxValue){
+    for (size_t i = 1; i < N; ++i) {
+        if (GPUStorage2ComputeT(x[i]) > maxValue) {
             maxValue = GPUStorage2ComputeT(x[i]);
             maxID = i;
         }
         //printf("%d %f %d\n", i, GPUStorage2ComputeT(x[i]), maxID);
     }
-    if (pMaxID!=NULL)    *pMaxID = maxID;
-    if (pMaxValue!=NULL) *pMaxValue = maxValue;
+    if (pMaxID != NULL)    *pMaxID = maxID;
+    if (pMaxValue != NULL) *pMaxValue = maxValue;
 }
 
-void GPU_maxElement(size_t N, const StorageT *x, size_t* cpuMaxID, ComputeT* cpuMaxValue){
+void GPU_maxElement(size_t N, const StorageT *x, size_t* cpuMaxID, ComputeT* cpuMaxValue) {
     size_t* gpuMaxID;    cudaMalloc(&gpuMaxID,    sizeof(size_t));
     ComputeT* gpuMaxValue; cudaMalloc(&gpuMaxValue, sizeof(ComputeT));
 
-    Kernel_maxElement<<<1,1>>>(N, x, gpuMaxID, gpuMaxValue);
+    Kernel_maxElement <<< 1, 1>>>(N, x, gpuMaxID, gpuMaxValue);
 
     cudaMemcpy(cpuMaxID, gpuMaxID, sizeof(size_t), cudaMemcpyDeviceToHost);          cudaFree(gpuMaxID);
     cudaMemcpy(cpuMaxValue, gpuMaxValue, sizeof(ComputeT), cudaMemcpyDeviceToHost);    cudaFree(gpuMaxValue);
 }
 
-__global__ void Kernel_Hasum(size_t N, const half *x, int incx, float *result){
+__global__ void Kernel_Hasum(size_t N, const half *x, int incx, float *result) {
     const int i = CUDA_NUM_THREADS * blockIdx.x + threadIdx.x;
     if (i > 0) return;
 
     float r = 0;
-    for (int i=0;i<N;++i){
-        r += fabsf( __half2float(x[i*incx]) );
+    for (int i = 0; i < N; ++i) {
+        r += fabsf( __half2float(x[i * incx]) );
     }
     *result = r;
 }
 
-cublasStatus_t Hasum(cublasHandle_t handle, int n, const half *x, int incx, float *result){
+cublasStatus_t Hasum(cublasHandle_t handle, int n, const half *x, int incx, float *result) {
     float* answer;
     cudaMalloc(&answer, sizeof(float));
-    Kernel_Hasum<<<1,1>>>(n, x, incx, answer);
+    Kernel_Hasum <<< 1, 1>>>(n, x, incx, answer);
     cudaMemcpy(result, answer, sizeof(float), cudaMemcpyDeviceToHost);
     cudaFree(answer);
     return CUBLAS_STATUS_SUCCESS;
 }
 
-cublasStatus_t Hgemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float *alpha, const half *A, int lda, const half *B, int ldb, const float *beta,  half *C, int ldc){
+cublasStatus_t Hgemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float *alpha, const half *A, int lda, const half *B, int ldb, const float *beta,  half *C, int ldc) {
     return cublasSgemmEx(handle, transa, transb, m, n, k, alpha, A, CUBLAS_DATA_HALF, lda, B, CUBLAS_DATA_HALF, ldb, beta, C, CUBLAS_DATA_HALF, ldc);
 }
 
@@ -2180,107 +2180,107 @@ cublasStatus_t Hgemm(cublasHandle_t handle, cublasOperation_t transa, cublasOper
 // File format
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-uint8_t typeID(std::type_index t){
-    if (t==typeid(half))        return uint8_t(0);
-    if (t==typeid(float))       return uint8_t(1);
-    if (t==typeid(double))      return uint8_t(2);
-    if (t==typeid(uint8_t))     return uint8_t(3);
-    if (t==typeid(uint16_t))    return uint8_t(4);
-    if (t==typeid(uint32_t))    return uint8_t(5);
-    if (t==typeid(uint64_t))    return uint8_t(6);
-    if (t==typeid(int8_t))      return uint8_t(7);
-    if (t==typeid(int16_t))     return uint8_t(8);
-    if (t==typeid(int32_t))     return uint8_t(9);
-    if (t==typeid(int64_t))     return uint8_t(10);
-    if (t==typeid(char))        return uint8_t(11);
-    if (t==typeid(bool))        return uint8_t(12);
+uint8_t typeID(std::type_index t) {
+    if (t == typeid(half))        return uint8_t(0);
+    if (t == typeid(float))       return uint8_t(1);
+    if (t == typeid(double))      return uint8_t(2);
+    if (t == typeid(uint8_t))     return uint8_t(3);
+    if (t == typeid(uint16_t))    return uint8_t(4);
+    if (t == typeid(uint32_t))    return uint8_t(5);
+    if (t == typeid(uint64_t))    return uint8_t(6);
+    if (t == typeid(int8_t))      return uint8_t(7);
+    if (t == typeid(int16_t))     return uint8_t(8);
+    if (t == typeid(int32_t))     return uint8_t(9);
+    if (t == typeid(int64_t))     return uint8_t(10);
+    if (t == typeid(char))        return uint8_t(11);
+    if (t == typeid(bool))        return uint8_t(12);
     FatalError(__LINE__);       return uint8_t(255);
 }
 
-uint8_t readTypeID(std::string filename){
-    FILE* fp = fopen(filename.c_str(),"rb");
-    while (fp==NULL) {
-        std::cerr<<"readTypeID: fail to open file "<<filename<<". Please provide it first. Will retry after 5 seconds."<<std::endl;
+uint8_t readTypeID(std::string filename) {
+    FILE* fp = fopen(filename.c_str(), "rb");
+    while (fp == NULL) {
+        std::cerr << "readTypeID: fail to open file " << filename << ". Please provide it first. Will retry after 5 seconds." << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(5));
-        fp = fopen(filename.c_str(),"rb");
+        fp = fopen(filename.c_str(), "rb");
     }
     size_t read_cnt;
-    uint8_t fpTypeid; read_cnt = fread((void*)(&fpTypeid), sizeof(uint8_t), 1, fp);     if (read_cnt!=1) { std::cerr<<"Error at readTypeID: no data type. "<<std::endl; FatalError(__LINE__); }
+    uint8_t fpTypeid; read_cnt = fread((void*)(&fpTypeid), sizeof(uint8_t), 1, fp);     if (read_cnt != 1) { std::cerr << "Error at readTypeID: no data type. " << std::endl; FatalError(__LINE__); }
     fclose(fp);
     return fpTypeid;
 }
 
 template <class T>
-class Tensor{
+class Tensor {
 public:
     std::vector<int> dim;
     T* CPUmem;
     std::string name;
 
     // compile will check if your time is not correct for writeGPU and readGPU
-    void writeGPU(T* GPUmem){
+    void writeGPU(T* GPUmem) {
         cudaMemcpy(GPUmem, CPUmem, numel()*sizeof(T), cudaMemcpyHostToDevice);
     };
 
-    void readGPU(T* GPUmem){
+    void readGPU(T* GPUmem) {
         cudaMemcpy(CPUmem, GPUmem, numel()*sizeof(T), cudaMemcpyDeviceToHost);
     };
 
-    Tensor(): CPUmem(NULL){};
+    Tensor(): CPUmem(NULL) {};
 
-    size_t numel(){ return marvin::numel(dim); };
+    size_t numel() { return marvin::numel(dim); };
 
-    size_t numBytes(){ return sizeof(T)*numel(); };
+    size_t numBytes() { return sizeof(T) * numel(); };
 
-    int numofitems(){ return dim[0]; };
+    int numofitems() { return dim[0]; };
 
-    size_t sizeofitem(){ return marvin::sizeofitem(dim); };
+    size_t sizeofitem() { return marvin::sizeofitem(dim); };
 
-    ~Tensor(){
-        if (CPUmem!=NULL)   delete[] CPUmem;
+    ~Tensor() {
+        if (CPUmem != NULL)   delete[] CPUmem;
     };
 
-    void initialize(T val){
-        for (size_t i=0;i<numel();++i){
-            CPUmem[i]=val;
+    void initialize(T val) {
+        for (size_t i = 0; i < numel(); ++i) {
+            CPUmem[i] = val;
         }
     };
 
-    size_t readHeader(FILE* fp){
+    size_t readHeader(FILE* fp) {
         size_t read_cnt;
         uint8_t myTypeid = typeID(typeid(T));
         uint32_t myTypesizeof = uint32_t(sizeof(T));
-        uint8_t fpTypeid;       read_cnt = fread((void*)(&fpTypeid), sizeof(uint8_t), 1, fp);       if (read_cnt!=1) { std::cerr<<"Error at Tensor::readHeader: no data type. "<<std::endl; FatalError(__LINE__); }
-        uint32_t fpTypesizeof;  read_cnt = fread((void*)(&fpTypesizeof), sizeof(uint32_t), 1, fp);  if (read_cnt!=1) { std::cerr<<"Error at Tensor::readHeader: no data size. "<<std::endl; FatalError(__LINE__); }
+        uint8_t fpTypeid;       read_cnt = fread((void*)(&fpTypeid), sizeof(uint8_t), 1, fp);       if (read_cnt != 1) { std::cerr << "Error at Tensor::readHeader: no data type. " << std::endl; FatalError(__LINE__); }
+        uint32_t fpTypesizeof;  read_cnt = fread((void*)(&fpTypesizeof), sizeof(uint32_t), 1, fp);  if (read_cnt != 1) { std::cerr << "Error at Tensor::readHeader: no data size. " << std::endl; FatalError(__LINE__); }
         int lenName;
         read_cnt = fread((void*)(&lenName), sizeof(int), 1, fp);
-        if (read_cnt!=1) { std::cerr<<"Error at Tensor::readHeader: wrong data type. "<<std::endl; FatalError(__LINE__); }
+        if (read_cnt != 1) { std::cerr << "Error at Tensor::readHeader: wrong data type. " << std::endl; FatalError(__LINE__); }
         name.resize(lenName);
-        if (lenName>0){
+        if (lenName > 0) {
             read_cnt = fread((void*)(name.data()), sizeof(char), lenName, fp);
-            if (read_cnt!=lenName) { std::cerr<<"Error at Tensor::readHeader: wrong data type. "<<std::endl; FatalError(__LINE__); }
+            if (read_cnt != lenName) { std::cerr << "Error at Tensor::readHeader: wrong data type. " << std::endl; FatalError(__LINE__); }
         }
         int nbDims;
         read_cnt = fread((void*)(&nbDims), sizeof(int), 1, fp);
-        if (read_cnt!=1) { std::cerr<<"Error at Tensor::readHeader: wrong data type. "<<std::endl; FatalError(__LINE__); }
+        if (read_cnt != 1) { std::cerr << "Error at Tensor::readHeader: wrong data type. " << std::endl; FatalError(__LINE__); }
         dim.resize(nbDims);
-        if (nbDims>0){
+        if (nbDims > 0) {
             read_cnt = fread((void*)(&dim[0]), sizeof(int), nbDims, fp);
-            if (read_cnt!=nbDims) { std::cerr<<"Error at Tensor::readHeader: wrong data type. "<<std::endl; FatalError(__LINE__); }
+            if (read_cnt != nbDims) { std::cerr << "Error at Tensor::readHeader: wrong data type. " << std::endl; FatalError(__LINE__); }
         }
 
-        size_t headerBytes = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(int) + lenName*sizeof(char) + sizeof(int) + nbDims*sizeof(int);
+        size_t headerBytes = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(int) + lenName * sizeof(char) + sizeof(int) + nbDims * sizeof(int);
 
-        if (myTypeid!=fpTypeid || myTypesizeof!=fpTypesizeof){
-            std::cerr<<"Error at Tensor::readHeader: wrong data type. "<<std::endl; FatalError(__LINE__);
+        if (myTypeid != fpTypeid || myTypesizeof != fpTypesizeof) {
+            std::cerr << "Error at Tensor::readHeader: wrong data type. " << std::endl; FatalError(__LINE__);
         }
 
         return headerBytes;
     };
 
     //support continuous read across many NdTensors
-    T* read(FILE* fp,int batch_size=1){
-        if (CPUmem!=NULL){
+    T* read(FILE* fp, int batch_size = 1) {
+        if (CPUmem != NULL) {
             delete[] CPUmem;
             CPUmem = NULL;
         }
@@ -2290,109 +2290,109 @@ public:
         uint8_t myTypeid = typeID(typeid(T));
         uint32_t myTypesizeof = uint32_t(sizeof(T));
 
-        uint8_t fpTypeid;       read_cnt = fread((void*)(&fpTypeid), sizeof(uint8_t), 1, fp);       if (read_cnt!=1) return NULL;
-        uint32_t fpTypesizeof;  read_cnt = fread((void*)(&fpTypesizeof), sizeof(uint32_t), 1, fp);  if (read_cnt!=1) return NULL;
+        uint8_t fpTypeid;       read_cnt = fread((void*)(&fpTypeid), sizeof(uint8_t), 1, fp);       if (read_cnt != 1) return NULL;
+        uint32_t fpTypesizeof;  read_cnt = fread((void*)(&fpTypesizeof), sizeof(uint32_t), 1, fp);  if (read_cnt != 1) return NULL;
 
-        if (myTypeid!=fpTypeid || myTypesizeof!=fpTypesizeof){
+        if (myTypeid != fpTypeid || myTypesizeof != fpTypesizeof) {
 
-            if (myTypeid==fpTypeid && myTypesizeof!=fpTypesizeof){ std::cerr<<"Tensor read error: same type but different sizeof, maybe different computer architecture. "<<std::endl; FatalError(__LINE__);}
+            if (myTypeid == fpTypeid && myTypesizeof != fpTypesizeof) { std::cerr << "Tensor read error: same type but different sizeof, maybe different computer architecture. " << std::endl; FatalError(__LINE__);}
 
             //if (myTypeid!=fpTypeid){ std::cerr<<"Tensor read error: different types. "<<std::endl; FatalError(__LINE__); }
 
-            if (myTypeid==typeID(typeid(half)) && fpTypeid==typeID(typeid(float))){
+            if (myTypeid == typeID(typeid(half)) && fpTypeid == typeID(typeid(float))) {
                 //std::cout<<std::endl<<"converting from float to half"<<std::endl;
-                fseek(fp, -(sizeof(uint8_t)+sizeof(uint32_t)), SEEK_CUR);
+                fseek(fp, -(sizeof(uint8_t) + sizeof(uint32_t)), SEEK_CUR);
                 Tensor<float>* floatTensor = new Tensor<float>(fp);
                 this->dim  = floatTensor->dim ;
                 this->name = floatTensor->name;
                 Malloc(batch_size);
-                for(size_t i=0; i<numel(); ++i){
+                for (size_t i = 0; i < numel(); ++i) {
                     half v = cpu_float2half(floatTensor->CPUmem[i]);
-                    memcpy(((half*)(CPUmem))+i,&v,sizeof(half));
+                    memcpy(((half*)(CPUmem)) + i, &v, sizeof(half));
                 }
                 delete floatTensor;
-            }else if (myTypeid==typeID(typeid(float)) && fpTypeid==typeID(typeid(half))){
-                fseek(fp, -(sizeof(uint8_t)+sizeof(uint32_t)), SEEK_CUR);
+            } else if (myTypeid == typeID(typeid(float)) && fpTypeid == typeID(typeid(half))) {
+                fseek(fp, -(sizeof(uint8_t) + sizeof(uint32_t)), SEEK_CUR);
                 Tensor<half>* halfTensor = new Tensor<half>(fp);
                 this->dim  = halfTensor->dim ;
                 this->name = halfTensor->name;
                 Malloc(batch_size);
-                for(size_t i=0; i<numel(); ++i){
+                for (size_t i = 0; i < numel(); ++i) {
                     float v = cpu_half2float(halfTensor->CPUmem[i]);
-                    memcpy(((float*)(CPUmem))+i,&v,sizeof(float));
+                    memcpy(((float*)(CPUmem)) + i, &v, sizeof(float));
                 }
                 delete halfTensor;
-            }else if (myTypeid==typeID(typeid(double)) && fpTypeid==typeID(typeid(float))){
-                fseek(fp, -(sizeof(uint8_t)+sizeof(uint32_t)), SEEK_CUR);
+            } else if (myTypeid == typeID(typeid(double)) && fpTypeid == typeID(typeid(float))) {
+                fseek(fp, -(sizeof(uint8_t) + sizeof(uint32_t)), SEEK_CUR);
                 Tensor<float>* floatTensor = new Tensor<float>(fp);
                 this->dim  = floatTensor->dim ;
                 this->name = floatTensor->name;
                 Malloc(batch_size);
-                for(size_t i=0; i<numel(); ++i){
+                for (size_t i = 0; i < numel(); ++i) {
                     double v = double(floatTensor->CPUmem[i]);
-                    memcpy(((double*)(CPUmem))+i,&v,sizeof(double));
+                    memcpy(((double*)(CPUmem)) + i, &v, sizeof(double));
                 }
                 delete floatTensor;
-            }else if (myTypeid==typeID(typeid(float)) && fpTypeid==typeID(typeid(double))){
-                fseek(fp, -(sizeof(uint8_t)+sizeof(uint32_t)), SEEK_CUR);
+            } else if (myTypeid == typeID(typeid(float)) && fpTypeid == typeID(typeid(double))) {
+                fseek(fp, -(sizeof(uint8_t) + sizeof(uint32_t)), SEEK_CUR);
                 Tensor<double>* doubleTensor = new Tensor<double>(fp);
                 this->dim  = doubleTensor->dim ;
                 this->name = doubleTensor->name;
                 Malloc(batch_size);
-                for(size_t i=0; i<numel(); ++i){
+                for (size_t i = 0; i < numel(); ++i) {
                     float v = float(doubleTensor->CPUmem[i]);
-                    memcpy(((float*)(CPUmem))+i,&v,sizeof(float));
+                    memcpy(((float*)(CPUmem)) + i, &v, sizeof(float));
                 }
                 delete doubleTensor;
-            }else if (myTypeid==typeID(typeid(half)) && fpTypeid==typeID(typeid(double))){
-                fseek(fp, -(sizeof(uint8_t)+sizeof(uint32_t)), SEEK_CUR);
+            } else if (myTypeid == typeID(typeid(half)) && fpTypeid == typeID(typeid(double))) {
+                fseek(fp, -(sizeof(uint8_t) + sizeof(uint32_t)), SEEK_CUR);
                 Tensor<double>* doubleTensor = new Tensor<double>(fp);
                 this->dim  = doubleTensor->dim ;
                 this->name = doubleTensor->name;
                 Malloc(batch_size);
-                for(size_t i=0; i<numel(); ++i){
+                for (size_t i = 0; i < numel(); ++i) {
                     half v = cpu_float2half(float(doubleTensor->CPUmem[i]));
-                    memcpy(((half*)(CPUmem))+i,&v,sizeof(half));
+                    memcpy(((half*)(CPUmem)) + i, &v, sizeof(half));
                 }
                 delete doubleTensor;
-            }else if (myTypeid==typeID(typeid(float)) && fpTypeid==typeID(typeid(half))){
-                fseek(fp, -(sizeof(uint8_t)+sizeof(uint32_t)), SEEK_CUR);
+            } else if (myTypeid == typeID(typeid(float)) && fpTypeid == typeID(typeid(half))) {
+                fseek(fp, -(sizeof(uint8_t) + sizeof(uint32_t)), SEEK_CUR);
                 Tensor<half>* halfTensor = new Tensor<half>(fp);
                 this->dim  = halfTensor->dim ;
                 this->name = halfTensor->name;
                 Malloc(batch_size);
-                for(size_t i=0; i<numel(); ++i){
+                for (size_t i = 0; i < numel(); ++i) {
                     double v = double(cpu_half2float(halfTensor->CPUmem[i]));
-                    memcpy(((double*)(CPUmem))+i,&v,sizeof(double));
+                    memcpy(((double*)(CPUmem)) + i, &v, sizeof(double));
                 }
                 delete halfTensor;
-            }else{
-                std::cerr<<"Tensor conversion is not supported: from Type "<<fpTypeid<<" to Type "<<myTypeid<<std::endl;
+            } else {
+                std::cerr << "Tensor conversion is not supported: from Type " << fpTypeid << " to Type " << myTypeid << std::endl;
                 FatalError(__LINE__);
             }
 
-        }else{
+        } else {
             int lenName;
             read_cnt = fread((void*)(&lenName), sizeof(int), 1, fp);
-            if (read_cnt!=1) return NULL;
+            if (read_cnt != 1) return NULL;
             name.resize(lenName);
-            if (lenName>0){
+            if (lenName > 0) {
                 read_cnt = fread((void*)(name.data()), sizeof(char), lenName, fp);
-                if (read_cnt!=lenName) return NULL;
+                if (read_cnt != lenName) return NULL;
             }
             int nbDims;
             read_cnt = fread((void*)(&nbDims), sizeof(int), 1, fp);
-            if (read_cnt!=1) return NULL;
+            if (read_cnt != 1) return NULL;
             dim.resize(nbDims);
-            if (nbDims>0){
+            if (nbDims > 0) {
                 read_cnt = fread((void*)(&dim[0]), sizeof(int), nbDims, fp);
-                if (read_cnt!=nbDims) return NULL;
+                if (read_cnt != nbDims) return NULL;
             }
 
             size_t n = numel();
             Malloc(batch_size);
             read_cnt = fread((void*)(CPUmem), sizeof(T), n, fp);
-            if (read_cnt!=n){
+            if (read_cnt != n) {
                 delete [] CPUmem;
                 CPUmem = NULL;
                 return NULL;
@@ -2402,56 +2402,56 @@ public:
         return CPUmem;
     };
 
-    void Malloc(int batch_size){
+    void Malloc(int batch_size) {
         size_t n = numel();
-        std::cout<<"  ";        memorySizePrint(n*sizeof(T));   std::cout<<std::endl;
+        std::cout << "  ";        memorySizePrint(n * sizeof(T));   std::cout << std::endl;
 
-        if (batch_size==1 || dim[0]%batch_size ==0){
+        if (batch_size == 1 || dim[0] % batch_size == 0) {
             CPUmem = new T [n];
-        }else{
-            int dim0 =  (dim[0]/batch_size + 1) * batch_size;
-            size_t oversize = n/dim[0] * dim0;
+        } else {
+            int dim0 =  (dim[0] / batch_size + 1) * batch_size;
+            size_t oversize = n / dim[0] * dim0;
             CPUmem = new T [oversize];
-            memset((void*)(CPUmem+n),0, (oversize-n)*sizeof(T));
+            memset((void*)(CPUmem + n), 0, (oversize - n)*sizeof(T));
         }
     };
 
-    T* read(std::string filename,int batch_size=1){
-        FILE* fp = fopen(filename.c_str(),"rb");
-        while (fp==NULL) {
-            std::cerr<<"Tensor:read: fail to open file "<<filename<<". Please provide it first. Will retry after 5 seconds."<<std::endl;
+    T* read(std::string filename, int batch_size = 1) {
+        FILE* fp = fopen(filename.c_str(), "rb");
+        while (fp == NULL) {
+            std::cerr << "Tensor:read: fail to open file " << filename << ". Please provide it first. Will retry after 5 seconds." << std::endl;
             std::this_thread::sleep_for(std::chrono::seconds(5));
-            fp = fopen(filename.c_str(),"rb");
+            fp = fopen(filename.c_str(), "rb");
         }
-        read(fp,batch_size);
+        read(fp, batch_size);
         fclose(fp);
         return CPUmem;
     };
 
     //write without header
-    void writeHeader(FILE* fp, std::vector<int> dim2write){
+    void writeHeader(FILE* fp, std::vector<int> dim2write) {
         uint8_t myTypeid = typeID(typeid(T));
         fwrite((void*)(&myTypeid), sizeof(uint8_t), 1, fp);
         uint32_t typesizeof = uint32_t(sizeof(T));
         fwrite((void*)(&typesizeof), sizeof(uint32_t), 1, fp);
         int lenName = name.size();
         fwrite((void*)(&lenName), sizeof(int), 1, fp);
-        if (lenName>0) fwrite((void*)(name.data()), sizeof(char), lenName, fp);
+        if (lenName > 0) fwrite((void*)(name.data()), sizeof(char), lenName, fp);
         int nbDims = dim2write.size();
         fwrite((void*)(&nbDims), sizeof(int), 1, fp);
-        if (nbDims>0) fwrite((void*)(&dim2write[0]), sizeof(int), nbDims, fp);
-        if (ferror (fp)){
-            std::cerr << "disk writing failed"<<std::endl;
+        if (nbDims > 0) fwrite((void*)(&dim2write[0]), sizeof(int), nbDims, fp);
+        if (ferror (fp)) {
+            std::cerr << "disk writing failed" << std::endl;
             FatalError();
         }
     };
 
-    void writeData(FILE* fp, size_t max_size = 0){
+    void writeData(FILE* fp, size_t max_size = 0) {
         size_t n = numel();
-        if (max_size !=0 ) n = min(n,max_size);
-        if (n>0){
+        if (max_size != 0 ) n = min(n, max_size);
+        if (n > 0) {
             fwrite((void*)(CPUmem), sizeof(T), n, fp);
-            if (ferror (fp)){
+            if (ferror (fp)) {
                 std::cerr << "disk writing failed" << std::endl;
                 FatalError();
             }
@@ -2460,139 +2460,139 @@ public:
 
     //support continuous write across many NdTensors
     //write with header
-    void write(FILE* fp){
-        writeHeader(fp,dim);
+    void write(FILE* fp) {
+        writeHeader(fp, dim);
         writeData(fp);
     };
 
-    void write(std::string filename){
-        FILE* fp = fopen(filename.c_str(),"wb");
-        while (fp==NULL) {
-            std::cerr<<"Tensor::write: fail to open file "<<filename<<". Will retry after 5 seconds."<<std::endl;
+    void write(std::string filename) {
+        FILE* fp = fopen(filename.c_str(), "wb");
+        while (fp == NULL) {
+            std::cerr << "Tensor::write: fail to open file " << filename << ". Will retry after 5 seconds." << std::endl;
             std::this_thread::sleep_for(std::chrono::seconds(5));
-            fp = fopen(filename.c_str(),"wb");
+            fp = fopen(filename.c_str(), "wb");
         }
         write(fp);
         fclose(fp);
         return;
     };
 
-    Tensor(std::string filename, int batch_size=1): CPUmem(NULL){ read(filename,batch_size); };
+    Tensor(std::string filename, int batch_size = 1): CPUmem(NULL) { read(filename, batch_size); };
 
-    Tensor(FILE* fp): CPUmem(NULL){ read(fp); };
+    Tensor(FILE* fp): CPUmem(NULL) { read(fp); };
 
-    Tensor(std::vector<int> dim_): dim(dim_){ CPUmem = new T [numel()]; };
+    Tensor(std::vector<int> dim_): dim(dim_) { CPUmem = new T [numel()]; };
 
-    Tensor(std::vector<int> dim_, T initValue): dim(dim_){
+    Tensor(std::vector<int> dim_, T initValue): dim(dim_) {
         int n = numel();
         CPUmem = new T [n];
         if (initValue == T(0))
-            memset(CPUmem, 0, n*sizeof(T));
+            memset(CPUmem, 0, n * sizeof(T));
         else
-            for (int i=0;i<n;++i) CPUmem[i] = initValue;
+            for (int i = 0; i < n; ++i) CPUmem[i] = initValue;
 
     };
 
-    Tensor(std::string name_, std::vector<int> dim_): name(name_),dim(dim_){
+    Tensor(std::string name_, std::vector<int> dim_): name(name_), dim(dim_) {
         CPUmem = new T [numel()];
     };
 
-    void permute(std::vector<size_t> v){
+    void permute(std::vector<size_t> v) {
         size_t nbItems = numofitems();
         size_t sizeofitem_ = sizeofitem();
         size_t nbBytes = sizeofitem_ * sizeof(T);
         T* CPUmemNew = new T[numel()];
         memcpy(CPUmemNew, CPUmem, nbItems * nbBytes);
-        for (size_t i=0;i<nbItems;++i){
-            memcpy(CPUmem+i*sizeofitem_, CPUmemNew+v[i]*sizeofitem_, nbBytes);
+        for (size_t i = 0; i < nbItems; ++i) {
+            memcpy(CPUmem + i * sizeofitem_, CPUmemNew + v[i]*sizeofitem_, nbBytes);
         }
         delete [] CPUmemNew;
     };
 
 
-    void printRange(){
+    void printRange() {
         int n = numel();
-        if (n==0){
-            std::cout<<"Emtpy tensor"<<std::endl;
+        if (n == 0) {
+            std::cout << "Emtpy tensor" << std::endl;
             return;
         }
         T maxValue = CPUmem[0];
         T minValue = CPUmem[0];
 
-        for (int i=0;i<n;++i){
-            if (maxValue<CPUmem[i])     maxValue=CPUmem[i];
-            if (CPUmem[i]<minValue)     minValue=CPUmem[i];
+        for (int i = 0; i < n; ++i) {
+            if (maxValue < CPUmem[i])     maxValue = CPUmem[i];
+            if (CPUmem[i] < minValue)     minValue = CPUmem[i];
         }
-        std::cout<< "Value Range ["<<minValue<<", "<<maxValue<<"]"<<std::endl;
+        std::cout << "Value Range [" << minValue << ", " << maxValue << "]" << std::endl;
     };
 
-    void print(std::vector<int> display_dim){
+    void print(std::vector<int> display_dim) {
 
-        std::cout<<"  name:"<<name<<" dim"; veciPrint(dim); std::cout<<std::endl;
-        switch (display_dim.size()){
-            case 1:
-                for (int i=0;i<min((size_t)(display_dim[0]),numel());++i)
-                    std::cout<<CPUmem[i]<<" ";
-                std::cout<<std::endl;
-                break;
-            case 2:
-                for (int i=0;i<display_dim[0];++i){
-                    for (int j=0;j<display_dim[1];++j){
-                        std::cout<<(CPUmem[i*dim[display_dim.size()-1]+j])<<" ";
-                    }
-                    std::cout<<std::endl;
+        std::cout << "  name:" << name << " dim"; veciPrint(dim); std::cout << std::endl;
+        switch (display_dim.size()) {
+        case 1:
+            for (int i = 0; i < min((size_t)(display_dim[0]), numel()); ++i)
+                std::cout << CPUmem[i] << " ";
+            std::cout << std::endl;
+            break;
+        case 2:
+            for (int i = 0; i < display_dim[0]; ++i) {
+                for (int j = 0; j < display_dim[1]; ++j) {
+                    std::cout << (CPUmem[i * dim[display_dim.size() - 1] + j]) << " ";
                 }
-                break;
-            case 3:
-                for (int i=0;i<display_dim[0];++i){
-                    for (int j=0;j<display_dim[1];++j){
-                        for (int k=0;k<display_dim[2];++k){
-                            std::cout<<CPUmem[i*dim[dim.size()-2]*dim[dim.size()-1]+j*dim[dim.size()-1]+k]<<" ";
-                        }
-                        std::cout<<std::endl;
+                std::cout << std::endl;
+            }
+            break;
+        case 3:
+            for (int i = 0; i < display_dim[0]; ++i) {
+                for (int j = 0; j < display_dim[1]; ++j) {
+                    for (int k = 0; k < display_dim[2]; ++k) {
+                        std::cout << CPUmem[i * dim[dim.size() - 2]*dim[dim.size() - 1] + j * dim[dim.size() - 1] + k] << " ";
                     }
-                    std::cout<<std::endl;
+                    std::cout << std::endl;
                 }
-                break;
+                std::cout << std::endl;
+            }
+            break;
         }
 
     };
 };
 
 template <class T>
-std::vector<Tensor<T>*> readTensors(std::string filename, size_t max_count = SIZE_MAX){
+std::vector<Tensor<T>*> readTensors(std::string filename, size_t max_count = SIZE_MAX) {
 
-    FILE* fp = fopen(filename.c_str(),"rb");
+    FILE* fp = fopen(filename.c_str(), "rb");
 
-    while (fp==NULL) {
-        std::cerr<<"readTensors: fail to open file "<<filename<<". Please provide it first. Will retry after 5 seconds."<<std::endl;
+    while (fp == NULL) {
+        std::cerr << "readTensors: fail to open file " << filename << ". Please provide it first. Will retry after 5 seconds." << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(5));
-        fp = fopen(filename.c_str(),"rb");
+        fp = fopen(filename.c_str(), "rb");
     }
 
     std::vector<Tensor<T>*> tensors;
     size_t count = 0;
-    while (feof(fp)==0) {
+    while (feof(fp) == 0) {
         tensors.push_back(new Tensor<T>(fp));
         count++;
-        if (count>=max_count) break;
-		int c = getc(fp);
-		ungetc(c, fp);
+        if (count >= max_count) break;
+        int c = getc(fp);
+        ungetc(c, fp);
     }
     fclose(fp);
     return tensors;
 }
 
 template <class T>
-void writeTensors(std::string filename, std::vector<Tensor<T>*> tensors){
-    FILE* fp = fopen(filename.c_str(),"wb");
-    while (fp==NULL) {
-        std::cerr<<"writeTensors: fail to open file "<<filename<<". Disk full? Will retry after 5 seconds."<<std::endl;
+void writeTensors(std::string filename, std::vector<Tensor<T>*> tensors) {
+    FILE* fp = fopen(filename.c_str(), "wb");
+    while (fp == NULL) {
+        std::cerr << "writeTensors: fail to open file " << filename << ". Disk full? Will retry after 5 seconds." << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(5));
-        fp = fopen(filename.c_str(),"wb");
+        fp = fopen(filename.c_str(), "wb");
     }
 
-    for(int i=0;i<tensors.size();++i){
+    for (int i = 0; i < tensors.size(); ++i) {
         tensors[i]->write(fp);
     }
     fclose(fp);
@@ -2603,7 +2603,7 @@ void writeTensors(std::string filename, std::vector<Tensor<T>*> tensors){
 // Response and Layer
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-class Response{
+class Response {
 public:
     std::string name;
     cudnnTensorDescriptor_t desc;
@@ -2623,133 +2623,133 @@ public:
     std::vector<ComputeT> receptive_gap;
     std::vector<ComputeT> receptive_offset;
 
-    size_t sizeofitem(){ return marvin::sizeofitem(dim); };
+    size_t sizeofitem() { return marvin::sizeofitem(dim); };
 
-    size_t numBytes(){ return sizeofStorageT*(marvin::numel(dim)); };
+    size_t numBytes() { return sizeofStorageT * (marvin::numel(dim)); };
 
-    Response(std::string name_, bool need_diff_=false): name(name_), dataGPU(NULL), diffGPU(NULL), need_diff(need_diff_), isProxy(false){
-        checkCUDNN(__LINE__,cudnnCreateTensorDescriptor(&desc));
+    Response(std::string name_, bool need_diff_ = false): name(name_), dataGPU(NULL), diffGPU(NULL), need_diff(need_diff_), isProxy(false) {
+        checkCUDNN(__LINE__, cudnnCreateTensorDescriptor(&desc));
     };
 
-    size_t Malloc(std::vector<int> dim_, StorageT* dataGPUexisting=NULL, StorageT* diffGPUexisting=NULL){
+    size_t Malloc(std::vector<int> dim_, StorageT* dataGPUexisting = NULL, StorageT* diffGPUexisting = NULL) {
         size_t memoryBytes = 0;
-        if (dataGPU==NULL){ // two layers (one for training, one for testing) may output to the same response and Malloc twice, ignore the second time
+        if (dataGPU == NULL) { // two layers (one for training, one for testing) may output to the same response and Malloc twice, ignore the second time
 
             dim = dim_;
             stride.resize(dim.size());
 
-            stride[dim.size()-1] = 1;
-            for (int d=dim.size()-2;d>=0;--d){
-                stride[d] = stride[d+1] *  dim[d+1];
+            stride[dim.size() - 1] = 1;
+            for (int d = dim.size() - 2; d >= 0; --d) {
+                stride[d] = stride[d + 1] *  dim[d + 1];
             }
 
-            checkCUDNN(__LINE__,cudnnSetTensorNdDescriptor(desc,
-                                                    CUDNNStorageT,
-                                                    dim.size(),
-                                                    &dim[0],
-                                                    &stride[0]) );
+            checkCUDNN(__LINE__, cudnnSetTensorNdDescriptor(desc,
+                       CUDNNStorageT,
+                       dim.size(),
+                       &dim[0],
+                       &stride[0]) );
 
-            std::cout<<"                                                                               ";
-            std::cout<< (need_diff? "* " : "  ");
+            std::cout << "                                                                               ";
+            std::cout << (need_diff ? "* " : "  ");
 
-            std::cout<<name; veciPrint(dim);
-            if (!receptive_field.empty())   {   std::cout<<" RF"; vecfPrint(receptive_field);   }
-            if (!receptive_gap.empty())     {   std::cout<<" GP"; vecfPrint(receptive_gap);     }
-            if (!receptive_offset.empty())  {   std::cout<<" OF"; vecfPrint(receptive_offset);      }
+            std::cout << name; veciPrint(dim);
+            if (!receptive_field.empty())   {   std::cout << " RF"; vecfPrint(receptive_field);   }
+            if (!receptive_gap.empty())     {   std::cout << " GP"; vecfPrint(receptive_gap);     }
+            if (!receptive_offset.empty())  {   std::cout << " OF"; vecfPrint(receptive_offset);      }
 
-            std::cout<<std::endl;
+            std::cout << std::endl;
 
-            if (dataGPUexisting==NULL){            
+            if (dataGPUexisting == NULL) {
                 checkCUDA(__LINE__, cudaMalloc(&dataGPU, numel(dim) * sizeofStorageT) );
                 memoryBytes += numel(dim) * sizeofStorageT;
-            }else{
+            } else {
                 dataGPU = dataGPUexisting;
                 isProxy = true;
             }
 
-            if (need_diff){
-                if (diffGPUexisting==NULL){                
+            if (need_diff) {
+                if (diffGPUexisting == NULL) {
                     checkCUDA(__LINE__, cudaMalloc(&diffGPU, numel(dim) * sizeofStorageT) );
                     memoryBytes += numel(dim) * sizeofStorageT;
-                }else{
+                } else {
                     diffGPU = diffGPUexisting;
                     isProxy = true;
                 }
             }
-        }else{
-            if (!same_dim(dim, dim_)){
+        } else {
+            if (!same_dim(dim, dim_)) {
 
-                std::cerr<<std::endl<<"Response["<< name <<"] Malloc dimension mis-matched: ";
+                std::cerr << std::endl << "Response[" << name << "] Malloc dimension mis-matched: ";
                 veciPrint(dim);
-                std::cerr<<" vs ";
+                std::cerr << " vs ";
                 veciPrint(dim_);
-                std::cerr<<std::endl;
+                std::cerr << std::endl;
 
-                if (numel(dim)!=numel(dim_)) FatalError(__LINE__);
+                if (numel(dim) != numel(dim_)) FatalError(__LINE__);
             }
         }
         return memoryBytes;
     };
 
 
-    cudnnTensorDescriptor_t getDesc(int group=1){ // must be called after malloc
-        if (group==1){
+    cudnnTensorDescriptor_t getDesc(int group = 1) { // must be called after malloc
+        if (group == 1) {
             return desc;
-        }else{
-            for(int i=0;i<number_group.size();++i){
-                if (number_group[i]==group){
+        } else {
+            for (int i = 0; i < number_group.size(); ++i) {
+                if (number_group[i] == group) {
                     return desc_group[i];
                 }
             }
         }
         number_group.push_back(group);
         cudnnTensorDescriptor_t desc_new;
-        checkCUDNN(__LINE__,cudnnCreateTensorDescriptor(&desc_new));
+        checkCUDNN(__LINE__, cudnnCreateTensorDescriptor(&desc_new));
         std::vector<int> dim_new = dim;
-        dim_new[1] = dim[1]/group;
-        checkCUDNN(__LINE__,cudnnSetTensorNdDescriptor(desc_new,
-                                                CUDNNStorageT,
-                                                dim_new.size(),
-                                                &dim_new[0],
-                                                &stride[0]) );
+        dim_new[1] = dim[1] / group;
+        checkCUDNN(__LINE__, cudnnSetTensorNdDescriptor(desc_new,
+                   CUDNNStorageT,
+                   dim_new.size(),
+                   &dim_new[0],
+                   &stride[0]) );
         desc_group.push_back(desc_new);
         return desc_new;
     }
 
-    ~Response(){
-        checkCUDNN(__LINE__,cudnnDestroyTensorDescriptor(desc));
-        for (int i=0; i<desc_group.size();++i){
-            checkCUDNN(__LINE__,cudnnDestroyTensorDescriptor(desc_group[i]));
+    ~Response() {
+        checkCUDNN(__LINE__, cudnnDestroyTensorDescriptor(desc));
+        for (int i = 0; i < desc_group.size(); ++i) {
+            checkCUDNN(__LINE__, cudnnDestroyTensorDescriptor(desc_group[i]));
         }
-        if (dataGPU!=NULL && !isProxy) checkCUDA(__LINE__, cudaFree(dataGPU));
-        if (diffGPU!=NULL && !isProxy) checkCUDA(__LINE__, cudaFree(diffGPU));
+        if (dataGPU != NULL && !isProxy) checkCUDA(__LINE__, cudaFree(dataGPU));
+        if (diffGPU != NULL && !isProxy) checkCUDA(__LINE__, cudaFree(diffGPU));
     };
 
-    void clearDiff(){
-        if (diffGPU!=NULL && !isProxy){
+    void clearDiff() {
+        if (diffGPU != NULL && !isProxy) {
             checkCUDA(__LINE__, cudaMemset(diffGPU, 0, sizeofStorageT * numel(dim)));
         }
     };
 
-    void print(std::vector<int> display_dim, bool printData=true){
-        if (!printData && diffGPU==NULL) return;
+    void print(std::vector<int> display_dim, bool printData = true) {
+        if (!printData && diffGPU == NULL) return;
         Tensor<StorageT>* feature = new Tensor<StorageT>(dim);
-        feature->readGPU((printData? dataGPU: diffGPU));
+        feature->readGPU((printData ? dataGPU : diffGPU));
         feature->print(display_dim);
         delete feature;
     };
 
 
-    int checkNaN(){
+    int checkNaN() {
         return marvin::checkNaN(dataGPU, numel(dim));
     };
 
-    int checkNaNdiff(){
+    int checkNaNdiff() {
         return marvin::checkNaN(diffGPU, numel(dim));
     };
 
-    ComputeT ameanData(){
-        if (dataGPU!=NULL){
+    ComputeT ameanData() {
+        if (dataGPU != NULL) {
             ComputeT result;
             size_t n = numel(dim);
             //std::cout<<"n="<<n<<std::endl;
@@ -2758,18 +2758,18 @@ public:
             checkCUBLAS(__LINE__, GPUasum(cublasHandle, n, dataGPU, 1, &result));
             result /= ComputeT(n);
             return result;
-        }else{
+        } else {
             return -1;
         }
     };
-    ComputeT ameanDiff(){
-        if (diffGPU!=NULL){
+    ComputeT ameanDiff() {
+        if (diffGPU != NULL) {
             ComputeT result;
             size_t n = numel(dim);
             checkCUBLAS(__LINE__, GPUasum(cublasHandle, n, diffGPU, 1, &result));
             result /= ComputeT(n);
             return result;
-        }else{
+        } else {
             return -1;
         }
     };
@@ -2816,10 +2816,10 @@ public:
     std::vector<Layer*> sub_layers;
 
     Layer() : phase(TrainingTesting), train_me(false), weight_dataGPU(NULL),
-              weight_diffGPU(NULL), weight_histGPU(NULL), bias_dataGPU(NULL),
-              bias_diffGPU(NULL), bias_histGPU(NULL), weight_numel(0),
-              bias_numel(0), weight_decay_mult(ComputeT(1)),
-              bias_decay_mult(ComputeT(1)) {
+        weight_diffGPU(NULL), weight_histGPU(NULL), bias_dataGPU(NULL),
+        bias_diffGPU(NULL), bias_histGPU(NULL), weight_numel(0),
+        bias_numel(0), weight_decay_mult(ComputeT(1)),
+        bias_decay_mult(ComputeT(1)) {
         checkCUDNN(__LINE__, cudnnCreate(&cudnnHandle));
         checkCUBLAS(__LINE__, cublasCreate(&cublasHandle));
         std::random_device rd;
@@ -2827,12 +2827,12 @@ public:
     };
 
     Layer(std::string name_) : name(name_), phase(TrainingTesting),
-                               train_me(false), weight_dataGPU(NULL),
-                               weight_diffGPU(NULL), weight_histGPU(NULL),
-                               bias_dataGPU(NULL), bias_diffGPU(NULL),
-                               bias_histGPU(NULL), weight_numel(0),
-                               bias_numel(0), weight_decay_mult(ComputeT(1)),
-                               bias_decay_mult(ComputeT(1)) {
+        train_me(false), weight_dataGPU(NULL),
+        weight_diffGPU(NULL), weight_histGPU(NULL),
+        bias_dataGPU(NULL), bias_diffGPU(NULL),
+        bias_histGPU(NULL), weight_numel(0),
+        bias_numel(0), weight_decay_mult(ComputeT(1)),
+        bias_decay_mult(ComputeT(1)) {
         checkCUDNN(__LINE__, cudnnCreate(&cudnnHandle));
         checkCUBLAS(__LINE__, cublasCreate(&cublasHandle));
         std::random_device rd;
@@ -2866,13 +2866,13 @@ public:
         return result;
     };
 
-    int checkNaNWeight(){
+    int checkNaNWeight() {
         return marvin::checkNaN(weight_dataGPU, numel(weight_dim));
     };
 
-    int checkNaNWeightDiff(){
+    int checkNaNWeightDiff() {
         return marvin::checkNaN(weight_diffGPU, numel(weight_dim));
-    };    
+    };
 
     ComputeT ameanBiasData() {
         if (bias_dataGPU == NULL) return -1;
@@ -2894,13 +2894,13 @@ public:
         return result;
     };
 
-    int checkNaNBias(){
+    int checkNaNBias() {
         return marvin::checkNaN(bias_dataGPU, numel(bias_dim));
     };
 
-    int checkNaNBiasDiff(){
+    int checkNaNBiasDiff() {
         return marvin::checkNaN(bias_diffGPU, numel(bias_dim));
-    };       
+    };
 
     void addIn(Response *r) { in.push_back(r); };
 
@@ -2923,32 +2923,32 @@ public:
         int n = numel(dim);
         StorageT *CPUbuf = new StorageT[n];
         switch (filler) {
-            case Xavier: {
-                int fan_in = ComputeT(n / dim[0]);
-                ComputeT scale = sqrt(ComputeT(3) / fan_in);
+        case Xavier: {
+            int fan_in = ComputeT(n / dim[0]);
+            ComputeT scale = sqrt(ComputeT(3) / fan_in);
 
-                //default_random_engine generator;
-                std::uniform_real_distribution<ComputeT> distribution(-scale,
-                                                                      scale);
-                for (StorageT *p = CPUbuf; p != CPUbuf + n; ++p) {
-                    *p = CPUCompute2StorageT(distribution(rng));
-                }
+            //default_random_engine generator;
+            std::uniform_real_distribution<ComputeT> distribution(-scale,
+                    scale);
+            for (StorageT *p = CPUbuf; p != CPUbuf + n; ++p) {
+                *p = CPUCompute2StorageT(distribution(rng));
             }
-            break;
-            case Gaussian: {
-                std::normal_distribution<ComputeT> distribution(0, param);
-                for (StorageT *p = CPUbuf; p != CPUbuf + n; ++p) {
-                    *p = CPUCompute2StorageT(distribution(rng));
-                }
+        }
+        break;
+        case Gaussian: {
+            std::normal_distribution<ComputeT> distribution(0, param);
+            for (StorageT *p = CPUbuf; p != CPUbuf + n; ++p) {
+                *p = CPUCompute2StorageT(distribution(rng));
             }
-            break;
-            case Constant: {
-                StorageT paramStorageT = CPUCompute2StorageT(param);
-                for (StorageT *p = CPUbuf; p != CPUbuf + n; ++p) {
-                    *p = paramStorageT;
-                }
+        }
+        break;
+        case Constant: {
+            StorageT paramStorageT = CPUCompute2StorageT(param);
+            for (StorageT *p = CPUbuf; p != CPUbuf + n; ++p) {
+                *p = paramStorageT;
             }
-            break;
+        }
+        break;
         }
         checkCUDA(__LINE__, cudaMemcpy(GPUmem, CPUbuf, n * sizeofStorageT,
                                        cudaMemcpyHostToDevice));
@@ -2959,7 +2959,7 @@ public:
     void randInit() {
         if (weight_dataGPU != NULL) fillGPU(weight_dataGPU, weight_dim, weight_filler, weight_filler_param);
         if (bias_dataGPU != NULL) fillGPU(bias_dataGPU, bias_dim, bias_filler, bias_filler_param);
-        for(int l=0;l<sub_layers.size();++l) sub_layers[l]->randInit();
+        for (int l = 0; l < sub_layers.size(); ++l) sub_layers[l]->randInit();
     };
 
     void clearDiff() {
@@ -2969,7 +2969,7 @@ public:
         if (bias_diffGPU != NULL)
             checkCUDA(__LINE__, cudaMemset(bias_diffGPU, 0,
                                            sizeofStorageT * bias_numel));
-        for(int l=0;l<sub_layers.size();++l) sub_layers[l]->clearDiff();
+        for (int l = 0; l < sub_layers.size(); ++l) sub_layers[l]->clearDiff();
     };
 
     void clearHist() {
@@ -2979,17 +2979,17 @@ public:
         if (bias_diffGPU != NULL)
             checkCUDA(__LINE__, cudaMemset(bias_histGPU, 0,
                                            sizeofStorageT * bias_numel));
-        for(int l=0;l<sub_layers.size();++l) sub_layers[l]->clearHist();
+        for (int l = 0; l < sub_layers.size(); ++l) sub_layers[l]->clearHist();
     };
 
     void setWeights(std::vector<Tensor<StorageT> *> weights) {
         for (int i = 0; i < weights.size(); ++i) {
             if (weight_dataGPU != NULL &&
-                weights[i]->name == name + ".weight") {
+                    weights[i]->name == name + ".weight") {
                 if (numel(weight_dim) == numel(weights[i]->dim)) {
                     if (!same_dim(weight_dim, weights[i]->dim)) {
                         std::cout << "[Warning] " << name <<
-                        ".weight is loaded with mismatched dimensions ";
+                                  ".weight is loaded with mismatched dimensions ";
                         std::cout << "need";
                         veciPrint(weight_dim);
                         std::cout << " vs. file";
@@ -3002,7 +3002,7 @@ public:
                     weights[i]->writeGPU(weight_dataGPU);
                 } else {
                     std::cout << "[Warning] " << name <<
-                    ".weight is found but not loaded because the numels are mismatched: ";
+                              ".weight is found but not loaded because the numels are mismatched: ";
                     std::cout << "need";
                     veciPrint(weight_dim);
                     std::cout << " vs. file";
@@ -3014,7 +3014,7 @@ public:
                 if (numel(bias_dim) == numel(weights[i]->dim)) {
                     if (!same_dim(bias_dim, weights[i]->dim)) {
                         std::cout << "[Warning] " << name <<
-                        ".bias is loaded with mismatched dimensions ";
+                                  ".bias is loaded with mismatched dimensions ";
                         std::cout << "need";
                         veciPrint(bias_dim);
                         std::cout << " vs. file";
@@ -3027,7 +3027,7 @@ public:
                     weights[i]->writeGPU(bias_dataGPU);
                 } else {
                     std::cout << "[Warning] " << name <<
-                    ".bias is found but not loaded because the numels are mismatched: ";
+                              ".bias is found but not loaded because the numels are mismatched: ";
                     std::cout << "need";
                     veciPrint(bias_dim);
                     std::cout << " vs. file";
@@ -3037,7 +3037,7 @@ public:
 
             }
         }
-        for(int l=0;l<sub_layers.size();++l) sub_layers[l]->setWeights(weights);
+        for (int l = 0; l < sub_layers.size(); ++l) sub_layers[l]->setWeights(weights);
     };
 
     void saveWeights(FILE *fp) {
@@ -3057,7 +3057,7 @@ public:
             delete t;
         }
 
-        for(int l=0;l<sub_layers.size();++l) sub_layers[l]->saveWeights(fp);
+        for (int l = 0; l < sub_layers.size(); ++l) sub_layers[l]->saveWeights(fp);
     };
 
     void printWeights(std::vector<int> display_weight,
@@ -3077,20 +3077,20 @@ public:
             delete t;
         }
 
-        for(int l=0;l<sub_layers.size();++l) sub_layers[l]->printWeights(display_weight,display_bias);
+        for (int l = 0; l < sub_layers.size(); ++l) sub_layers[l]->printWeights(display_weight, display_bias);
     };
 
     void setDiffs(std::vector<Tensor<StorageT> *> weights) {
         for (int i = 0; i < weights.size(); ++i) {
             if (weight_diffGPU != NULL &&
-                weights[i]->name == name + ".weight_diff") {
+                    weights[i]->name == name + ".weight_diff") {
                 std::cout << " " << name << ".weight_diff";
                 veciPrint(weights[i]->dim);
                 std::cout << " is set." << std::endl;
                 weights[i]->writeGPU(weight_diffGPU);
             }
             if (bias_diffGPU != NULL &&
-                weights[i]->name == name + ".bias_diff") {
+                    weights[i]->name == name + ".bias_diff") {
                 std::cout << " " << name << ".bias_diff";
                 veciPrint(weights[i]->dim);
                 std::cout << " is set." << std::endl;
@@ -3098,7 +3098,7 @@ public:
             }
         }
 
-        for(int l=0;l<sub_layers.size();++l) sub_layers[l]->setDiffs(weights);
+        for (int l = 0; l < sub_layers.size(); ++l) sub_layers[l]->setDiffs(weights);
     };
 
     void saveDiffs(FILE *fp) {
@@ -3118,7 +3118,7 @@ public:
             delete t;
         }
 
-        for(int l=0;l<sub_layers.size();++l) sub_layers[l]->saveDiffs(fp);
+        for (int l = 0; l < sub_layers.size(); ++l) sub_layers[l]->saveDiffs(fp);
     };
 
     void printDiffs(std::vector<int> display_weight,
@@ -3137,7 +3137,7 @@ public:
             t->print(display_bias);
             delete t;
         }
-        for(int l=0;l<sub_layers.size();++l) sub_layers[l]->printDiffs(display_weight,display_bias);
+        for (int l = 0; l < sub_layers.size(); ++l) sub_layers[l]->printDiffs(display_weight, display_bias);
     };
 
     void update() {
@@ -3146,7 +3146,7 @@ public:
                 bsa2b(weight_numel, weight_histGPU, weight_dataGPU);
             if (bias_numel > 0 && bias_histGPU != NULL)
                 bsa2b(bias_numel, bias_histGPU, bias_dataGPU);
-            for(int l=0;l<sub_layers.size();++l) sub_layers[l]->update();
+            for (int l = 0; l < sub_layers.size(); ++l) sub_layers[l]->update();
         }
     };
 
@@ -3162,9 +3162,9 @@ public:
     bool random;
     int counter;
     int epoch;
-    bool isDataLayer(){ return true; };
-    DataLayer(): counter(0), epoch(0), random(false){};
-    DataLayer(std::string name_): Layer(name_), counter(0), epoch(0), random(false){};
+    bool isDataLayer() { return true; };
+    DataLayer(): counter(0), epoch(0), random(false) {};
+    DataLayer(std::string name_): Layer(name_), counter(0), epoch(0), random(false) {};
     virtual int numofitems() = 0;
     virtual void shuffle() = 0;
 };
@@ -3176,49 +3176,49 @@ public:
     std::vector<std::string> files;
     std::vector<std::vector<int> > dim;
 
-    TensorLayer(std::string name_): DataLayer(name_), tensorGPU(NULL){
+    TensorLayer(std::string name_): DataLayer(name_), tensorGPU(NULL) {
         train_me = false;
     };
 
-    TensorLayer(JSON* json): tensorGPU(NULL){
+    TensorLayer(JSON* json): tensorGPU(NULL) {
         SetOrDie(json, name)
         SetValue(json, phase,       TrainingTesting)
         SetOrDie(json, files        )
         train_me = false;
     };
 
-    ~TensorLayer(){
-        if (tensorGPU!=NULL) checkCUDA(__LINE__, cudaFree(tensorGPU));
+    ~TensorLayer() {
+        if (tensorGPU != NULL) checkCUDA(__LINE__, cudaFree(tensorGPU));
     };
 
-    int numofitems(){
+    int numofitems() {
         return dim[0][0];
     };
 
-    void shuffle(){
+    void shuffle() {
 
     };
 
-    void forward(Phase phase_){
+    void forward(Phase phase_) {
         ++epoch;
     };
 
-    size_t Malloc(Phase phase_){
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
+    size_t Malloc(Phase phase_) {
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
 
-        if (!in.empty()){   std::cout<<"TensorLayer shouldn't have any in's"<<std::endl; FatalError(__LINE__); }
-        if (out.empty()){   std::cout<<"TensorLayer should have some out's"<<std::endl; FatalError(__LINE__); }
-        if (out.size()!=files.size()){  std::cout<<"TensorLayer: # of out's should match the # of in's"<<std::endl; FatalError(__LINE__); }
+        if (!in.empty()) {   std::cout << "TensorLayer shouldn't have any in's" << std::endl; FatalError(__LINE__); }
+        if (out.empty()) {   std::cout << "TensorLayer should have some out's" << std::endl; FatalError(__LINE__); }
+        if (out.size() != files.size()) {  std::cout << "TensorLayer: # of out's should match the # of in's" << std::endl; FatalError(__LINE__); }
 
         size_t memoryBytes = 0;
 
         dim.resize(files.size());
-        for (size_t i=0;i<files.size();++i){
+        for (size_t i = 0; i < files.size(); ++i) {
             Tensor<StorageT>* tensorCPU = new Tensor<StorageT>(files[i]);
             dim[i] = tensorCPU->dim;
             out[i]->need_diff = false;
-            std::cout<<"tensorCPU->dim="; veciPrint(tensorCPU->dim); std::cout<<std::endl;
+            std::cout << "tensorCPU->dim="; veciPrint(tensorCPU->dim); std::cout << std::endl;
             memoryBytes += out[i]->Malloc(tensorCPU->dim);
             checkCUDA(__LINE__, cudaMemcpy(out[i]->dataGPU, tensorCPU->CPUmem, tensorCPU-> numBytes(), cudaMemcpyHostToDevice) );
             delete tensorCPU;
@@ -3238,11 +3238,11 @@ public:
     std::string map2char;
     Tensor<char>* tensor2char;
 
-    SequenceGenerationLayer(std::string name_): DataLayer(name_), resultResponse(NULL), tensor2char(NULL), iter(0){
+    SequenceGenerationLayer(std::string name_): DataLayer(name_), resultResponse(NULL), tensor2char(NULL), iter(0) {
         train_me = false;
     };
 
-    SequenceGenerationLayer(JSON* json): resultResponse(NULL), tensor2char(NULL), iter(0){
+    SequenceGenerationLayer(JSON* json): resultResponse(NULL), tensor2char(NULL), iter(0) {
         SetOrDie(json, name)
         SetValue(json, phase,       TrainingTesting)
         SetOrDie(json, map2char     )
@@ -3253,24 +3253,24 @@ public:
         train_me = false;
     };
 
-    ~SequenceGenerationLayer(){
-        if (tensor2char!=NULL) delete tensor2char;
+    ~SequenceGenerationLayer() {
+        if (tensor2char != NULL) delete tensor2char;
     };
 
-    int numofitems(){
+    int numofitems() {
         return length;
     };
 
-    void shuffle(){};
+    void shuffle() {};
 
-    void forward(Phase phase_){
-        if (iter == 0){
+    void forward(Phase phase_) {
+        if (iter == 0) {
             GPU_set_zeros(1, out[1]->dataGPU);
             GPU_set_one_hot(channel, out[0]->dataGPU, seed);
 
             //std::cout<<seed<<" "<<std::endl;
-            std::cout<<tensor2char->CPUmem[seed];
-        }else{
+            std::cout << tensor2char->CPUmem[seed];
+        } else {
             GPU_set_ones(1, out[1]->dataGPU);
 
             size_t maxID;
@@ -3282,22 +3282,22 @@ public:
 
             //FatalError(__LINE__);
             //std::cout<<maxID<<" "<<maxValue<<std::endl;
-            std::cout<<tensor2char->CPUmem[maxID];
+            std::cout << tensor2char->CPUmem[maxID];
 
             GPU_set_one_hot(channel, out[0]->dataGPU, maxID);
         }
 
         ++iter;
 
-        if (iter ==length)
+        if (iter == length)
             ++epoch;
     };
 
-    size_t Malloc(Phase phase_){
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
+    size_t Malloc(Phase phase_) {
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
 
-        if (out.size()!=2){  std::cout<<"SequenceGenerationLayer: # of out's should be 2."<<std::endl; FatalError(__LINE__); }
+        if (out.size() != 2) {  std::cout << "SequenceGenerationLayer: # of out's should be 2." << std::endl; FatalError(__LINE__); }
 
         size_t memoryBytes = 0;
 
@@ -3313,9 +3313,9 @@ public:
         memoryBytes += out[0]->Malloc(dim);
 
         out[1]->need_diff = false;
-        dim[2]=1;
+        dim[2] = 1;
         memoryBytes += out[1]->Malloc(dim);
-        
+
         return memoryBytes;
     };
 };
@@ -3324,34 +3324,34 @@ public:
 
 class MemoryDataLayer : public DataLayer {
     std::vector<Tensor<StorageT>*> dataCPU;
-    public:
+public:
     std::vector<std::string> file_data;
     std::vector<std::string> file_mean;
     std::vector<ComputeT> scale;
     std::vector<ComputeT> mean;
     int batch_size;
 
-    int numofitems(){
+    int numofitems() {
         return dataCPU[0]->dim[0];
     };
-    void init(){
+    void init() {
         train_me = false;
-        std::cout<<"MemoryDataLayer "<<name<<" loading data: "<<std::endl;
+        std::cout << "MemoryDataLayer " << name << " loading data: " << std::endl;
         dataCPU.resize(file_data.size());
-        for (int i =0;i<file_data.size();i++){
-            dataCPU[i] = new Tensor<StorageT> (file_data[i],batch_size);
+        for (int i = 0; i < file_data.size(); i++) {
+            dataCPU[i] = new Tensor<StorageT> (file_data[i], batch_size);
             dataCPU[i]->print(veci(0));
         }
 
-        if (file_mean.size()>0){
-            for (int i =0;i<file_mean.size();i++){
-                Tensor<StorageT>* meanCPU = new Tensor<StorageT>(file_mean[i],batch_size);
+        if (file_mean.size() > 0) {
+            for (int i = 0; i < file_mean.size(); i++) {
+                Tensor<StorageT>* meanCPU = new Tensor<StorageT>(file_mean[i], batch_size);
                 meanCPU->print(veci(0));
 
-                if (meanCPU->numel() != dataCPU[i]->sizeofitem()){
-                    std::cerr<<"mean tensor file size error: "<<std::endl;
-                    std::cerr<<"mean"; veciPrint(meanCPU->dim); std::cerr<<std::endl;
-                    std::cerr<<"data"; veciPrint(dataCPU[i]->dim); std::cerr<<std::endl;
+                if (meanCPU->numel() != dataCPU[i]->sizeofitem()) {
+                    std::cerr << "mean tensor file size error: " << std::endl;
+                    std::cerr << "mean"; veciPrint(meanCPU->dim); std::cerr << std::endl;
+                    std::cerr << "data"; veciPrint(dataCPU[i]->dim); std::cerr << std::endl;
                     FatalError(__LINE__);
                 };
                 StorageT* d  = dataCPU[i]->CPUmem;
@@ -3360,41 +3360,41 @@ class MemoryDataLayer : public DataLayer {
                 StorageT* m  = meanCPU->CPUmem;
                 StorageT* mE = meanCPU->CPUmem + meanCPU->numel();
 
-                while(d!=dE){
+                while (d != dE) {
                     *d = CPUCompute2StorageT( CPUStorage2ComputeT(*d) - CPUStorage2ComputeT(*m) );
                     ++m;
-                    if (m==mE) m = meanCPU->CPUmem;
+                    if (m == mE) m = meanCPU->CPUmem;
                     ++d;
                 }
                 delete meanCPU;
             }
         }
 
-        for (int i =0;i<scale.size();i++){
-            if (scale[i]!=1){
+        for (int i = 0; i < scale.size(); i++) {
+            if (scale[i] != 1) {
                 StorageT* dE = dataCPU[i]->CPUmem + dataCPU[i]->numel();
-                for(StorageT* d  = dataCPU[i]->CPUmem; d!=dE; ++d){
+                for (StorageT* d  = dataCPU[i]->CPUmem; d != dE; ++d) {
                     *d = CPUCompute2StorageT( CPUStorage2ComputeT(*d) * scale[i] );
                 }
             }
         }
-        for (int i =0;i<mean.size();i++){
-            if (mean[i]!=0){
+        for (int i = 0; i < mean.size(); i++) {
+            if (mean[i] != 0) {
                 StorageT* dE = dataCPU[i]->CPUmem + dataCPU[i]->numel();
-                for(StorageT* d  = dataCPU[i]->CPUmem; d!=dE; ++d){
+                for (StorageT* d  = dataCPU[i]->CPUmem; d != dE; ++d) {
                     *d = CPUCompute2StorageT( CPUStorage2ComputeT(*d) - mean[i] );
                 }
             }
         }
 
-        if (phase!=Testing) shuffle();
+        if (phase != Testing) shuffle();
     }
 
-    MemoryDataLayer(std::string name_, Phase phase_, std::vector<std::string> file_data_, int batch_size_): DataLayer(name_), batch_size(batch_size_), file_data(file_data_){
+    MemoryDataLayer(std::string name_, Phase phase_, std::vector<std::string> file_data_, int batch_size_): DataLayer(name_), batch_size(batch_size_), file_data(file_data_) {
         phase = phase_;
         init();
     };
-    MemoryDataLayer(JSON* json){
+    MemoryDataLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,       Training)
         SetOrDie(json, file_data    )
@@ -3405,52 +3405,52 @@ class MemoryDataLayer : public DataLayer {
         SetValue(json, random,      true)
         init();
     };
-    ~MemoryDataLayer(){
-        for (int i =0; i<dataCPU.size();i++){
+    ~MemoryDataLayer() {
+        for (int i = 0; i < dataCPU.size(); i++) {
             delete dataCPU[i];
         }
     };
-    size_t Malloc(Phase phase_){
-        if (phase == Training && phase_==Testing) return 0;
-        
-        if (!in.empty()){   std::cout<<"MemoryDataLayer shouldn't have any in's"<<std::endl; FatalError(__LINE__); }
-        if (out.empty()){   std::cout<<"MemoryDataLayer should have some out's"<<std::endl; FatalError(__LINE__); }
-        if (out.size()!=file_data.size()){  std::cout<<"MemoryDataLayer: # of out's should match the # of in's"<<std::endl; FatalError(__LINE__); }
+    size_t Malloc(Phase phase_) {
+        if (phase == Training && phase_ == Testing) return 0;
+
+        if (!in.empty()) {   std::cout << "MemoryDataLayer shouldn't have any in's" << std::endl; FatalError(__LINE__); }
+        if (out.empty()) {   std::cout << "MemoryDataLayer should have some out's" << std::endl; FatalError(__LINE__); }
+        if (out.size() != file_data.size()) {  std::cout << "MemoryDataLayer: # of out's should match the # of in's" << std::endl; FatalError(__LINE__); }
 
         size_t memoryBytes = 0;
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
-        for (int i = 0;i < file_data.size(); i++){
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
+        for (int i = 0; i < file_data.size(); i++) {
             out[i]->need_diff = false;
             std::vector<int> data_dim = dataCPU[i]->dim;
             data_dim[0] = batch_size;
-            out[i]->receptive_field.resize(data_dim.size()-2);  fill_n(out[i]->receptive_field.begin(), data_dim.size()-2,1);
-            out[i]->receptive_gap.resize(data_dim.size()-2);    fill_n(out[i]->receptive_gap.begin(),   data_dim.size()-2,1);
-            out[i]->receptive_offset.resize(data_dim.size()-2); fill_n(out[i]->receptive_offset.begin(),data_dim.size()-2,0);
+            out[i]->receptive_field.resize(data_dim.size() - 2);  fill_n(out[i]->receptive_field.begin(), data_dim.size() - 2, 1);
+            out[i]->receptive_gap.resize(data_dim.size() - 2);    fill_n(out[i]->receptive_gap.begin(),   data_dim.size() - 2, 1);
+            out[i]->receptive_offset.resize(data_dim.size() - 2); fill_n(out[i]->receptive_offset.begin(), data_dim.size() - 2, 0);
             memoryBytes += out[i]->Malloc(data_dim);
         }
         return memoryBytes;
     }
-    void shuffle(){
+    void shuffle() {
         if (!random) return;
         std::vector<size_t> v = randperm(dataCPU[0]->numofitems(), rng);
-        for(int i =0; i <dataCPU.size();i++){
+        for (int i = 0; i < dataCPU.size(); i++) {
             dataCPU[i]->permute(v);
         }
     };
 
-    void forward(Phase phase_){
-        if (counter + batch_size >= dataCPU[0]->numofitems() ){
+    void forward(Phase phase_) {
+        if (counter + batch_size >= dataCPU[0]->numofitems() ) {
             ++epoch;
-            if(phase!=Testing){
+            if (phase != Testing) {
                 shuffle();
                 counter = 0;
             }
         }
-        for(int i =0; i <dataCPU.size();i++){
-            checkCUDA(__LINE__, cudaMemcpy(out[i]->dataGPU, dataCPU[i]->CPUmem +  (size_t(counter) * size_t( dataCPU[i]->sizeofitem())), batch_size * dataCPU[i]->sizeofitem() * sizeofStorageT, cudaMemcpyHostToDevice) );     
+        for (int i = 0; i < dataCPU.size(); i++) {
+            checkCUDA(__LINE__, cudaMemcpy(out[i]->dataGPU, dataCPU[i]->CPUmem +  (size_t(counter) * size_t( dataCPU[i]->sizeofitem())), batch_size * dataCPU[i]->sizeofitem() * sizeofStorageT, cudaMemcpyHostToDevice) );
         }
-        counter+=batch_size;
+        counter += batch_size;
         if (counter >= dataCPU[0]->numofitems()) counter = 0;
     };
 };
@@ -3458,8 +3458,8 @@ class MemoryDataLayer : public DataLayer {
 template <class T>
 class PeriodTrainDataLayer : public DataLayer {
     std::future<void> lock;
-    
-    std::vector<size_t> ordering; 
+
+    std::vector<size_t> ordering;
     std::bernoulli_distribution* distribution_bernoulli;
     // std::vector<std::uniform_int_distribution<int>*> distribution_uniform2D;
     // std::vector<std::uniform_int_distribution<int>*> distribution_uniform3D;
@@ -3469,19 +3469,21 @@ class PeriodTrainDataLayer : public DataLayer {
     std::vector<T*> dataGPU;
     std::vector<T*> item_raw;
 
-    Tensor<StorageT>* labelCPUall;
-    Tensor<StorageT>* labelCPU;
+    // Tensor<StorageT>* labelCPUall;
+    // Tensor<StorageT>* labelCPU;
+    // StorageT* labelGPU;
+    std::vector<T*> labelCPU;
+    std::vector<T*> labelGPU;
     std::vector<StorageT*> mean_data_GPU;
-    StorageT* labelGPU;
 
     size_t numel_per_channel_crop2D ;
     size_t numel_all_channel_crop2D ;
-    size_t numel_per_channel_orgi2D ; 
+    size_t numel_per_channel_orgi2D ;
     size_t numel_batch_all_channel_crop2D ;
 
     size_t numel_per_channel_crop3D ;
     size_t numel_all_channel_crop3D ;
-    size_t numel_per_channel_orgi3D ; 
+    size_t numel_per_channel_orgi3D ;
     size_t numel_batch_all_channel_crop3D ;
 
     int epoch_prefetch;
@@ -3492,7 +3494,7 @@ class PeriodTrainDataLayer : public DataLayer {
     size_t headerBytes3D;
     std::vector<int> size_data2D;
     std::vector<int> size_data3D;
-    public:
+public:
     bool mirror;
     std::vector<int> size_crop2D;
     std::vector<int> size_crop3D;
@@ -3501,89 +3503,58 @@ class PeriodTrainDataLayer : public DataLayer {
     std::string file_label;
     int batch_size;
 
-    int numofitems(){
-        return labelCPUall->numofitems();
+    int numofitems() {
+        return 0; //labelCPUall->numofitems();
     };
 
-    void init(){
+    void init() {
         epoch_prefetch  = 0;
-        distribution_bernoulli = new std::bernoulli_distribution(0.5);  
+        distribution_bernoulli = new std::bernoulli_distribution(0.5);
         //dataFILE = NULL;
         //dataCPU = NULL;
         //dataGPU = NULL;
-        labelCPU = NULL;
-        labelGPU = NULL;
-        labelCPUall = NULL;
+        // labelCPU = NULL;
+        // labelGPU = NULL;
+        // labelCPUall = NULL;
         train_me = false;
-        std::cout<<"PeriodTrainDataLayer "<<name<<" loading data: "<<std::endl;
+        std::cout << "PeriodTrainDataLayer " << name << " loading data: " << std::endl;
 
-        dataCPU.resize(file_data.size());
-        dataGPU.resize(file_data.size());
-        item_raw.resize(file_data.size());
+        dataCPU.resize(2);
+        dataGPU.resize(2);
+        item_raw.resize(2);
         dataFILE.resize(file_data.size());
 
-        // open data file
-        for (int i = 0;i<file_data.size();++i){
+        // Open data file
+        for (int i = 0; i < file_data.size(); ++i) {
             std::cout << file_data[i] << std::endl;
-            dataFILE[i] = fopen(file_data[i].c_str(),"rb");
-            if (dataFILE[i] ==NULL){
-                std::cerr<<"Fail to open the data file"<<std::endl;
+            dataFILE[i] = fopen(file_data[i].c_str(), "rb");
+            if (dataFILE[i] == NULL) {
+                std::cerr << "Fail to open the data file" << std::endl;
                 FatalError(__LINE__);
             }
         }
 
         mean_data_GPU.resize(file_mean.size());
-        for (int i =0;i<file_mean.size();i++){
-            Tensor<StorageT>* meanCPU = new Tensor<StorageT>(file_mean[i],batch_size);
+        for (int i = 0; i < file_mean.size(); i++) {
+            Tensor<StorageT>* meanCPU = new Tensor<StorageT>(file_mean[i], batch_size);
             meanCPU->print(veci(0));
             checkCUDA(__LINE__, cudaMalloc(&mean_data_GPU[i], meanCPU->numBytes()) );
             meanCPU->writeGPU(mean_data_GPU[i]);
             delete meanCPU;
         }
 
-        // Size crop
+        // 2D data size
         size_crop2D.clear(); size_crop2D.push_back(227); size_crop2D.push_back(227);
-        size_crop3D.clear(); size_crop3D.push_back(30); size_crop3D.push_back(30); size_crop3D.push_back(30);
-
-        // 2D data
-        Tensor<T> tensor2D;
-        headerBytes2D = tensor2D.readHeader(dataFILE[0]);
-        size_data2D.insert( size_data2D.end(), tensor2D.dim.begin()+1, tensor2D.dim.end() );
-
         numel_per_channel_crop2D = numel(size_crop2D);
-        numel_all_channel_crop2D = size_data2D[0] * numel_per_channel_crop2D;
-        numel_per_channel_orgi2D = sizeofitem(size_data2D);
-        numel_batch_all_channel_crop2D = batch_size*numel_all_channel_crop2D;
-        bytes_per_item2D = sizeof(T)* numel(size_data2D);
-
+        numel_all_channel_crop2D = 3 * numel_per_channel_crop2D;
+        numel_per_channel_orgi2D = numel_per_channel_crop2D;
+        numel_batch_all_channel_crop2D = batch_size * numel_all_channel_crop2D;
+        bytes_per_item2D = sizeof(T) * 3 * numel_per_channel_crop2D;
         std::vector<int> data_dim2D;
-        data_dim2D.push_back(batch_size);
-        data_dim2D.push_back(size_data2D[0]);
-        data_dim2D.insert( data_dim2D.end(), size_crop2D.begin(), size_crop2D.end() );
-
-        // for (int i = 0;i<file_data.size();++i){
-        // }
+        data_dim2D.push_back(batch_size); data_dim2D.push_back(3); data_dim2D.push_back(227); data_dim2D.push_back(227);
         dataCPU[0]  = new T[numel(data_dim2D)];
-        item_raw[0] = new T[numel(size_data2D)];
-
-        // 3D data
-        Tensor<T> tensor3D;
-        headerBytes3D = tensor3D.readHeader(dataFILE[1]);
-        size_data3D.insert( size_data3D.end(), tensor3D.dim.begin()+1, tensor3D.dim.end() );
-
-        numel_per_channel_crop3D = numel(size_crop3D);
-        numel_all_channel_crop3D = size_data3D[0] * numel_per_channel_crop3D;
-        numel_per_channel_orgi3D = sizeofitem(size_data3D);
-        numel_batch_all_channel_crop3D = batch_size*numel_all_channel_crop3D;
-        bytes_per_item3D = sizeof(T)* numel(size_data3D);
-
-        std::vector<int> data_dim3D;
-        data_dim3D.push_back(batch_size);
-        data_dim3D.push_back(size_data3D[0]);
-        data_dim3D.insert( data_dim3D.end(), size_crop3D.begin(), size_crop3D.end() );
-
-
-        for (int i = 0;i<data_dim2D.size();++i)
+        item_raw[0] = new T[3 * numel_per_channel_crop2D];
+        for (int i = 0; i < data_dim2D.size(); ++i)
             std::cout << data_dim2D[i] << " ";
         std::cout << std::endl;
         std::cout << numel_per_channel_crop2D << std::endl;
@@ -3592,7 +3563,19 @@ class PeriodTrainDataLayer : public DataLayer {
         std::cout << numel_batch_all_channel_crop2D << std::endl;
         std::cout << bytes_per_item2D << std::endl;
 
-        for (int i = 0;i<data_dim3D.size();++i)
+        // 3D data size
+        size_crop3D.clear(); size_crop3D.push_back(30); size_crop3D.push_back(30); size_crop3D.push_back(30);
+        size_data3D.clear(); size_data3D.push_back(1); size_data3D.push_back(30); size_data3D.push_back(30); size_data3D.push_back(30);
+        numel_per_channel_crop3D = numel(size_crop3D);
+        numel_all_channel_crop3D = 1 * numel_per_channel_crop3D;
+        numel_per_channel_orgi3D = numel_per_channel_crop3D;
+        numel_batch_all_channel_crop3D = batch_size * numel_all_channel_crop3D;
+        bytes_per_item3D = sizeof(T) * 1 * numel_per_channel_crop3D;
+        std::vector<int> data_dim3D;
+        data_dim3D.push_back(batch_size); data_dim3D.push_back(1); data_dim3D.push_back(30); data_dim3D.push_back(30); data_dim3D.push_back(30);
+        dataCPU[1]  = new T[numel(data_dim3D)];
+        item_raw[1] = new T[1 * numel_per_channel_crop3D];
+        for (int i = 0; i < data_dim3D.size(); ++i)
             std::cout << data_dim3D[i] << " ";
         std::cout << std::endl;
         std::cout << numel_per_channel_crop3D << std::endl;
@@ -3601,22 +3584,21 @@ class PeriodTrainDataLayer : public DataLayer {
         std::cout << numel_batch_all_channel_crop3D << std::endl;
         std::cout << bytes_per_item3D << std::endl;
 
-        // for (int i = 0;i<file_data.size();++i){
-        //     dataCPU[i]  = new T[numel(data_dim3D)];
-        //     item_raw[i] = new T[numel(size_data3D)];
-        // }
-        dataCPU[1]  = new T[numel(data_dim3D)];
-        item_raw[1] = new T[numel(size_data3D)];
+        // Labels (class, axis, angle)
+        // labelCPUall = new Tensor<StorageT>(file_label);
+        // labelCPUall -> print(veci(0));
+        // std::cout << "    "; labelCPUall->printRange();
+        // while (labelCPUall->dim.size() < size_data2D.size() + 1) labelCPUall->dim.push_back(1);
+        // std::vector<int> label_dim = labelCPUall->dim;
+        // label_dim[0] = batch_size;
+        // labelCPU = new Tensor<StorageT>(label_dim);
+        labelCPU.resize(3);
+        labelGPU.resize(3);
+        labelCPU[0] = new T[batch_size];
+        labelCPU[1] = new T[batch_size];
+        labelCPU[2] = new T[batch_size];
 
-        // for label
-        labelCPUall = new Tensor<StorageT>(file_label);
-        labelCPUall -> print(veci(0));
-        std::cout<<"    "; labelCPUall->printRange();
-        while (labelCPUall->dim.size()<size_data2D.size()+1) labelCPUall->dim.push_back(1);
-        std::vector<int> label_dim = labelCPUall->dim;
-        label_dim[0] = batch_size;
-        labelCPU = new Tensor<StorageT>(label_dim);
-
+        init_fusion_GPU();
 
         // distribution_uniform2D.resize(size_crop2D.size());
         // for (int d=0; d<size_crop2D.size(); d++){
@@ -3628,227 +3610,308 @@ class PeriodTrainDataLayer : public DataLayer {
         //     distribution_uniform3D[d] = new std::uniform_int_distribution<int>(0,size_data3D[d+1] - size_crop3D[d]);
         // }
 
-        if (phase!=Testing){
-            shuffle();
-        }else{
-            ordering.resize(numofitems());
-            for (int i=0;i<numofitems();++i) ordering[i]=i;
-        }
+        // if (phase != Testing) {
+        //     shuffle();
+        // } else {
+        //     ordering.resize(numofitems());
+        //     for (int i = 0; i < numofitems(); ++i) ordering[i] = i;
+        // }
     };
 
-    PeriodTrainDataLayer(std::string name_, Phase phase_, bool mirror_, std::vector<int> size_data_, std::vector<int> size_crop_, std::vector<std::string> file_data_, std::string file_label_, int batch_size_): 
-        DataLayer(name_), mirror(mirror_), size_data3D(size_data_), size_crop3D(size_crop_), file_data(file_data_), file_label(file_label_), batch_size(batch_size_){
+    PeriodTrainDataLayer(std::string name_, Phase phase_, bool mirror_, std::vector<int> size_data_, std::vector<int> size_crop_, std::vector<std::string> file_data_, std::string file_label_, int batch_size_):
+        DataLayer(name_), mirror(mirror_), size_data3D(size_data_), size_crop3D(size_crop_), file_data(file_data_), file_label(file_label_), batch_size(batch_size_) {
         phase = phase_;
         init();
     };
 
-    PeriodTrainDataLayer(JSON* json){
+    PeriodTrainDataLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,       Training)
         SetValue(json, mirror,      false)
         SetOrDie(json, file_data    )
         SetValue(json, file_mean,   std::vector<std::string>(0))
-        SetValue(json, file_label,"")
+        SetValue(json, file_label, "")
         SetOrDie(json, batch_size   )
         SetValue(json, random,      true)
         init();
     };
 
-    ~PeriodTrainDataLayer(){
+    ~PeriodTrainDataLayer() {
         if (lock.valid()) lock.wait();
         delete distribution_bernoulli;
         // for (int i=0;i<distribution_uniform.size();++i) delete distribution_uniform[i];
-        for (int i = 0; i<dataFILE.size();++i){
-            if (dataFILE[i]!=NULL) fclose(dataFILE[i]);
+        for (int i = 0; i < dataFILE.size(); ++i) {
+            if (dataFILE[i] != NULL) fclose(dataFILE[i]);
         }
-        for (int i = 0; i<dataCPU.size();++i){
-            if (dataCPU[i]!=NULL) delete [] dataCPU[i];
+        for (int i = 0; i < dataCPU.size(); ++i) {
+            if (dataCPU[i] != NULL) delete [] dataCPU[i];
         }
-        for (int i = 0; i<item_raw.size();++i){
-            if (item_raw[i]!=NULL) delete [] item_raw[i];
-        }
-
-        if (labelCPU!=NULL) delete labelCPU;
-        if (labelCPUall!=NULL) delete labelCPUall;
-
-        for (int i = 0; i<dataGPU.size();++i){
-            if (dataGPU[i]!=NULL) checkCUDA(__LINE__, cudaFree(dataGPU[i]));
+        for (int i = 0; i < item_raw.size(); ++i) {
+            if (item_raw[i] != NULL) delete [] item_raw[i];
         }
 
-        if (labelGPU!=NULL) checkCUDA(__LINE__, cudaFree(labelGPU));
+        for (int i = 0; i < labelCPU.size(); ++i) {
+            if (labelCPU[i] != NULL) delete [] labelCPU[i];
+        }
+        // if (labelCPU != NULL) delete labelCPU;
+        // if (labelCPUall != NULL) delete labelCPUall;
+
+        for (int i = 0; i < dataGPU.size(); ++i) {
+            if (dataGPU[i] != NULL) checkCUDA(__LINE__, cudaFree(dataGPU[i]));
+        }
+
+        for (int i = 0; i < labelGPU.size(); ++i) {
+            if (labelGPU[i] != NULL) checkCUDA(__LINE__, cudaFree(labelGPU[i]));
+        }
+        // if (labelGPU != NULL) checkCUDA(__LINE__, cudaFree(labelGPU));
 
 
-        for (int i =0;i<file_mean.size();i++){
-            if (mean_data_GPU[i]!=NULL) checkCUDA(__LINE__, cudaFree(mean_data_GPU[i]));
+        for (int i = 0; i < file_mean.size(); i++) {
+            if (mean_data_GPU[i] != NULL) checkCUDA(__LINE__, cudaFree(mean_data_GPU[i]));
         }
     };
 
 
-    void shuffle(){
-        if (!random) return;
-        if (phase!=Testing){
-            ordering = randperm(labelCPUall->numofitems(), rng);
-        }
-    }; 
-
-    void prefetch(){
-
-        checkCUDA(__LINE__,cudaSetDevice(GPU));
-
-        
-        // std::vector<size_t> begin_coor(size_crop.size());
-
-        for (size_t i=0;i<batch_size;++i){
-
-            int image_i = ordering[counter];
-            //std::cout<<"i"<<i<<"image_i"<<image_i<<"bytes_per_item"<<bytes_per_item<<std::endl;
-
-            //label 
-            size_t labelSizeOfItem = labelCPU->sizeofitem();
-            memcpy(labelCPU->CPUmem+i*labelSizeOfItem, labelCPUall->CPUmem+image_i*labelSizeOfItem, labelSizeOfItem*sizeofStorageT);
-            
-            // // mirror
-            // bool mirror_this = false;
-            // if (mirror) mirror_this = ((*distribution_bernoulli)(rng));
-            // if (numel_per_channel_orgi != numel_per_channel_crop || mirror_this){
-            //     for (int d=0;d<size_crop.size();++d){
-            //         begin_coor[d] = (numel_per_channel_orgi == numel_per_channel_crop) ? 0 : ((*(distribution_uniform[d]))(rng));
-            //     }
-            // }
-            
-            // 2D
-            // for (int data_i = 0; data_i<file_data.size();data_i++){
-            // read file
-            fseek(dataFILE[0], headerBytes2D + bytes_per_item2D * image_i, SEEK_SET);
-            size_t read_cnt2D = fread(item_raw[0], 1, bytes_per_item2D, dataFILE[0]);
-            if (read_cnt2D != bytes_per_item2D){
-                std::cerr<<"Error reading file for PeriodTrainDataLayer::prefetch : "<<dataFILE[0]<<std::endl;
-                std::cerr<<"data_i"<<0<<"read_cnt2D: "<<read_cnt2D<<" bytes_per_item2D: "<<bytes_per_item2D<<std::endl;
-                FatalError(__LINE__);
-            }
-
-            T* memBegin2D = dataCPU[0] + i * numel_all_channel_crop2D;
-            if (numel_per_channel_orgi2D == numel_per_channel_crop2D){
-                memcpy(memBegin2D, item_raw[0], bytes_per_item2D);
-            }
-
-            // }//for (int data_i = 0; data_i<file_data.size();data_i++)
-
-            // 3D
-            fseek(dataFILE[1], headerBytes3D + bytes_per_item3D * image_i, SEEK_SET);
-            size_t read_cnt3D = fread(item_raw[1], 1, bytes_per_item3D, dataFILE[1]);
-            if (read_cnt3D != bytes_per_item3D){
-                std::cerr<<"Error reading file for PeriodTrainDataLayer::prefetch : "<<dataFILE[1]<<std::endl;
-                std::cerr<<"data_i"<<1<<"read_cnt3D: "<<read_cnt3D<<" bytes_per_item3D: "<<bytes_per_item3D<<std::endl;
-                FatalError(__LINE__);
-            }
-
-            T* memBegin3D = dataCPU[1] + i * numel_all_channel_crop3D;
-            if (numel_per_channel_orgi3D == numel_per_channel_crop3D){
-                memcpy(memBegin3D, item_raw[1], bytes_per_item3D);
-            }
-
-            counter++;
-            if (counter>= ordering.size()){
-                if (phase!=Testing) shuffle();
-                counter = 0;
-                ++epoch_prefetch;
-            }
-        }//end for (size_t i=0;i<batch_size;++i)
-        //std::cout<<"numel_batch_all_channel_crop:  "<<numel_batch_all_channel_crop<<std::endl;
-
-
-        // for (int data_i = 0; data_i<file_data.size();data_i++){
+    void shuffle() {
+        // if (!random) return;
+        // if (phase != Testing) {
+        //     ordering = randperm(labelCPUall->numofitems(), rng);
         // }
-        checkCUDA(__LINE__, cudaMemcpy( dataGPU[0],  dataCPU[0],  numel_batch_all_channel_crop2D*sizeof(T), cudaMemcpyHostToDevice) );
-        checkCUDA(__LINE__, cudaMemcpy( dataGPU[1],  dataCPU[1],  numel_batch_all_channel_crop3D*sizeof(T), cudaMemcpyHostToDevice) );
-            
-        labelCPU->writeGPU(labelGPU);
-
     };
 
-    void forward(Phase phase_){
+    void prefetch() {
+
+
+        checkCUDA(__LINE__, cudaSetDevice(GPU));
+
+        int positive_hypothesis_crop_info[8] = {0};
+        int negative_hypothesis_crop_info[8] = {0};
+
+        // float * d_batch_2D;
+        // float * d_batch_3D;
+        // kCheckCUDA(__LINE__, cudaMalloc(&d_batch_2D, 32 * 3 * 227 * 227 * sizeof(float)));
+        // kCheckCUDA(__LINE__, cudaMalloc(&d_batch_3D, 32 * 30 * 30 * 30 * sizeof(float)));
+
+        for (int i = 0; i < 16; i++) {
+
+            // Create positive and negative hypothesis
+            std::string data_directory = file_data[0];
+            std::string object_name = "glue";
+            std::string object_directory = data_directory + "/" + object_name;
+            int axis_angle_label[2] = {0};
+            std::vector<cv::Mat> patches_2D = gen_train_hypothesis_pair(i, dataGPU[1], object_directory, positive_hypothesis_crop_info, negative_hypothesis_crop_info, axis_angle_label);
+
+            // // Show image patches
+            // cv::namedWindow("Positive Patch", CV_WINDOW_AUTOSIZE);
+            // cv::imshow("Positive Patch", patches_2D[0]);
+            // cv::namedWindow("Negative Patch", CV_WINDOW_AUTOSIZE);
+            // cv::imshow("Negative Patch", patches_2D[1]);
+            // cv::waitKey(0);
+
+            // Write 2D image patches to data tensors (bgr and subtract mean)
+            float * pos_patch_data = new float[3 * 227 * 227];
+            float * neg_patch_data = new float[3 * 227 * 227];
+            patch2tensor(patches_2D[0], pos_patch_data);
+            patch2tensor(patches_2D[1], neg_patch_data);
+            kCheckCUDA(__LINE__, cudaMemcpy(&(dataGPU[0][(i * 2) * 3 * 227 * 227]), pos_patch_data, 3 * 227 * 227 * sizeof(float), cudaMemcpyHostToDevice));
+            kCheckCUDA(__LINE__, cudaMemcpy(&(dataGPU[0][(i * 2 + 1) * 3 * 227 * 227]), neg_patch_data, 3 * 227 * 227 * sizeof(float), cudaMemcpyHostToDevice));
+
+            // Copy axis/angle label
+            float pos_class_label = 1;
+            float neg_class_label = 0;
+            float axis_label = (float)axis_angle_label[0];
+            float angle_label = (float)axis_angle_label[1];
+            // std::cout << axis_angle_label[0] << " " << axis_angle_label[1] << std::endl;
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[0][i * 2]), &pos_class_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[0][i * 2 + 1]), &neg_class_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[1][i * 2]), &axis_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[1][i * 2 + 1]), &axis_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][i * 2]), &angle_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][i * 2 + 1]), &angle_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
+
+        }
+
+        // Debug 3D
+        // float * batch_2D = new float[32 * 3 * 227 * 227];
+        // float * batch_3D = new float[32 * 30 * 30 * 30];
+        // memset(batch_2D, 0, sizeof(float) * 32 * 3 * 227 * 227);
+        // memset(batch_3D, 0, sizeof(float) * 32 * 30 * 30 * 30);
+        // kCheckCUDA(__LINE__, cudaMemcpy(batch_2D, dataGPU[0], 32 * 3 * 227 * 227 * sizeof(float), cudaMemcpyDeviceToHost));
+        // kCheckCUDA(__LINE__, cudaMemcpy(batch_3D, dataGPU[1], 32 * 30 * 30 * 30 * sizeof(float), cudaMemcpyDeviceToHost));
+        // for (int i = 0; i < 32 * 3 * 227 * 227; i++)
+        //   std::cout << "2D batch data: " << batch_2D[i] << std::endl;
+        // for (int i = 0; i < 32 * 30 * 30 * 30; i++)
+        //   std::cout << "3D batch data: " << batch_3D[i] << std::endl;
+        // // Save curr volumes to file
+        // int patch3D_size[3];
+        // patch3D_size[0] = 30;
+        // patch3D_size[1] = 30;
+        // patch3D_size[2] = 30;
+        // for (int i = 0; i < 32; i++) {
+        //   std::string scene_ply_name = "patch." + std::to_string(i) + ".ply";
+        //   save_volume_to_ply(scene_ply_name, patch3D_size, &batch_3D[i * 30 * 30 * 30]);
+        // }
+
+        // Debug labels
+        // float * label_class = new float[32];
+        // float * label_axis = new float[32];
+        // float * label_angle = new float[32];
+        // memset(label_class, 0, sizeof(float) * 32);
+        // memset(label_axis, 0, sizeof(float) * 32);
+        // memset(label_angle, 0, sizeof(float) * 32);
+        // kCheckCUDA(__LINE__, cudaMemcpy(label_class, labelGPU[0], 32 * sizeof(float), cudaMemcpyDeviceToHost));
+        // kCheckCUDA(__LINE__, cudaMemcpy(label_axis, labelGPU[1], 32 * sizeof(float), cudaMemcpyDeviceToHost));
+        // kCheckCUDA(__LINE__, cudaMemcpy(label_angle, labelGPU[2], 32 * sizeof(float), cudaMemcpyDeviceToHost));
+        // for (int i = 0; i < 32; i++)
+        //   std::cout << label_class[i] << " " << label_axis[i] << " " << label_angle[i] << std::endl;
+
+
+
+
+
+
+
+
+
+        // checkCUDA(__LINE__, cudaSetDevice(GPU));
+
+        // for (size_t i = 0; i < batch_size; ++i) {
+
+        //     int image_i = ordering[counter];
+
+        //     //label
+        //     size_t labelSizeOfItem = labelCPU->sizeofitem();
+        //     memcpy(labelCPU->CPUmem + i * labelSizeOfItem, labelCPUall->CPUmem + image_i * labelSizeOfItem, labelSizeOfItem * sizeofStorageT);
+
+        //     // 2D
+        //     fseek(dataFILE[0], headerBytes2D + bytes_per_item2D * image_i, SEEK_SET);
+        //     size_t read_cnt2D = fread(item_raw[0], 1, bytes_per_item2D, dataFILE[0]);
+        //     if (read_cnt2D != bytes_per_item2D) {
+        //         std::cerr << "Error reading file for PeriodTrainDataLayer::prefetch : " << dataFILE[0] << std::endl;
+        //         std::cerr << "data_i" << 0 << "read_cnt2D: " << read_cnt2D << " bytes_per_item2D: " << bytes_per_item2D << std::endl;
+        //         FatalError(__LINE__);
+        //     }
+
+        //     T* memBegin2D = dataCPU[0] + i * numel_all_channel_crop2D;
+        //     if (numel_per_channel_orgi2D == numel_per_channel_crop2D) {
+        //         memcpy(memBegin2D, item_raw[0], bytes_per_item2D);
+        //     }
+
+        //     // 3D
+        //     fseek(dataFILE[1], headerBytes3D + bytes_per_item3D * image_i, SEEK_SET);
+        //     size_t read_cnt3D = fread(item_raw[1], 1, bytes_per_item3D, dataFILE[1]);
+        //     if (read_cnt3D != bytes_per_item3D) {
+        //         std::cerr << "Error reading file for PeriodTrainDataLayer::prefetch : " << dataFILE[1] << std::endl;
+        //         std::cerr << "data_i" << 1 << "read_cnt3D: " << read_cnt3D << " bytes_per_item3D: " << bytes_per_item3D << std::endl;
+        //         FatalError(__LINE__);
+        //     }
+
+        //     T* memBegin3D = dataCPU[1] + i * numel_all_channel_crop3D;
+        //     if (numel_per_channel_orgi3D == numel_per_channel_crop3D) {
+        //         memcpy(memBegin3D, item_raw[1], bytes_per_item3D);
+        //     }
+
+        //     counter++;
+        //     if (counter >= ordering.size()) {
+        //         if (phase != Testing) shuffle();
+        //         counter = 0;
+        //         ++epoch_prefetch;
+        //     }
+        // }
+
+        // checkCUDA(__LINE__, cudaMemcpy( dataGPU[0],  dataCPU[0],  numel_batch_all_channel_crop2D * sizeof(T), cudaMemcpyHostToDevice) );
+        // checkCUDA(__LINE__, cudaMemcpy( dataGPU[1],  dataCPU[1],  numel_batch_all_channel_crop3D * sizeof(T), cudaMemcpyHostToDevice) );
+
+        // labelCPU->writeGPU(labelGPU);
+    };
+
+    void forward(Phase phase_) {
         lock.wait();
         epoch = epoch_prefetch;
         // for (int data_i = 0; data_i<file_data.size();data_i++){
         // }
-        StorageT* mean_data2D =  (0<mean_data_GPU.size()? mean_data_GPU[0]: NULL );
-        Kernel_convert_to_StorageT_subtract<<<CUDA_GET_BLOCKS(numel_batch_all_channel_crop2D), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(numel_batch_all_channel_crop2D), numel_batch_all_channel_crop2D, numel_all_channel_crop2D, dataGPU[0], mean_data2D, out[0]->dataGPU);
-        StorageT* mean_data3D =  (1<mean_data_GPU.size()? mean_data_GPU[1]: NULL );
-        Kernel_convert_to_StorageT_subtract<<<CUDA_GET_BLOCKS(numel_batch_all_channel_crop3D), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(numel_batch_all_channel_crop3D), numel_batch_all_channel_crop3D, numel_all_channel_crop3D, dataGPU[1], mean_data3D, out[1]->dataGPU);
-        std::swap(out[file_data.size()]->dataGPU,labelGPU);
-        lock = std::async(std::launch::async,&PeriodTrainDataLayer<T>::prefetch,this);
+        StorageT* mean_data2D =  (0 < mean_data_GPU.size() ? mean_data_GPU[0] : NULL );
+        Kernel_convert_to_StorageT_subtract <<< CUDA_GET_BLOCKS(numel_batch_all_channel_crop2D), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(numel_batch_all_channel_crop2D), numel_batch_all_channel_crop2D, numel_all_channel_crop2D, dataGPU[0], mean_data2D, out[0]->dataGPU);
+        StorageT* mean_data3D =  (1 < mean_data_GPU.size() ? mean_data_GPU[1] : NULL );
+        Kernel_convert_to_StorageT_subtract <<< CUDA_GET_BLOCKS(numel_batch_all_channel_crop3D), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(numel_batch_all_channel_crop3D), numel_batch_all_channel_crop3D, numel_all_channel_crop3D, dataGPU[1], mean_data3D, out[1]->dataGPU);
+        std::swap(out[2]->dataGPU, labelGPU[0]);
+        std::swap(out[3]->dataGPU, labelGPU[1]);
+        std::swap(out[4]->dataGPU, labelGPU[2]);
+        lock = std::async(std::launch::async, &PeriodTrainDataLayer<T>::prefetch, this);
     };
 
 
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
 
-        if (phase == Training && phase_==Testing) return 0;
+        if (phase == Training && phase_ == Testing) return 0;
 
-        
-
-        if (out.size()!=file_data.size()+1){    std::cout<<"PeriodTrainDataLayer: # of out's should match the # of in-1"<<std::endl; FatalError(__LINE__); }
-        if (! (in.size()==0 || in.size()<file_data.size())){
-            std::cerr<< "PeriodTrainDataLayer in.size()==0 || in.size<file_data.size()"<<std::endl;
+        if (out.size() != 5) {
+            std::cout << "PeriodTrainDataLayer: incorrect # of out's; should be 5 (data2D, data3D, label_class, label_axis, label_angle)" << std::endl;
             FatalError(__LINE__);
         }
+        // if (! (in.size() == 0 || in.size() < file_data.size())) {
+        //     std::cerr << "PeriodTrainDataLayer in.size()==0 || in.size<file_data.size()" << std::endl;
+        //     FatalError(__LINE__);
+        // }
         size_t memoryBytes = 0;
 
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
 
+        // Malloc 2D data
         std::vector<int> data_dim2D;
-        data_dim2D.push_back(batch_size);
-        data_dim2D.push_back(size_data2D[0]);
-        data_dim2D.insert( data_dim2D.end(), size_crop2D.begin(), size_crop2D.end() );
-
-        // for (int data_i = 0; data_i<file_data.size();data_i++){
+        data_dim2D.push_back(batch_size); data_dim2D.push_back(3); data_dim2D.push_back(227); data_dim2D.push_back(227);
         out[0]->need_diff = false;
-        out[0]->receptive_field.resize(data_dim2D.size()-2); fill_n(out[0]->receptive_field.begin(),data_dim2D.size()-2,1);
-        out[0]->receptive_gap.resize(data_dim2D.size()-2);   fill_n(out[0]->receptive_gap.begin(),data_dim2D.size()-2,1);     
-        out[0]->receptive_offset.resize(data_dim2D.size()-2);fill_n(out[0]->receptive_offset.begin(),data_dim2D.size()-2,0);
+        out[0]->receptive_field.resize(data_dim2D.size() - 2); fill_n(out[0]->receptive_field.begin(), data_dim2D.size() - 2, 1);
+        out[0]->receptive_gap.resize(data_dim2D.size() - 2);   fill_n(out[0]->receptive_gap.begin(), data_dim2D.size() - 2, 1);
+        out[0]->receptive_offset.resize(data_dim2D.size() - 2); fill_n(out[0]->receptive_offset.begin(), data_dim2D.size() - 2, 0);
         memoryBytes += out[0]->Malloc(data_dim2D);
-        // }
 
+        // Malloc 3D data
         std::vector<int> data_dim3D;
-        data_dim3D.push_back(batch_size);
-        data_dim3D.push_back(size_data3D[0]);
-        data_dim3D.insert( data_dim3D.end(), size_crop3D.begin(), size_crop3D.end() );
-
-        // for (int data_i = 0; data_i<file_data.size();data_i++){
+        data_dim3D.push_back(batch_size); data_dim3D.push_back(1); data_dim3D.push_back(30); data_dim3D.push_back(30); data_dim3D.push_back(30);
         out[1]->need_diff = false;
-        out[1]->receptive_field.resize(data_dim3D.size()-2); fill_n(out[1]->receptive_field.begin(),data_dim3D.size()-2,1);
-        out[1]->receptive_gap.resize(data_dim3D.size()-2);   fill_n(out[1]->receptive_gap.begin(),data_dim3D.size()-2,1);     
-        out[1]->receptive_offset.resize(data_dim3D.size()-2);fill_n(out[1]->receptive_offset.begin(),data_dim3D.size()-2,0);
+        out[1]->receptive_field.resize(data_dim3D.size() - 2); fill_n(out[1]->receptive_field.begin(), data_dim3D.size() - 2, 1);
+        out[1]->receptive_gap.resize(data_dim3D.size() - 2);   fill_n(out[1]->receptive_gap.begin(), data_dim3D.size() - 2, 1);
+        out[1]->receptive_offset.resize(data_dim3D.size() - 2); fill_n(out[1]->receptive_offset.begin(), data_dim3D.size() - 2, 0);
         memoryBytes += out[1]->Malloc(data_dim3D);
-        // }
 
-        out[file_data.size()]->need_diff = false;
-        memoryBytes += out[file_data.size()]->Malloc(labelCPU->dim);
-        checkCUDA(__LINE__, cudaMalloc(&labelGPU, labelCPU->numBytes()) );
-        memoryBytes += labelCPU->numBytes();
-
-        // for (int data_i = 0; data_i<file_data.size();data_i++){
+        // CUDA Malloc 2D data
         checkCUDA(__LINE__, cudaMalloc(&dataGPU[0], numel_batch_all_channel_crop2D * sizeof(T)) );
         memoryBytes += numel_batch_all_channel_crop2D * sizeof(T);
-        // }
 
-        // for (int data_i = 0; data_i<file_data.size();data_i++){
+        // CUDA Malloc 3D data
         checkCUDA(__LINE__, cudaMalloc(&dataGPU[1], numel_batch_all_channel_crop3D * sizeof(T)) );
         memoryBytes += numel_batch_all_channel_crop3D * sizeof(T);
-        // }
 
-        lock = std::async(std::launch::async,&PeriodTrainDataLayer<T>::prefetch,this);
+        // Malloc labels
+        out[2]->need_diff = false;
+        out[3]->need_diff = false;
+        out[4]->need_diff = false;
+        std::vector<int> labels_dim; labels_dim.push_back(batch_size); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1);
+        memoryBytes += out[2]->Malloc(labels_dim);
+        memoryBytes += out[3]->Malloc(labels_dim);
+        memoryBytes += out[4]->Malloc(labels_dim);
+
+        // CUDA Malloc labels
+        checkCUDA(__LINE__, cudaMalloc(&labelGPU[0], size_t(batch_size) * sizeof(T)) );
+        checkCUDA(__LINE__, cudaMalloc(&labelGPU[1], size_t(batch_size) * sizeof(T)) );
+        checkCUDA(__LINE__, cudaMalloc(&labelGPU[2], size_t(batch_size) * sizeof(T)) );
+        memoryBytes += batch_size * sizeof(T);
+        memoryBytes += batch_size * sizeof(T);
+        memoryBytes += batch_size * sizeof(T);
+
+        lock = std::async(std::launch::async, &PeriodTrainDataLayer<T>::prefetch, this);
 
         return memoryBytes;
-    };  
+    };
 };
 
 template <class T>
 class PeriodMemoryDataLayer : public DataLayer {
     std::future<void> lock;
-    
-    std::vector<size_t> ordering; 
+
+    std::vector<size_t> ordering;
     std::bernoulli_distribution* distribution_bernoulli;
     // std::vector<std::uniform_int_distribution<int>*> distribution_uniform2D;
     // std::vector<std::uniform_int_distribution<int>*> distribution_uniform3D;
@@ -3865,12 +3928,12 @@ class PeriodMemoryDataLayer : public DataLayer {
 
     size_t numel_per_channel_crop2D ;
     size_t numel_all_channel_crop2D ;
-    size_t numel_per_channel_orgi2D ; 
+    size_t numel_per_channel_orgi2D ;
     size_t numel_batch_all_channel_crop2D ;
 
     size_t numel_per_channel_crop3D ;
     size_t numel_all_channel_crop3D ;
-    size_t numel_per_channel_orgi3D ; 
+    size_t numel_per_channel_orgi3D ;
     size_t numel_batch_all_channel_crop3D ;
 
     int epoch_prefetch;
@@ -3881,7 +3944,7 @@ class PeriodMemoryDataLayer : public DataLayer {
     size_t headerBytes3D;
     std::vector<int> size_data2D;
     std::vector<int> size_data3D;
-    public:
+public:
     bool mirror;
     std::vector<int> size_crop2D;
     std::vector<int> size_crop3D;
@@ -3890,13 +3953,13 @@ class PeriodMemoryDataLayer : public DataLayer {
     std::string file_label;
     int batch_size;
 
-    int numofitems(){
+    int numofitems() {
         return labelCPUall->numofitems();
     };
 
-    void init(){
+    void init() {
         epoch_prefetch  = 0;
-        distribution_bernoulli = new std::bernoulli_distribution(0.5);  
+        distribution_bernoulli = new std::bernoulli_distribution(0.5);
         //dataFILE = NULL;
         //dataCPU = NULL;
         //dataGPU = NULL;
@@ -3904,7 +3967,7 @@ class PeriodMemoryDataLayer : public DataLayer {
         labelGPU = NULL;
         labelCPUall = NULL;
         train_me = false;
-        std::cout<<"PeriodMemoryDataLayer "<<name<<" loading data: "<<std::endl;
+        std::cout << "PeriodMemoryDataLayer " << name << " loading data: " << std::endl;
 
         dataCPU.resize(file_data.size());
         dataGPU.resize(file_data.size());
@@ -3912,18 +3975,18 @@ class PeriodMemoryDataLayer : public DataLayer {
         dataFILE.resize(file_data.size());
 
         // open data file
-        for (int i = 0;i<file_data.size();++i){
+        for (int i = 0; i < file_data.size(); ++i) {
             std::cout << file_data[i] << std::endl;
-            dataFILE[i] = fopen(file_data[i].c_str(),"rb");
-            if (dataFILE[i] ==NULL){
-                std::cerr<<"Fail to open the data file"<<std::endl;
+            dataFILE[i] = fopen(file_data[i].c_str(), "rb");
+            if (dataFILE[i] == NULL) {
+                std::cerr << "Fail to open the data file" << std::endl;
                 FatalError(__LINE__);
             }
         }
 
         mean_data_GPU.resize(file_mean.size());
-        for (int i =0;i<file_mean.size();i++){
-            Tensor<StorageT>* meanCPU = new Tensor<StorageT>(file_mean[i],batch_size);
+        for (int i = 0; i < file_mean.size(); i++) {
+            Tensor<StorageT>* meanCPU = new Tensor<StorageT>(file_mean[i], batch_size);
             meanCPU->print(veci(0));
             checkCUDA(__LINE__, cudaMalloc(&mean_data_GPU[i], meanCPU->numBytes()) );
             meanCPU->writeGPU(mean_data_GPU[i]);
@@ -3937,13 +4000,13 @@ class PeriodMemoryDataLayer : public DataLayer {
         // 2D data
         Tensor<T> tensor2D;
         headerBytes2D = tensor2D.readHeader(dataFILE[0]);
-        size_data2D.insert( size_data2D.end(), tensor2D.dim.begin()+1, tensor2D.dim.end() );
+        size_data2D.insert( size_data2D.end(), tensor2D.dim.begin() + 1, tensor2D.dim.end() );
 
         numel_per_channel_crop2D = numel(size_crop2D);
         numel_all_channel_crop2D = size_data2D[0] * numel_per_channel_crop2D;
         numel_per_channel_orgi2D = sizeofitem(size_data2D);
-        numel_batch_all_channel_crop2D = batch_size*numel_all_channel_crop2D;
-        bytes_per_item2D = sizeof(T)* numel(size_data2D);
+        numel_batch_all_channel_crop2D = batch_size * numel_all_channel_crop2D;
+        bytes_per_item2D = sizeof(T) * numel(size_data2D);
 
         std::vector<int> data_dim2D;
         data_dim2D.push_back(batch_size);
@@ -3958,13 +4021,13 @@ class PeriodMemoryDataLayer : public DataLayer {
         // 3D data
         Tensor<T> tensor3D;
         headerBytes3D = tensor3D.readHeader(dataFILE[1]);
-        size_data3D.insert( size_data3D.end(), tensor3D.dim.begin()+1, tensor3D.dim.end() );
+        size_data3D.insert( size_data3D.end(), tensor3D.dim.begin() + 1, tensor3D.dim.end() );
 
         numel_per_channel_crop3D = numel(size_crop3D);
         numel_all_channel_crop3D = size_data3D[0] * numel_per_channel_crop3D;
         numel_per_channel_orgi3D = sizeofitem(size_data3D);
-        numel_batch_all_channel_crop3D = batch_size*numel_all_channel_crop3D;
-        bytes_per_item3D = sizeof(T)* numel(size_data3D);
+        numel_batch_all_channel_crop3D = batch_size * numel_all_channel_crop3D;
+        bytes_per_item3D = sizeof(T) * numel(size_data3D);
 
         std::vector<int> data_dim3D;
         data_dim3D.push_back(batch_size);
@@ -3972,7 +4035,7 @@ class PeriodMemoryDataLayer : public DataLayer {
         data_dim3D.insert( data_dim3D.end(), size_crop3D.begin(), size_crop3D.end() );
 
 
-        for (int i = 0;i<data_dim2D.size();++i)
+        for (int i = 0; i < data_dim2D.size(); ++i)
             std::cout << data_dim2D[i] << " ";
         std::cout << std::endl;
         std::cout << numel_per_channel_crop2D << std::endl;
@@ -3981,7 +4044,7 @@ class PeriodMemoryDataLayer : public DataLayer {
         std::cout << numel_batch_all_channel_crop2D << std::endl;
         std::cout << bytes_per_item2D << std::endl;
 
-        for (int i = 0;i<data_dim3D.size();++i)
+        for (int i = 0; i < data_dim3D.size(); ++i)
             std::cout << data_dim3D[i] << " ";
         std::cout << std::endl;
         std::cout << numel_per_channel_crop3D << std::endl;
@@ -4000,8 +4063,8 @@ class PeriodMemoryDataLayer : public DataLayer {
         // for label
         labelCPUall = new Tensor<StorageT>(file_label);
         labelCPUall -> print(veci(0));
-        std::cout<<"    "; labelCPUall->printRange();
-        while (labelCPUall->dim.size()<size_data2D.size()+1) labelCPUall->dim.push_back(1);
+        std::cout << "    "; labelCPUall->printRange();
+        while (labelCPUall->dim.size() < size_data2D.size() + 1) labelCPUall->dim.push_back(1);
         std::vector<int> label_dim = labelCPUall->dim;
         label_dim[0] = batch_size;
         labelCPU = new Tensor<StorageT>(label_dim);
@@ -4017,85 +4080,85 @@ class PeriodMemoryDataLayer : public DataLayer {
         //     distribution_uniform3D[d] = new std::uniform_int_distribution<int>(0,size_data3D[d+1] - size_crop3D[d]);
         // }
 
-        if (phase!=Testing){
+        if (phase != Testing) {
             shuffle();
-        }else{
+        } else {
             ordering.resize(numofitems());
-            for (int i=0;i<numofitems();++i) ordering[i]=i;
+            for (int i = 0; i < numofitems(); ++i) ordering[i] = i;
         }
     };
 
-    PeriodMemoryDataLayer(std::string name_, Phase phase_, bool mirror_, std::vector<int> size_data_, std::vector<int> size_crop_, std::vector<std::string> file_data_, std::string file_label_, int batch_size_): 
-        DataLayer(name_), mirror(mirror_), size_data3D(size_data_), size_crop3D(size_crop_), file_data(file_data_), file_label(file_label_), batch_size(batch_size_){
+    PeriodMemoryDataLayer(std::string name_, Phase phase_, bool mirror_, std::vector<int> size_data_, std::vector<int> size_crop_, std::vector<std::string> file_data_, std::string file_label_, int batch_size_):
+        DataLayer(name_), mirror(mirror_), size_data3D(size_data_), size_crop3D(size_crop_), file_data(file_data_), file_label(file_label_), batch_size(batch_size_) {
         phase = phase_;
         init();
     };
 
-    PeriodMemoryDataLayer(JSON* json){
+    PeriodMemoryDataLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,       Training)
         SetValue(json, mirror,      false)
         SetOrDie(json, file_data    )
         SetValue(json, file_mean,   std::vector<std::string>(0))
-        SetValue(json, file_label,"")
+        SetValue(json, file_label, "")
         SetOrDie(json, batch_size   )
         SetValue(json, random,      true)
         init();
     };
 
-    ~PeriodMemoryDataLayer(){
+    ~PeriodMemoryDataLayer() {
         if (lock.valid()) lock.wait();
         delete distribution_bernoulli;
         // for (int i=0;i<distribution_uniform.size();++i) delete distribution_uniform[i];
-        for (int i = 0; i<dataFILE.size();++i){
-            if (dataFILE[i]!=NULL) fclose(dataFILE[i]);
+        for (int i = 0; i < dataFILE.size(); ++i) {
+            if (dataFILE[i] != NULL) fclose(dataFILE[i]);
         }
-        for (int i = 0; i<dataCPU.size();++i){
-            if (dataCPU[i]!=NULL) delete [] dataCPU[i];
+        for (int i = 0; i < dataCPU.size(); ++i) {
+            if (dataCPU[i] != NULL) delete [] dataCPU[i];
         }
-        for (int i = 0; i<item_raw.size();++i){
-            if (item_raw[i]!=NULL) delete [] item_raw[i];
-        }
-
-        if (labelCPU!=NULL) delete labelCPU;
-        if (labelCPUall!=NULL) delete labelCPUall;
-
-        for (int i = 0; i<dataGPU.size();++i){
-            if (dataGPU[i]!=NULL) checkCUDA(__LINE__, cudaFree(dataGPU[i]));
+        for (int i = 0; i < item_raw.size(); ++i) {
+            if (item_raw[i] != NULL) delete [] item_raw[i];
         }
 
-        if (labelGPU!=NULL) checkCUDA(__LINE__, cudaFree(labelGPU));
+        if (labelCPU != NULL) delete labelCPU;
+        if (labelCPUall != NULL) delete labelCPUall;
+
+        for (int i = 0; i < dataGPU.size(); ++i) {
+            if (dataGPU[i] != NULL) checkCUDA(__LINE__, cudaFree(dataGPU[i]));
+        }
+
+        if (labelGPU != NULL) checkCUDA(__LINE__, cudaFree(labelGPU));
 
 
-        for (int i =0;i<file_mean.size();i++){
-            if (mean_data_GPU[i]!=NULL) checkCUDA(__LINE__, cudaFree(mean_data_GPU[i]));
+        for (int i = 0; i < file_mean.size(); i++) {
+            if (mean_data_GPU[i] != NULL) checkCUDA(__LINE__, cudaFree(mean_data_GPU[i]));
         }
     };
 
 
-    void shuffle(){
+    void shuffle() {
         if (!random) return;
-        if (phase!=Testing){
+        if (phase != Testing) {
             ordering = randperm(labelCPUall->numofitems(), rng);
         }
-    }; 
+    };
 
-    void prefetch(){
+    void prefetch() {
 
-        checkCUDA(__LINE__,cudaSetDevice(GPU));
+        checkCUDA(__LINE__, cudaSetDevice(GPU));
 
-        
+
         // std::vector<size_t> begin_coor(size_crop.size());
 
-        for (size_t i=0;i<batch_size;++i){
+        for (size_t i = 0; i < batch_size; ++i) {
 
             int image_i = ordering[counter];
             //std::cout<<"i"<<i<<"image_i"<<image_i<<"bytes_per_item"<<bytes_per_item<<std::endl;
 
-            //label 
+            //label
             size_t labelSizeOfItem = labelCPU->sizeofitem();
-            memcpy(labelCPU->CPUmem+i*labelSizeOfItem, labelCPUall->CPUmem+image_i*labelSizeOfItem, labelSizeOfItem*sizeofStorageT);
-            
+            memcpy(labelCPU->CPUmem + i * labelSizeOfItem, labelCPUall->CPUmem + image_i * labelSizeOfItem, labelSizeOfItem * sizeofStorageT);
+
             // // mirror
             // bool mirror_this = false;
             // if (mirror) mirror_this = ((*distribution_bernoulli)(rng));
@@ -4104,20 +4167,20 @@ class PeriodMemoryDataLayer : public DataLayer {
             //         begin_coor[d] = (numel_per_channel_orgi == numel_per_channel_crop) ? 0 : ((*(distribution_uniform[d]))(rng));
             //     }
             // }
-            
+
             // 2D
             // for (int data_i = 0; data_i<file_data.size();data_i++){
             // read file
             fseek(dataFILE[0], headerBytes2D + bytes_per_item2D * image_i, SEEK_SET);
             size_t read_cnt2D = fread(item_raw[0], 1, bytes_per_item2D, dataFILE[0]);
-            if (read_cnt2D != bytes_per_item2D){
-                std::cerr<<"Error reading file for PeriodMemoryDataLayer::prefetch : "<<dataFILE[0]<<std::endl;
-                std::cerr<<"data_i"<<0<<"read_cnt2D: "<<read_cnt2D<<" bytes_per_item2D: "<<bytes_per_item2D<<std::endl;
+            if (read_cnt2D != bytes_per_item2D) {
+                std::cerr << "Error reading file for PeriodMemoryDataLayer::prefetch : " << dataFILE[0] << std::endl;
+                std::cerr << "data_i" << 0 << "read_cnt2D: " << read_cnt2D << " bytes_per_item2D: " << bytes_per_item2D << std::endl;
                 FatalError(__LINE__);
             }
 
             T* memBegin2D = dataCPU[0] + i * numel_all_channel_crop2D;
-            if (numel_per_channel_orgi2D == numel_per_channel_crop2D){
+            if (numel_per_channel_orgi2D == numel_per_channel_crop2D) {
                 memcpy(memBegin2D, item_raw[0], bytes_per_item2D);
             }
 
@@ -4126,20 +4189,20 @@ class PeriodMemoryDataLayer : public DataLayer {
             // 3D
             fseek(dataFILE[1], headerBytes3D + bytes_per_item3D * image_i, SEEK_SET);
             size_t read_cnt3D = fread(item_raw[1], 1, bytes_per_item3D, dataFILE[1]);
-            if (read_cnt3D != bytes_per_item3D){
-                std::cerr<<"Error reading file for PeriodMemoryDataLayer::prefetch : "<<dataFILE[1]<<std::endl;
-                std::cerr<<"data_i"<<1<<"read_cnt3D: "<<read_cnt3D<<" bytes_per_item3D: "<<bytes_per_item3D<<std::endl;
+            if (read_cnt3D != bytes_per_item3D) {
+                std::cerr << "Error reading file for PeriodMemoryDataLayer::prefetch : " << dataFILE[1] << std::endl;
+                std::cerr << "data_i" << 1 << "read_cnt3D: " << read_cnt3D << " bytes_per_item3D: " << bytes_per_item3D << std::endl;
                 FatalError(__LINE__);
             }
 
             T* memBegin3D = dataCPU[1] + i * numel_all_channel_crop3D;
-            if (numel_per_channel_orgi3D == numel_per_channel_crop3D){
+            if (numel_per_channel_orgi3D == numel_per_channel_crop3D) {
                 memcpy(memBegin3D, item_raw[1], bytes_per_item3D);
             }
 
             counter++;
-            if (counter>= ordering.size()){
-                if (phase!=Testing) shuffle();
+            if (counter >= ordering.size()) {
+                if (phase != Testing) shuffle();
                 counter = 0;
                 ++epoch_prefetch;
             }
@@ -4149,42 +4212,42 @@ class PeriodMemoryDataLayer : public DataLayer {
 
         // for (int data_i = 0; data_i<file_data.size();data_i++){
         // }
-        checkCUDA(__LINE__, cudaMemcpy( dataGPU[0],  dataCPU[0],  numel_batch_all_channel_crop2D*sizeof(T), cudaMemcpyHostToDevice) );
-        checkCUDA(__LINE__, cudaMemcpy( dataGPU[1],  dataCPU[1],  numel_batch_all_channel_crop3D*sizeof(T), cudaMemcpyHostToDevice) );
-            
+        checkCUDA(__LINE__, cudaMemcpy( dataGPU[0],  dataCPU[0],  numel_batch_all_channel_crop2D * sizeof(T), cudaMemcpyHostToDevice) );
+        checkCUDA(__LINE__, cudaMemcpy( dataGPU[1],  dataCPU[1],  numel_batch_all_channel_crop3D * sizeof(T), cudaMemcpyHostToDevice) );
+
         labelCPU->writeGPU(labelGPU);
 
     };
 
-    void forward(Phase phase_){
+    void forward(Phase phase_) {
         lock.wait();
         epoch = epoch_prefetch;
         // for (int data_i = 0; data_i<file_data.size();data_i++){
         // }
-        StorageT* mean_data2D =  (0<mean_data_GPU.size()? mean_data_GPU[0]: NULL );
-        Kernel_convert_to_StorageT_subtract<<<CUDA_GET_BLOCKS(numel_batch_all_channel_crop2D), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(numel_batch_all_channel_crop2D), numel_batch_all_channel_crop2D, numel_all_channel_crop2D, dataGPU[0], mean_data2D, out[0]->dataGPU);
-        StorageT* mean_data3D =  (1<mean_data_GPU.size()? mean_data_GPU[1]: NULL );
-        Kernel_convert_to_StorageT_subtract<<<CUDA_GET_BLOCKS(numel_batch_all_channel_crop3D), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(numel_batch_all_channel_crop3D), numel_batch_all_channel_crop3D, numel_all_channel_crop3D, dataGPU[1], mean_data3D, out[1]->dataGPU);
-        std::swap(out[file_data.size()]->dataGPU,labelGPU);
-        lock = std::async(std::launch::async,&PeriodMemoryDataLayer<T>::prefetch,this);
+        StorageT* mean_data2D =  (0 < mean_data_GPU.size() ? mean_data_GPU[0] : NULL );
+        Kernel_convert_to_StorageT_subtract <<< CUDA_GET_BLOCKS(numel_batch_all_channel_crop2D), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(numel_batch_all_channel_crop2D), numel_batch_all_channel_crop2D, numel_all_channel_crop2D, dataGPU[0], mean_data2D, out[0]->dataGPU);
+        StorageT* mean_data3D =  (1 < mean_data_GPU.size() ? mean_data_GPU[1] : NULL );
+        Kernel_convert_to_StorageT_subtract <<< CUDA_GET_BLOCKS(numel_batch_all_channel_crop3D), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(numel_batch_all_channel_crop3D), numel_batch_all_channel_crop3D, numel_all_channel_crop3D, dataGPU[1], mean_data3D, out[1]->dataGPU);
+        std::swap(out[file_data.size()]->dataGPU, labelGPU);
+        lock = std::async(std::launch::async, &PeriodMemoryDataLayer<T>::prefetch, this);
     };
 
 
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
 
-        if (phase == Training && phase_==Testing) return 0;
+        if (phase == Training && phase_ == Testing) return 0;
 
-        
 
-        if (out.size()!=file_data.size()+1){    std::cout<<"PeriodMemoryDataLayer: # of out's should match the # of in-1"<<std::endl; FatalError(__LINE__); }
-        if (! (in.size()==0 || in.size()<file_data.size())){
-            std::cerr<< "PeriodMemoryDataLayer in.size()==0 || in.size<file_data.size()"<<std::endl;
+
+        if (out.size() != file_data.size() + 1) {    std::cout << "PeriodMemoryDataLayer: # of out's should match the # of in-1" << std::endl; FatalError(__LINE__); }
+        if (! (in.size() == 0 || in.size() < file_data.size())) {
+            std::cerr << "PeriodMemoryDataLayer in.size()==0 || in.size<file_data.size()" << std::endl;
             FatalError(__LINE__);
         }
         size_t memoryBytes = 0;
 
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
 
         std::vector<int> data_dim2D;
         data_dim2D.push_back(batch_size);
@@ -4193,9 +4256,9 @@ class PeriodMemoryDataLayer : public DataLayer {
 
         // for (int data_i = 0; data_i<file_data.size();data_i++){
         out[0]->need_diff = false;
-        out[0]->receptive_field.resize(data_dim2D.size()-2); fill_n(out[0]->receptive_field.begin(),data_dim2D.size()-2,1);
-        out[0]->receptive_gap.resize(data_dim2D.size()-2);   fill_n(out[0]->receptive_gap.begin(),data_dim2D.size()-2,1);     
-        out[0]->receptive_offset.resize(data_dim2D.size()-2);fill_n(out[0]->receptive_offset.begin(),data_dim2D.size()-2,0);
+        out[0]->receptive_field.resize(data_dim2D.size() - 2); fill_n(out[0]->receptive_field.begin(), data_dim2D.size() - 2, 1);
+        out[0]->receptive_gap.resize(data_dim2D.size() - 2);   fill_n(out[0]->receptive_gap.begin(), data_dim2D.size() - 2, 1);
+        out[0]->receptive_offset.resize(data_dim2D.size() - 2); fill_n(out[0]->receptive_offset.begin(), data_dim2D.size() - 2, 0);
         memoryBytes += out[0]->Malloc(data_dim2D);
         // }
 
@@ -4206,9 +4269,9 @@ class PeriodMemoryDataLayer : public DataLayer {
 
         // for (int data_i = 0; data_i<file_data.size();data_i++){
         out[1]->need_diff = false;
-        out[1]->receptive_field.resize(data_dim3D.size()-2); fill_n(out[1]->receptive_field.begin(),data_dim3D.size()-2,1);
-        out[1]->receptive_gap.resize(data_dim3D.size()-2);   fill_n(out[1]->receptive_gap.begin(),data_dim3D.size()-2,1);     
-        out[1]->receptive_offset.resize(data_dim3D.size()-2);fill_n(out[1]->receptive_offset.begin(),data_dim3D.size()-2,0);
+        out[1]->receptive_field.resize(data_dim3D.size() - 2); fill_n(out[1]->receptive_field.begin(), data_dim3D.size() - 2, 1);
+        out[1]->receptive_gap.resize(data_dim3D.size() - 2);   fill_n(out[1]->receptive_gap.begin(), data_dim3D.size() - 2, 1);
+        out[1]->receptive_offset.resize(data_dim3D.size() - 2); fill_n(out[1]->receptive_offset.begin(), data_dim3D.size() - 2, 0);
         memoryBytes += out[1]->Malloc(data_dim3D);
         // }
 
@@ -4227,17 +4290,17 @@ class PeriodMemoryDataLayer : public DataLayer {
         memoryBytes += numel_batch_all_channel_crop3D * sizeof(T);
         // }
 
-        lock = std::async(std::launch::async,&PeriodMemoryDataLayer<T>::prefetch,this);
+        lock = std::async(std::launch::async, &PeriodMemoryDataLayer<T>::prefetch, this);
 
         return memoryBytes;
-    };  
+    };
 };
 
 template <class T>
 class DiskDataLayer : public DataLayer {
     std::future<void> lock;
-    
-    std::vector<size_t> ordering; 
+
+    std::vector<size_t> ordering;
     std::bernoulli_distribution* distribution_bernoulli;
     std::vector<std::uniform_int_distribution<int>*> distribution_uniform;
 
@@ -4253,7 +4316,7 @@ class DiskDataLayer : public DataLayer {
 
     size_t numel_per_channel_crop ;
     size_t numel_all_channel_crop ;
-    size_t numel_per_channel_orgi ; 
+    size_t numel_per_channel_orgi ;
     size_t numel_batch_all_channel_crop ;
 
     int epoch_prefetch;
@@ -4261,7 +4324,7 @@ class DiskDataLayer : public DataLayer {
     size_t bytes_per_item;
     size_t headerBytes;
     std::vector<int> size_data;
-    public:
+public:
     bool mirror;
     std::vector<int> size_crop;
     std::vector<std::string> file_data;
@@ -4269,13 +4332,13 @@ class DiskDataLayer : public DataLayer {
     std::string file_label;
     int batch_size;
 
-    int numofitems(){
+    int numofitems() {
         return labelCPUall->numofitems();
     };
 
-    void init(){
+    void init() {
         epoch_prefetch  = 0;
-        distribution_bernoulli = new std::bernoulli_distribution(0.5);  
+        distribution_bernoulli = new std::bernoulli_distribution(0.5);
         //dataFILE = NULL;
         //dataCPU = NULL;
         //dataGPU = NULL;
@@ -4283,7 +4346,7 @@ class DiskDataLayer : public DataLayer {
         labelGPU = NULL;
         labelCPUall = NULL;
         train_me = false;
-        std::cout<<"DiskDataLayer "<<name<<" loading data: "<<std::endl;
+        std::cout << "DiskDataLayer " << name << " loading data: " << std::endl;
 
         dataCPU.resize(file_data.size());
         dataGPU.resize(file_data.size());
@@ -4291,42 +4354,42 @@ class DiskDataLayer : public DataLayer {
         dataFILE.resize(file_data.size());
 
         // open data file
-        for (int i = 0;i<file_data.size();++i){
-            dataFILE[i] = fopen(file_data[i].c_str(),"rb");
-            if (dataFILE[i] ==NULL){
-                std::cerr<<"Fail to open the data file"<<std::endl;
+        for (int i = 0; i < file_data.size(); ++i) {
+            dataFILE[i] = fopen(file_data[i].c_str(), "rb");
+            if (dataFILE[i] == NULL) {
+                std::cerr << "Fail to open the data file" << std::endl;
                 FatalError(__LINE__);
             }
         }
 
         mean_data_GPU.resize(file_mean.size());
-        for (int i =0;i<file_mean.size();i++){
-            Tensor<StorageT>* meanCPU = new Tensor<StorageT>(file_mean[i],batch_size);
+        for (int i = 0; i < file_mean.size(); i++) {
+            Tensor<StorageT>* meanCPU = new Tensor<StorageT>(file_mean[i], batch_size);
             meanCPU->print(veci(0));
             checkCUDA(__LINE__, cudaMalloc(&mean_data_GPU[i], meanCPU->numBytes()) );
             meanCPU->writeGPU(mean_data_GPU[i]);
             delete meanCPU;
         }
 
-        
+
         Tensor<T> tensor;
         headerBytes = tensor.readHeader(dataFILE[0]);
 
-        size_data.insert( size_data.end(), tensor.dim.begin()+1, tensor.dim.end() );
+        size_data.insert( size_data.end(), tensor.dim.begin() + 1, tensor.dim.end() );
 
 
         numel_per_channel_crop = numel(size_crop);
         numel_all_channel_crop = size_data[0] * numel_per_channel_crop;
         numel_per_channel_orgi = sizeofitem(size_data);
-        numel_batch_all_channel_crop = batch_size*numel_all_channel_crop;
-        bytes_per_item = sizeof(T)* numel(size_data);
+        numel_batch_all_channel_crop = batch_size * numel_all_channel_crop;
+        bytes_per_item = sizeof(T) * numel(size_data);
 
         std::vector<int> data_dim;
         data_dim.push_back(batch_size);
         data_dim.push_back(size_data[0]);
         data_dim.insert( data_dim.end(), size_crop.begin(), size_crop.end() );
 
-        for (int i = 0;i<file_data.size();++i){
+        for (int i = 0; i < file_data.size(); ++i) {
             dataCPU[i]  = new T[numel(data_dim)];
             item_raw[i] = new T[numel(size_data)];
         }
@@ -4335,218 +4398,218 @@ class DiskDataLayer : public DataLayer {
         // for label
         labelCPUall = new Tensor<StorageT>(file_label);
         labelCPUall -> print(veci(0));
-        std::cout<<"    "; labelCPUall->printRange();
-        while (labelCPUall->dim.size()<size_data.size()+1) labelCPUall->dim.push_back(1);
+        std::cout << "    "; labelCPUall->printRange();
+        while (labelCPUall->dim.size() < size_data.size() + 1) labelCPUall->dim.push_back(1);
         std::vector<int> label_dim = labelCPUall->dim;
         label_dim[0] = batch_size;
         labelCPU = new Tensor<StorageT>(label_dim);
 
 
         distribution_uniform.resize(size_crop.size());
-        for (int d=0; d<size_crop.size(); d++){
-            distribution_uniform[d] = new std::uniform_int_distribution<int>(0,size_data[d+1] - size_crop[d]);
+        for (int d = 0; d < size_crop.size(); d++) {
+            distribution_uniform[d] = new std::uniform_int_distribution<int>(0, size_data[d + 1] - size_crop[d]);
         }
 
-        if (phase!=Testing){
+        if (phase != Testing) {
             shuffle();
-        }else{
+        } else {
             ordering.resize(numofitems());
-            for (int i=0;i<numofitems();++i) ordering[i]=i;
+            for (int i = 0; i < numofitems(); ++i) ordering[i] = i;
         }
     };
 
-    DiskDataLayer(std::string name_, Phase phase_, bool mirror_, std::vector<int> size_data_, std::vector<int> size_crop_, std::vector<std::string> file_data_, std::string file_label_, int batch_size_): 
-        DataLayer(name_), mirror(mirror_), size_data(size_data_), size_crop(size_crop_), file_data(file_data_), file_label(file_label_), batch_size(batch_size_){
+    DiskDataLayer(std::string name_, Phase phase_, bool mirror_, std::vector<int> size_data_, std::vector<int> size_crop_, std::vector<std::string> file_data_, std::string file_label_, int batch_size_):
+        DataLayer(name_), mirror(mirror_), size_data(size_data_), size_crop(size_crop_), file_data(file_data_), file_label(file_label_), batch_size(batch_size_) {
         phase = phase_;
         init();
     };
 
-    DiskDataLayer(JSON* json){
+    DiskDataLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,       Training)
         SetValue(json, mirror,      false)
         SetOrDie(json, file_data    )
         SetValue(json, file_mean,   std::vector<std::string>(0))
-        SetValue(json, file_label,"")
+        SetValue(json, file_label, "")
         SetOrDie(json, batch_size   )
         SetOrDie(json, size_crop    )
         SetValue(json, random,      true)
         init();
     };
 
-    ~DiskDataLayer(){
+    ~DiskDataLayer() {
         if (lock.valid()) lock.wait();
         delete distribution_bernoulli;
-        for (int i=0;i<distribution_uniform.size();++i) delete distribution_uniform[i];
-        for (int i = 0; i<dataFILE.size();++i){
-            if (dataFILE[i]!=NULL) fclose(dataFILE[i]);
+        for (int i = 0; i < distribution_uniform.size(); ++i) delete distribution_uniform[i];
+        for (int i = 0; i < dataFILE.size(); ++i) {
+            if (dataFILE[i] != NULL) fclose(dataFILE[i]);
         }
-        for (int i = 0; i<dataCPU.size();++i){
-            if (dataCPU[i]!=NULL) delete [] dataCPU[i];
+        for (int i = 0; i < dataCPU.size(); ++i) {
+            if (dataCPU[i] != NULL) delete [] dataCPU[i];
         }
-        for (int i = 0; i<item_raw.size();++i){
-            if (item_raw[i]!=NULL) delete [] item_raw[i];
-        }
-
-        if (labelCPU!=NULL) delete labelCPU;
-        if (labelCPUall!=NULL) delete labelCPUall;
-
-        for (int i = 0; i<dataGPU.size();++i){
-            if (dataGPU[i]!=NULL) checkCUDA(__LINE__, cudaFree(dataGPU[i]));
+        for (int i = 0; i < item_raw.size(); ++i) {
+            if (item_raw[i] != NULL) delete [] item_raw[i];
         }
 
-        if (labelGPU!=NULL) checkCUDA(__LINE__, cudaFree(labelGPU));
+        if (labelCPU != NULL) delete labelCPU;
+        if (labelCPUall != NULL) delete labelCPUall;
+
+        for (int i = 0; i < dataGPU.size(); ++i) {
+            if (dataGPU[i] != NULL) checkCUDA(__LINE__, cudaFree(dataGPU[i]));
+        }
+
+        if (labelGPU != NULL) checkCUDA(__LINE__, cudaFree(labelGPU));
 
 
-        for (int i =0;i<file_mean.size();i++){
-            if (mean_data_GPU[i]!=NULL) checkCUDA(__LINE__, cudaFree(mean_data_GPU[i]));
+        for (int i = 0; i < file_mean.size(); i++) {
+            if (mean_data_GPU[i] != NULL) checkCUDA(__LINE__, cudaFree(mean_data_GPU[i]));
         }
     };
 
 
-    void shuffle(){
+    void shuffle() {
         if (!random) return;
-        if (phase!=Testing){
+        if (phase != Testing) {
             ordering = randperm(labelCPUall->numofitems(), rng);
         }
-    }; 
+    };
 
-    void prefetch(){
+    void prefetch() {
 
-        checkCUDA(__LINE__,cudaSetDevice(GPU));
+        checkCUDA(__LINE__, cudaSetDevice(GPU));
 
-        
+
         std::vector<size_t> begin_coor(size_crop.size());
 
-        for (size_t i=0;i<batch_size;++i){
+        for (size_t i = 0; i < batch_size; ++i) {
 
             int image_i = ordering[counter];
             //std::cout<<"i"<<i<<"image_i"<<image_i<<"bytes_per_item"<<bytes_per_item<<std::endl;
 
-            //label 
+            //label
             size_t labelSizeOfItem = labelCPU->sizeofitem();
-            memcpy(labelCPU->CPUmem+i*labelSizeOfItem, labelCPUall->CPUmem+image_i*labelSizeOfItem, labelSizeOfItem*sizeofStorageT);
-            
+            memcpy(labelCPU->CPUmem + i * labelSizeOfItem, labelCPUall->CPUmem + image_i * labelSizeOfItem, labelSizeOfItem * sizeofStorageT);
+
             // mirror
             bool mirror_this = false;
             if (mirror) mirror_this = ((*distribution_bernoulli)(rng));
-            if (numel_per_channel_orgi != numel_per_channel_crop || mirror_this){
-                for (int d=0;d<size_crop.size();++d){
+            if (numel_per_channel_orgi != numel_per_channel_crop || mirror_this) {
+                for (int d = 0; d < size_crop.size(); ++d) {
                     begin_coor[d] = (numel_per_channel_orgi == numel_per_channel_crop) ? 0 : ((*(distribution_uniform[d]))(rng));
                 }
             }
-            
+
 
             //for (int data_i = 0; data_i<file_data.size();data_i++){
-            for (int data_i = 0; data_i<file_data.size();data_i++){
+            for (int data_i = 0; data_i < file_data.size(); data_i++) {
                 // read file
                 fseek(dataFILE[data_i], headerBytes + bytes_per_item * image_i, SEEK_SET);
                 size_t read_cnt = fread(item_raw[data_i], 1, bytes_per_item, dataFILE[data_i]);
-                if (read_cnt != bytes_per_item){
-                    std::cerr<<"Error reading file for DiskDataLayer::prefetch : "<<dataFILE[data_i]<<std::endl;
-                    std::cerr<<"data_i"<<data_i<<"read_cnt: "<<read_cnt<<" bytes_per_item: "<<bytes_per_item<<std::endl;
+                if (read_cnt != bytes_per_item) {
+                    std::cerr << "Error reading file for DiskDataLayer::prefetch : " << dataFILE[data_i] << std::endl;
+                    std::cerr << "data_i" << data_i << "read_cnt: " << read_cnt << " bytes_per_item: " << bytes_per_item << std::endl;
                     FatalError(__LINE__);
                 }
 
                 T* memBegin = dataCPU[data_i] + i * numel_all_channel_crop;
-                if (numel_per_channel_orgi == numel_per_channel_crop && !mirror_this){
+                if (numel_per_channel_orgi == numel_per_channel_crop && !mirror_this) {
                     memcpy(memBegin, item_raw[data_i], bytes_per_item);
                 }
-                else{
-                    if (size_crop.size()==2){
-                        for (size_t x_crop = 0; x_crop < size_crop[0]; ++ x_crop){
+                else {
+                    if (size_crop.size() == 2) {
+                        for (size_t x_crop = 0; x_crop < size_crop[0]; ++ x_crop) {
                             size_t x_orgi = x_crop + begin_coor[0];
-                            for (size_t y_crop=0; y_crop < size_crop[1]; ++ y_crop){
+                            for (size_t y_crop = 0; y_crop < size_crop[1]; ++ y_crop) {
                                 size_t y_orgi = y_crop + begin_coor[1];
                                 if (mirror_this) y_orgi = size_data[2] - 1 - y_orgi;
 
                                 size_t idx_orgi = x_orgi * size_data[2] + y_orgi;
                                 size_t idx_crop = x_crop * size_crop[1] + y_crop;
-                                for (size_t c=0; c<size_data[0];++c){
-                                    memBegin[idx_crop+c*numel_per_channel_crop] =  item_raw[data_i][idx_orgi+c*numel_per_channel_orgi];
+                                for (size_t c = 0; c < size_data[0]; ++c) {
+                                    memBegin[idx_crop + c * numel_per_channel_crop] =  item_raw[data_i][idx_orgi + c * numel_per_channel_orgi];
                                 }
-                            }               
+                            }
                         }
-                    }else if (size_crop.size()==3){
-                        for (size_t x_crop = 0; x_crop < size_crop[0]; ++ x_crop){
+                    } else if (size_crop.size() == 3) {
+                        for (size_t x_crop = 0; x_crop < size_crop[0]; ++ x_crop) {
                             size_t x_orgi = x_crop + begin_coor[0];
-                            for (size_t y_crop=0; y_crop < size_crop[1]; ++ y_crop){
+                            for (size_t y_crop = 0; y_crop < size_crop[1]; ++ y_crop) {
                                 size_t y_orgi = y_crop + begin_coor[1];
                                 if (mirror_this) y_orgi = size_data[2] - 1 - y_orgi;
 
-                                for (size_t z_crop=0; z_crop<size_crop[2]; ++z_crop){
+                                for (size_t z_crop = 0; z_crop < size_crop[2]; ++z_crop) {
                                     size_t z_orgi = z_crop + begin_coor[2];
 
                                     size_t idx_orgi = (x_orgi * size_data[2] + y_orgi) * size_data[3] + z_orgi;
                                     size_t idx_crop = (x_crop * size_crop[1] + y_crop) * size_crop[2] + z_crop;
-                                    for (size_t c=0; c<size_data[0];++c){
-                                        memBegin[idx_crop+c*numel_per_channel_crop] =  item_raw[data_i][idx_orgi+c*numel_per_channel_orgi];
+                                    for (size_t c = 0; c < size_data[0]; ++c) {
+                                        memBegin[idx_crop + c * numel_per_channel_crop] =  item_raw[data_i][idx_orgi + c * numel_per_channel_orgi];
                                     }
                                 }
-                            }               
+                            }
                         }
                     }
-                    else{
-                        std::cerr<<"Error: dimension unimplemented. You can implement by yourself."<<std::endl;
+                    else {
+                        std::cerr << "Error: dimension unimplemented. You can implement by yourself." << std::endl;
                         FatalError(__LINE__);
                     }
                 }
             }//for (int data_i = 0; data_i<file_data.size();data_i++)
 
             counter++;
-            if (counter>= ordering.size()){
-                if (phase!=Testing) shuffle();
+            if (counter >= ordering.size()) {
+                if (phase != Testing) shuffle();
                 counter = 0;
                 ++epoch_prefetch;
             }
         }//end for (size_t i=0;i<batch_size;++i)
         //std::cout<<"numel_batch_all_channel_crop:  "<<numel_batch_all_channel_crop<<std::endl;
-        for (int data_i = 0; data_i<file_data.size();data_i++){
-            checkCUDA(__LINE__, cudaMemcpy( dataGPU[data_i],  dataCPU[data_i],  numel_batch_all_channel_crop*sizeof(T), cudaMemcpyHostToDevice) );
+        for (int data_i = 0; data_i < file_data.size(); data_i++) {
+            checkCUDA(__LINE__, cudaMemcpy( dataGPU[data_i],  dataCPU[data_i],  numel_batch_all_channel_crop * sizeof(T), cudaMemcpyHostToDevice) );
         }
-            
+
         labelCPU->writeGPU(labelGPU);
 
     };
 
-    void forward(Phase phase_){
+    void forward(Phase phase_) {
         lock.wait();
         epoch = epoch_prefetch;
-        for (int data_i = 0; data_i<file_data.size();data_i++){
-            StorageT* mean_data =  (data_i<mean_data_GPU.size()? mean_data_GPU[data_i]: NULL );
-            Kernel_convert_to_StorageT_subtract<<<CUDA_GET_BLOCKS(numel_batch_all_channel_crop), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(numel_batch_all_channel_crop), numel_batch_all_channel_crop, numel_all_channel_crop, dataGPU[data_i], mean_data, out[data_i]->dataGPU);
+        for (int data_i = 0; data_i < file_data.size(); data_i++) {
+            StorageT* mean_data =  (data_i < mean_data_GPU.size() ? mean_data_GPU[data_i] : NULL );
+            Kernel_convert_to_StorageT_subtract <<< CUDA_GET_BLOCKS(numel_batch_all_channel_crop), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(numel_batch_all_channel_crop), numel_batch_all_channel_crop, numel_all_channel_crop, dataGPU[data_i], mean_data, out[data_i]->dataGPU);
         }
-        std::swap(out[file_data.size()]->dataGPU,labelGPU);
-        lock = std::async(std::launch::async,&DiskDataLayer<T>::prefetch,this);
+        std::swap(out[file_data.size()]->dataGPU, labelGPU);
+        lock = std::async(std::launch::async, &DiskDataLayer<T>::prefetch, this);
     };
 
 
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
 
-        if (phase == Training && phase_==Testing) return 0;
+        if (phase == Training && phase_ == Testing) return 0;
 
-        
 
-        if (out.size()!=file_data.size()+1){    std::cout<<"DiskDataLayer: # of out's should match the # of in-1"<<std::endl; FatalError(__LINE__); }
-        if (! (in.size()==0 || in.size()<file_data.size())){
-            std::cerr<< "DiskDataLayer in.size()==0 || in.size<file_data.size()"<<std::endl;
+
+        if (out.size() != file_data.size() + 1) {    std::cout << "DiskDataLayer: # of out's should match the # of in-1" << std::endl; FatalError(__LINE__); }
+        if (! (in.size() == 0 || in.size() < file_data.size())) {
+            std::cerr << "DiskDataLayer in.size()==0 || in.size<file_data.size()" << std::endl;
             FatalError(__LINE__);
         }
         size_t memoryBytes = 0;
 
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
 
         std::vector<int> data_dim;
         data_dim.push_back(batch_size);
         data_dim.push_back(size_data[0]);
         data_dim.insert( data_dim.end(), size_crop.begin(), size_crop.end() );
 
-        for (int data_i = 0; data_i<file_data.size();data_i++){
+        for (int data_i = 0; data_i < file_data.size(); data_i++) {
             out[data_i]->need_diff = false;
-            out[data_i]->receptive_field.resize(data_dim.size()-2); fill_n(out[data_i]->receptive_field.begin(),data_dim.size()-2,1);
-            out[data_i]->receptive_gap.resize(data_dim.size()-2);   fill_n(out[data_i]->receptive_gap.begin(),data_dim.size()-2,1);     
-            out[data_i]->receptive_offset.resize(data_dim.size()-2);fill_n(out[data_i]->receptive_offset.begin(),data_dim.size()-2,0);
+            out[data_i]->receptive_field.resize(data_dim.size() - 2); fill_n(out[data_i]->receptive_field.begin(), data_dim.size() - 2, 1);
+            out[data_i]->receptive_gap.resize(data_dim.size() - 2);   fill_n(out[data_i]->receptive_gap.begin(), data_dim.size() - 2, 1);
+            out[data_i]->receptive_offset.resize(data_dim.size() - 2); fill_n(out[data_i]->receptive_offset.begin(), data_dim.size() - 2, 0);
             memoryBytes += out[data_i]->Malloc(data_dim);
         }
 
@@ -4555,15 +4618,15 @@ class DiskDataLayer : public DataLayer {
         checkCUDA(__LINE__, cudaMalloc(&labelGPU, labelCPU->numBytes()) );
         memoryBytes += labelCPU->numBytes();
 
-        for (int data_i = 0; data_i<file_data.size();data_i++){
+        for (int data_i = 0; data_i < file_data.size(); data_i++) {
             checkCUDA(__LINE__, cudaMalloc(&dataGPU[data_i], numel_batch_all_channel_crop * sizeof(T)) );
             memoryBytes += numel_batch_all_channel_crop * sizeof(T);
         }
 
-        lock = std::async(std::launch::async,&DiskDataLayer<T>::prefetch,this);
+        lock = std::async(std::launch::async, &DiskDataLayer<T>::prefetch, this);
 
         return memoryBytes;
-    };  
+    };
 };
 
 
@@ -4579,7 +4642,7 @@ public:
     std::vector<int> upscale;
     int group;
 
-    void init(){
+    void init() {
         weight_dim.push_back(num_output);
         weight_dim.push_back(0);  // need the channel size from the input
         weight_dim.insert( weight_dim.end(), window.begin(), window.end() );
@@ -4588,7 +4651,7 @@ public:
         bias_dim[1] = num_output;
     };
 
-    ConvolutionLayer(JSON* json){
+    ConvolutionLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,               TrainingTesting)
         SetValue(json, train_me,            true)
@@ -4604,8 +4667,8 @@ public:
         SetValue(json, bias_decay_mult,     1.0)
         SetValue(json, group,               1)
 
-        std::vector<int> ones  = std::vector<int>(window.size(),1);
-        std::vector<int> zeros = std::vector<int>(window.size(),0);
+        std::vector<int> ones  = std::vector<int>(window.size(), 1);
+        std::vector<int> zeros = std::vector<int>(window.size(), 0);
         SetValue(json, padding,             zeros)
         SetValue(json, stride,              ones)
         SetValue(json, upscale,             ones)
@@ -4614,13 +4677,13 @@ public:
     };
 
     ConvolutionLayer(std::string name_,
-                    int num_output_,
-                    std::vector<int> window_,
-                    std::vector<int> padding_, std::vector<int> stride_, std::vector<int> upscale_,
-                    ComputeT weight_lr_mult_,   Filler weight_filler_, ComputeT weight_filler_param_,
-                    ComputeT bias_lr_mult_,     Filler bias_filler_,   ComputeT  bias_filler_param_):
-                    Layer(name_),
-                    num_output(num_output_), window(window_), stride(stride_), padding(padding_), upscale(upscale_){
+                     int num_output_,
+                     std::vector<int> window_,
+                     std::vector<int> padding_, std::vector<int> stride_, std::vector<int> upscale_,
+                     ComputeT weight_lr_mult_,   Filler weight_filler_, ComputeT weight_filler_param_,
+                     ComputeT bias_lr_mult_,     Filler bias_filler_,   ComputeT  bias_filler_param_):
+        Layer(name_),
+        num_output(num_output_), window(window_), stride(stride_), padding(padding_), upscale(upscale_) {
 
         weight_lr_mult = weight_lr_mult_;
         weight_filler = weight_filler_;
@@ -4632,53 +4695,53 @@ public:
 
         init();
     };
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
         size_t memoryBytes = 0;
         train_me = train_me && phase_ != Testing;
 
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name;
-        if (group>1) std::cout<<" ("<<group<<" groups)";
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name;
+        if (group > 1) std::cout << " (" << group << " groups)";
 
-        if (in.size()==0) { std::cout<<std::endl<<"ConvolutionLayer in shouldn't be empty"<<std::endl; FatalError(__LINE__); }
-        if (in.size()!=out.size()) { std::cout<<std::endl<<"ConvolutionLayer #in should be the same as #out"<<std::endl; FatalError(__LINE__); }
+        if (in.size() == 0) { std::cout << std::endl << "ConvolutionLayer in shouldn't be empty" << std::endl; FatalError(__LINE__); }
+        if (in.size() != out.size()) { std::cout << std::endl << "ConvolutionLayer #in should be the same as #out" << std::endl; FatalError(__LINE__); }
 
-        weight_dim[1] = in[0]->dim[1]/group;
+        weight_dim[1] = in[0]->dim[1] / group;
 
         // create descriptor
-        checkCUDNN(__LINE__,cudnnCreateFilterDescriptor(&filter_desc) );
-        checkCUDNN(__LINE__,cudnnCreateTensorDescriptor(&bias_desc) );
-        checkCUDNN(__LINE__,cudnnCreateConvolutionDescriptor(&conv_desc) );
+        checkCUDNN(__LINE__, cudnnCreateFilterDescriptor(&filter_desc) );
+        checkCUDNN(__LINE__, cudnnCreateTensorDescriptor(&bias_desc) );
+        checkCUDNN(__LINE__, cudnnCreateConvolutionDescriptor(&conv_desc) );
         // set descriptor
         // set the parameters for convolution
 
         std::vector<int> weight_dim_group = weight_dim;
-        weight_dim_group[0] = weight_dim[0]/group;
+        weight_dim_group[0] = weight_dim[0] / group;
 
-        checkCUDNN(__LINE__,cudnnSetFilterNdDescriptor(filter_desc,
-                                                    CUDNNStorageT,
-                                                    weight_dim.size(),
-                                                    &weight_dim_group[0]) );
+        checkCUDNN(__LINE__, cudnnSetFilterNdDescriptor(filter_desc,
+                   CUDNNStorageT,
+                   weight_dim.size(),
+                   &weight_dim_group[0]) );
 
-        checkCUDNN(__LINE__,cudnnSetConvolutionNdDescriptor(conv_desc,
-                                                    padding.size(),
-                                                    &padding[0],
-                                                    &stride[0],
-                                                    &upscale[0],
-                                                    CUDNN_CROSS_CORRELATION,
-                                                    CUDNNConvComputeT) );
+        checkCUDNN(__LINE__, cudnnSetConvolutionNdDescriptor(conv_desc,
+                   padding.size(),
+                   &padding[0],
+                   &stride[0],
+                   &upscale[0],
+                   CUDNN_CROSS_CORRELATION,
+                   CUDNNConvComputeT) );
 
         std::vector<int> bias_stride(bias_dim.size());
 
-        bias_stride[bias_dim.size()-1] = 1;
-        for (int d=bias_dim.size()-2;d>=0;--d){
-            bias_stride[d] = bias_stride[d+1] *  bias_dim[d+1];
+        bias_stride[bias_dim.size() - 1] = 1;
+        for (int d = bias_dim.size() - 2; d >= 0; --d) {
+            bias_stride[d] = bias_stride[d + 1] *  bias_dim[d + 1];
         }
-        checkCUDNN(__LINE__,cudnnSetTensorNdDescriptor(bias_desc,
-                                                    CUDNNStorageT,
-                                                    bias_dim.size(),
-                                                    &bias_dim[0],
-                                                    &bias_stride[0]) );
+        checkCUDNN(__LINE__, cudnnSetTensorNdDescriptor(bias_desc,
+                   CUDNNStorageT,
+                   bias_dim.size(),
+                   &bias_dim[0],
+                   &bias_stride[0]) );
 
 
 
@@ -4688,39 +4751,39 @@ public:
         weight_numel = numel(weight_dim);
         bias_numel   = numel(bias_dim);
 
-        if (weight_numel>0){
-            std::cout<<" weight"; veciPrint(weight_dim);
+        if (weight_numel > 0) {
+            std::cout << " weight"; veciPrint(weight_dim);
             checkCUDA(__LINE__, cudaMalloc( &weight_dataGPU, weight_numel * sizeofStorageT) );
             memoryBytes += weight_numel * sizeofStorageT;
         }
-        if (bias_numel>0){
-            std::cout<<" bias"; veciPrint(bias_dim);
+        if (bias_numel > 0) {
+            std::cout << " bias"; veciPrint(bias_dim);
             checkCUDA(__LINE__, cudaMalloc( &bias_dataGPU, bias_numel * sizeofStorageT) );
             memoryBytes += bias_numel * sizeofStorageT;
         }
-        std::cout<<std::endl;
+        std::cout << std::endl;
 
 
-        for (int i=0;i<out.size();++i){
+        for (int i = 0; i < out.size(); ++i) {
             out[i]->need_diff = train_me || in[i]->need_diff; // if one of them need the grad
 
             std::vector<int> dimOut;
             dimOut.resize(in[i]->dim.size());
 
-            checkCUDNN(__LINE__,cudnnGetConvolutionNdForwardOutputDim(conv_desc,
-                                                                in[i]->getDesc(group),
-                                                                filter_desc,
-                                                                dimOut.size(),
-                                                                &dimOut[0]
-                                                                ));
+            checkCUDNN(__LINE__, cudnnGetConvolutionNdForwardOutputDim(conv_desc,
+                       in[i]->getDesc(group),
+                       filter_desc,
+                       dimOut.size(),
+                       &dimOut[0]
+                                                                      ));
             dimOut[1] *= group;
 
             size_t dall = in[i]->receptive_field.size();
             out[i]->receptive_field .resize(dall);
             out[i]->receptive_gap   .resize(dall);
             out[i]->receptive_offset.resize(dall);
-            for(size_t d=0;d<dall;++d){
-                out[i]->receptive_field[d] = in[i]->receptive_field[d] + ComputeT(window[d]-1) * in[i]->receptive_gap[d];
+            for (size_t d = 0; d < dall; ++d) {
+                out[i]->receptive_field[d] = in[i]->receptive_field[d] + ComputeT(window[d] - 1) * in[i]->receptive_gap[d];
                 out[i]->receptive_gap[d] = stride[d] * in[i]->receptive_gap[d];
                 out[i]->receptive_offset[d] = in[i]->receptive_offset[d] - ComputeT(padding[d]) * in[i]->receptive_gap[d];
             }
@@ -4731,130 +4794,130 @@ public:
         return memoryBytes;
     };
 
-    void forward(Phase phase_){
+    void forward(Phase phase_) {
 
-        for (int i=0;i<in.size();++i){
+        for (int i = 0; i < in.size(); ++i) {
             for (int g = 0; g < group; g++) {
-                checkCUDNN(__LINE__,cudnnConvolutionForward(cudnnHandle,
-                                                      one,
-                                                      in[i]->getDesc(group),
-                                                      in[i]->dataGPU + (g * in[i]->sizeofitem() / group),
-                                                      filter_desc,
-                                                      weight_dataGPU + (g * weight_numel / group),
-                                                      conv_desc,
-                                                      //CUDNN_CONVOLUTION_FWD_ALGO_DIRECT,
-                                                      CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM,
-                                                      // CUDNN For 3-d convolutions, only CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM is supported; support is provided for any format for srcDesc and destDesc as well as support for all data type configurations.
-                                                      NULL,
-                                                      0,
-                                                      zero,
-                                                      out[i]->getDesc(group),
-                                                      out[i]->dataGPU + (g * out[i]->sizeofitem() / group) ) );
+                checkCUDNN(__LINE__, cudnnConvolutionForward(cudnnHandle,
+                           one,
+                           in[i]->getDesc(group),
+                           in[i]->dataGPU + (g * in[i]->sizeofitem() / group),
+                           filter_desc,
+                           weight_dataGPU + (g * weight_numel / group),
+                           conv_desc,
+                           //CUDNN_CONVOLUTION_FWD_ALGO_DIRECT,
+                           CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM,
+                           // CUDNN For 3-d convolutions, only CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM is supported; support is provided for any format for srcDesc and destDesc as well as support for all data type configurations.
+                           NULL,
+                           0,
+                           zero,
+                           out[i]->getDesc(group),
+                           out[i]->dataGPU + (g * out[i]->sizeofitem() / group) ) );
 
             }
 
-            if (bias_dim.size()<=5){ // cudnnAddTensor_v3 only support upto 5 dimensions
-                checkCUDNN(__LINE__,cudnnAddTensor_v3(cudnnHandle,
-                                              one,
-                                              bias_desc,
-                                              bias_dataGPU,
-                                              one,
-                                              out[i]->desc,
-                                              out[i]->dataGPU) );
-            }else{
+            if (bias_dim.size() <= 5) { // cudnnAddTensor_v3 only support upto 5 dimensions
+                checkCUDNN(__LINE__, cudnnAddTensor_v3(cudnnHandle,
+                                                       one,
+                                                       bias_desc,
+                                                       bias_dataGPU,
+                                                       one,
+                                                       out[i]->desc,
+                                                       out[i]->dataGPU) );
+            } else {
                 std::vector<int> bias_dim_bug;
                 bias_dim_bug.push_back(bias_dim[0]);
                 bias_dim_bug.push_back(bias_dim[1]);
                 bias_dim_bug.push_back(bias_dim[2]);
                 bias_dim_bug.push_back(1);
-                for (int d=3;d<bias_dim.size();++d) bias_dim_bug[3] *= bias_dim[d];
+                for (int d = 3; d < bias_dim.size(); ++d) bias_dim_bug[3] *= bias_dim[d];
                 std::vector<int> bias_stride(bias_dim_bug.size());
-                bias_stride[bias_dim_bug.size()-1] = 1;
-                for (int d=bias_dim_bug.size()-2;d>=0;--d){
-                    bias_stride[d] = bias_stride[d+1] *  bias_dim_bug[d+1];
+                bias_stride[bias_dim_bug.size() - 1] = 1;
+                for (int d = bias_dim_bug.size() - 2; d >= 0; --d) {
+                    bias_stride[d] = bias_stride[d + 1] *  bias_dim_bug[d + 1];
                 }
                 cudnnTensorDescriptor_t bias_desc_bug;
-                checkCUDNN(__LINE__,cudnnCreateTensorDescriptor(&bias_desc_bug) );
-                checkCUDNN(__LINE__,cudnnSetTensorNdDescriptor(bias_desc_bug,
-                                                            CUDNNStorageT,
-                                                            bias_dim_bug.size(),
-                                                            &bias_dim_bug[0],
-                                                            &bias_stride[0]) );
+                checkCUDNN(__LINE__, cudnnCreateTensorDescriptor(&bias_desc_bug) );
+                checkCUDNN(__LINE__, cudnnSetTensorNdDescriptor(bias_desc_bug,
+                           CUDNNStorageT,
+                           bias_dim_bug.size(),
+                           &bias_dim_bug[0],
+                           &bias_stride[0]) );
                 std::vector<int> out_dim_bug;
                 out_dim_bug.push_back(out[i]->dim[0]);
                 out_dim_bug.push_back(out[i]->dim[1]);
                 out_dim_bug.push_back(out[i]->dim[2]);
                 out_dim_bug.push_back(1);
-                for (int d=3;d<out[i]->dim.size();++d)  out_dim_bug[3] *= out[i]->dim[d];
+                for (int d = 3; d < out[i]->dim.size(); ++d)  out_dim_bug[3] *= out[i]->dim[d];
                 std::vector<int> strideA(out_dim_bug.size());
-                strideA[out_dim_bug.size()-1] = 1;
-                for (int d=out_dim_bug.size()-2;d>=0;--d)  strideA[d] = strideA[d+1] *  out_dim_bug[d+1];
+                strideA[out_dim_bug.size() - 1] = 1;
+                for (int d = out_dim_bug.size() - 2; d >= 0; --d)  strideA[d] = strideA[d + 1] *  out_dim_bug[d + 1];
                 cudnnTensorDescriptor_t out_desc_bug;
-                checkCUDNN(__LINE__,cudnnCreateTensorDescriptor(&out_desc_bug));
-                checkCUDNN(__LINE__,cudnnSetTensorNdDescriptor(out_desc_bug,
-                                                        CUDNNStorageT,
-                                                        out_dim_bug.size(),
-                                                        &out_dim_bug[0],
-                                                        &strideA[0]) );
-                checkCUDNN(__LINE__,cudnnAddTensor(cudnnHandle,
-                                              one,
-                                              bias_desc_bug,
-                                              bias_dataGPU,
-                                              one,
-                                              out_desc_bug,
-                                              out[i]->dataGPU) );
-                checkCUDNN(__LINE__,cudnnDestroyTensorDescriptor(bias_desc_bug) );
-                checkCUDNN(__LINE__,cudnnDestroyTensorDescriptor(out_desc_bug) );
+                checkCUDNN(__LINE__, cudnnCreateTensorDescriptor(&out_desc_bug));
+                checkCUDNN(__LINE__, cudnnSetTensorNdDescriptor(out_desc_bug,
+                           CUDNNStorageT,
+                           out_dim_bug.size(),
+                           &out_dim_bug[0],
+                           &strideA[0]) );
+                checkCUDNN(__LINE__, cudnnAddTensor(cudnnHandle,
+                                                    one,
+                                                    bias_desc_bug,
+                                                    bias_dataGPU,
+                                                    one,
+                                                    out_desc_bug,
+                                                    out[i]->dataGPU) );
+                checkCUDNN(__LINE__, cudnnDestroyTensorDescriptor(bias_desc_bug) );
+                checkCUDNN(__LINE__, cudnnDestroyTensorDescriptor(out_desc_bug) );
             }
         }
     };
-    void backward(Phase phase_){
-        for (int i=0;i<in.size();++i){
+    void backward(Phase phase_) {
+        for (int i = 0; i < in.size(); ++i) {
             // if bottom still needs to compute gradients
-            if (in[i]->need_diff){
+            if (in[i]->need_diff) {
                 for (int g = 0; g < group; g++) {
-                    checkCUDNN(__LINE__,cudnnConvolutionBackwardData(cudnnHandle,
-                                                              one,
-                                                              filter_desc, weight_dataGPU + (g * weight_numel / group),
-                                                              out[i]->getDesc(group), out[i]->diffGPU + (g * out[i]->sizeofitem() / group),
-                                                              conv_desc,
-                                                              CUDNN_CONVOLUTION_BWD_DATA_ALGO_0, NULL, 0,
-                                                              one,
-                                                              in[i]->getDesc(group), in[i]->diffGPU + (g * in[i]->sizeofitem() / group)));
+                    checkCUDNN(__LINE__, cudnnConvolutionBackwardData(cudnnHandle,
+                               one,
+                               filter_desc, weight_dataGPU + (g * weight_numel / group),
+                               out[i]->getDesc(group), out[i]->diffGPU + (g * out[i]->sizeofitem() / group),
+                               conv_desc,
+                               CUDNN_CONVOLUTION_BWD_DATA_ALGO_0, NULL, 0,
+                               one,
+                               in[i]->getDesc(group), in[i]->diffGPU + (g * in[i]->sizeofitem() / group)));
                 }
             }
         }
         // compute in->diff first because the next layer need to use it immediate, and because weight_diff needs to write to another GPU
-        for (int i=0;i<in.size();++i){
-            if (train_me){
+        for (int i = 0; i < in.size(); ++i) {
+            if (train_me) {
                 ComputeT beta = ComputeT(1);
-                if (weight_numel>0){
+                if (weight_numel > 0) {
                     for (int g = 0; g < group; g++) {
-                        checkCUDNN(__LINE__,cudnnConvolutionBackwardFilter(cudnnHandle,
-                                                                  one,
-                                                                  in[i]->getDesc(group), in[i]->dataGPU + (g * in[i]->sizeofitem() / group),
-                                                                  out[i]->getDesc(group), out[i]->diffGPU + (g * out[i]->sizeofitem() / group),
-                                                                  conv_desc,
-                                                                  CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0, NULL, 0,
-                                                                  &beta,
-                                                                  filter_desc, weight_diffGPU + (g * weight_numel / group)));
+                        checkCUDNN(__LINE__, cudnnConvolutionBackwardFilter(cudnnHandle,
+                                   one,
+                                   in[i]->getDesc(group), in[i]->dataGPU + (g * in[i]->sizeofitem() / group),
+                                   out[i]->getDesc(group), out[i]->diffGPU + (g * out[i]->sizeofitem() / group),
+                                   conv_desc,
+                                   CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0, NULL, 0,
+                                   &beta,
+                                   filter_desc, weight_diffGPU + (g * weight_numel / group)));
                     }
                 }
-                if (bias_numel>0){
-                    checkCUDNN(__LINE__,cudnnConvolutionBackwardBias(cudnnHandle,
-                                                              one,
-                                                              out[i]->desc,  out[i]->diffGPU,
-                                                              &beta,
-                                                              bias_desc, bias_diffGPU));
+                if (bias_numel > 0) {
+                    checkCUDNN(__LINE__, cudnnConvolutionBackwardBias(cudnnHandle,
+                               one,
+                               out[i]->desc,  out[i]->diffGPU,
+                               &beta,
+                               bias_desc, bias_diffGPU));
                 }
             }
         }
     };
-    ~ConvolutionLayer(){
+    ~ConvolutionLayer() {
         // destory the descriptor
-        checkCUDNN(__LINE__,cudnnDestroyFilterDescriptor(filter_desc) );
-        checkCUDNN(__LINE__,cudnnDestroyTensorDescriptor(bias_desc) );
-        checkCUDNN(__LINE__,cudnnDestroyConvolutionDescriptor(conv_desc) );
+        checkCUDNN(__LINE__, cudnnDestroyFilterDescriptor(filter_desc) );
+        checkCUDNN(__LINE__, cudnnDestroyTensorDescriptor(bias_desc) );
+        checkCUDNN(__LINE__, cudnnDestroyConvolutionDescriptor(conv_desc) );
     };
 };
 
@@ -4870,10 +4933,10 @@ public:
     StorageT* bias_multGPU; // a std::vector with size # of mini-batch training example
 
     InnerProductLayer(std::string name_,
-                    int num_output_,
-                    bool bias_term_=true,
-                    ComputeT weight_lr_mult_=1.0,   Filler weight_filler_=Xavier, ComputeT weight_filler_param_=0.0,
-                    ComputeT bias_lr_mult_=2.0,     Filler bias_filler_=Constant,   ComputeT  bias_filler_param_=0.0): Layer(name_),num_output(num_output_), bias_multGPU(NULL), bias_term(bias_term_){
+                      int num_output_,
+                      bool bias_term_ = true,
+                      ComputeT weight_lr_mult_ = 1.0,   Filler weight_filler_ = Xavier, ComputeT weight_filler_param_ = 0.0,
+                      ComputeT bias_lr_mult_ = 2.0,     Filler bias_filler_ = Constant,   ComputeT  bias_filler_param_ = 0.0): Layer(name_), num_output(num_output_), bias_multGPU(NULL), bias_term(bias_term_) {
         weight_filler = weight_filler_;
         weight_filler_param = weight_filler_param_;
         bias_filler = bias_filler_;
@@ -4883,7 +4946,7 @@ public:
         train_me = true;
     };
 
-    InnerProductLayer(JSON* json){
+    InnerProductLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,               TrainingTesting)
         SetValue(json, train_me,            true)
@@ -4900,15 +4963,15 @@ public:
 
     };
 
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
         size_t memoryBytes = 0;
         train_me = train_me && phase_ != Testing;
 
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name;
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name;
 
-        if (in.size()==0) { std::cout<<std::endl<<"InnerProductLayer in shouldn't be empty"<<std::endl; FatalError(__LINE__); }
-        if (in.size()!=out.size()) { std::cout<<std::endl<<"InnerProductLayer #in should be the same as #out"<<std::endl; FatalError(__LINE__); }
+        if (in.size() == 0) { std::cout << std::endl << "InnerProductLayer in shouldn't be empty" << std::endl; FatalError(__LINE__); }
+        if (in.size() != out.size()) { std::cout << std::endl << "InnerProductLayer #in should be the same as #out" << std::endl; FatalError(__LINE__); }
 
         num_input = sizeofitem(in[0]->dim);
         num_items = in[0]->dim[0];
@@ -4918,37 +4981,37 @@ public:
         weight_dim[1] = num_input;
         weight_numel = numel(weight_dim);
 
-        if (bias_term){        
+        if (bias_term) {
             bias_dim.resize(1);
             bias_dim[0] = num_output;
             bias_numel   = numel(bias_dim);
-        }else{
+        } else {
             bias_numel   = 0;
         }
 
 
-        if (weight_numel>0){
-            std::cout<<" weight"; veciPrint(weight_dim);
+        if (weight_numel > 0) {
+            std::cout << " weight"; veciPrint(weight_dim);
             checkCUDA(__LINE__, cudaMalloc(&weight_dataGPU, weight_numel * sizeofStorageT) );
             memoryBytes += weight_numel * sizeofStorageT;
         }
 
-        if (bias_numel>0){
-            std::cout<<" bias"; veciPrint(bias_dim);
+        if (bias_numel > 0) {
+            std::cout << " bias"; veciPrint(bias_dim);
             checkCUDA(__LINE__, cudaMalloc(&bias_dataGPU, bias_numel * sizeofStorageT) );
             memoryBytes += bias_numel * sizeofStorageT;
             checkCUDA(__LINE__, cudaMalloc(&bias_multGPU, num_items * sizeofStorageT) );
-            Kernel_set_value<<<CUDA_GET_BLOCKS(num_items), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(num_items), num_items, bias_multGPU, CPUCompute2StorageT(1));
+            Kernel_set_value <<< CUDA_GET_BLOCKS(num_items), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(num_items), num_items, bias_multGPU, CPUCompute2StorageT(1));
             memoryBytes += num_items * sizeofStorageT;
         }
-        std::cout<<std::endl;
+        std::cout << std::endl;
 
-        for (int i=0;i<out.size();++i){
+        for (int i = 0; i < out.size(); ++i) {
             out[i]->need_diff = train_me || in[i]->need_diff; // if one of them need the grad
             std::vector<int> dimOut(in[i]->dim.size());
             dimOut[0] = in[i]->dim[0];
             dimOut[1] = num_output;
-            for (int d=2;d<in[i]->dim.size();++d)
+            for (int d = 2; d < in[i]->dim.size(); ++d)
                 dimOut[d] = 1;
 
             size_t dall = in[i]->receptive_field.size();
@@ -4956,8 +5019,8 @@ public:
             out[i]->receptive_gap   .resize(dall);
             out[i]->receptive_offset.resize(dall);
 
-            for(size_t d=0;d<dall;++d){
-                out[i]->receptive_field[d] = in[i]->receptive_field[d] + ComputeT(in[i]->dim[d+2]-1) * in[i]->receptive_gap[d];
+            for (size_t d = 0; d < dall; ++d) {
+                out[i]->receptive_field[d] = in[i]->receptive_field[d] + ComputeT(in[i]->dim[d + 2] - 1) * in[i]->receptive_gap[d];
                 out[i]->receptive_gap[d] = 0;
                 out[i]->receptive_offset[d] = 0;
 
@@ -4969,41 +5032,41 @@ public:
         return memoryBytes;
     };
 
-    void forward(Phase phase_){
-        for (int i=0;i<in.size();++i){
+    void forward(Phase phase_) {
+        for (int i = 0; i < in.size(); ++i) {
             checkCUBLAS(__LINE__, GPUgemm(cublasHandle, CUBLAS_OP_T, CUBLAS_OP_N, num_output, num_items, num_input, oneComputeT, weight_dataGPU, num_input, in[i]->dataGPU, num_input, zeroComputeT, out[i]->dataGPU, num_output) );
-            if (bias_numel>0)
+            if (bias_numel > 0)
                 checkCUBLAS(__LINE__, GPUgemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N, num_output, num_items, 1, oneComputeT, bias_dataGPU, num_output, bias_multGPU, 1, oneComputeT, out[i]->dataGPU, num_output) );
         }
     };
 
-    void backward(Phase phase_){
-        for (int i=0;i<in.size();++i){
-            if (in[i]->need_diff){
+    void backward(Phase phase_) {
+        for (int i = 0; i < in.size(); ++i) {
+            if (in[i]->need_diff) {
                 checkCUBLAS(__LINE__, GPUgemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N, num_input, num_items, num_output, oneComputeT, weight_dataGPU, num_input, out[i]->diffGPU, num_output, oneComputeT, in[i]->diffGPU, num_input) );
             }
         }
 
-        for (int i=0;i<in.size();++i){
-            if (train_me){
+        for (int i = 0; i < in.size(); ++i) {
+            if (train_me) {
                 ComputeT beta = ComputeT(1);
-                if (weight_numel>0){
+                if (weight_numel > 0) {
                     checkCUBLAS(__LINE__, GPUgemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_T, num_input, num_output, num_items, oneComputeT, in[i]->dataGPU,  num_input, out[i]->diffGPU, num_output, &beta, weight_diffGPU, num_input) );
                 }
-                if (bias_numel>0){
+                if (bias_numel > 0) {
                     checkCUBLAS(__LINE__, GPUgemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N, num_output,         1, num_items, oneComputeT, out[i]->diffGPU, num_output, bias_multGPU,    num_items, &beta, bias_diffGPU,    num_output) );
                 }
             }
         }
     };
 
-    ~InnerProductLayer(){
-        if (bias_multGPU!=NULL) checkCUDA(__LINE__, cudaFree(bias_multGPU));
+    ~InnerProductLayer() {
+        if (bias_multGPU != NULL) checkCUDA(__LINE__, cudaFree(bias_multGPU));
     };
 };
 
 
-class DropoutLayer: public Layer{
+class DropoutLayer: public Layer {
     ComputeT scale;
     unsigned int threshold;
     std::vector< unsigned int * > GPUmask;
@@ -5012,34 +5075,34 @@ class DropoutLayer: public Layer{
     curandGenerator_t generator;
 public:
     ComputeT dropout_rate;
-    void init(){
+    void init() {
         scale = 1. / (1. - dropout_rate);
         threshold = ComputeT(UINT_MAX) * dropout_rate;
         std::random_device rd;
-        if ( curandCreateGenerator(&generator,CURAND_RNG_PSEUDO_DEFAULT) != CURAND_STATUS_SUCCESS || curandSetPseudoRandomGeneratorSeed(generator,rd())!= CURAND_STATUS_SUCCESS ){
-            std::cerr<<"Cannot initialize Curand"<<std::endl;
+        if ( curandCreateGenerator(&generator, CURAND_RNG_PSEUDO_DEFAULT) != CURAND_STATUS_SUCCESS || curandSetPseudoRandomGeneratorSeed(generator, rd()) != CURAND_STATUS_SUCCESS ) {
+            std::cerr << "Cannot initialize Curand" << std::endl;
             FatalError(__LINE__);
         }
     };
-    DropoutLayer(std::string name_, ComputeT dropout_rate_): Layer(name_), dropout_rate(dropout_rate_){
+    DropoutLayer(std::string name_, ComputeT dropout_rate_): Layer(name_), dropout_rate(dropout_rate_) {
         init();
     };
-    DropoutLayer(JSON* json){
+    DropoutLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,               TrainingTesting)
         SetValue(json, dropout_rate,        0.5)
         init();
     };
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
         size_t memoryBytes = 0;
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
-        if (in.size()==0) { std::cout<<std::endl<<"DropoutLayer in shouldn't be empty"<<std::endl; FatalError(__LINE__); }
-        if (in.size()!=out.size()) { std::cout<<std::endl<<"DropoutLayer #in should be the same as #out"<<std::endl; FatalError(__LINE__); }
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
+        if (in.size() == 0) { std::cout << std::endl << "DropoutLayer in shouldn't be empty" << std::endl; FatalError(__LINE__); }
+        if (in.size() != out.size()) { std::cout << std::endl << "DropoutLayer #in should be the same as #out" << std::endl; FatalError(__LINE__); }
         GPUmask.resize(out.size());
         BYTESmask.resize(out.size());
         SIZEmask.resize(out.size());
-        for (int i=0;i<out.size();++i){
+        for (int i = 0; i < out.size(); ++i) {
             SIZEmask [i] = numel(in[i]->dim);
             BYTESmask[i] = sizeof(unsigned int) * SIZEmask[i];
             memoryBytes += BYTESmask[i];
@@ -5052,39 +5115,39 @@ public:
         }
         return memoryBytes;
     };
-    ~DropoutLayer(){
-        for (int i=0;i<GPUmask.size();++i){
+    ~DropoutLayer() {
+        for (int i = 0; i < GPUmask.size(); ++i) {
             checkCUDA(__LINE__, cudaFree(GPUmask[i]) );
         }
     };
-    void forward(Phase phase_){
-        if ( phase_==Training ){
-            for (int i=0;i<in.size();++i){
+    void forward(Phase phase_) {
+        if ( phase_ == Training ) {
+            for (int i = 0; i < in.size(); ++i) {
                 curandGenerate(generator, GPUmask[i], SIZEmask[i]);
-                Kernel_dropout_forward<<<CUDA_GET_BLOCKS(SIZEmask[i]), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(SIZEmask[i]),SIZEmask[i],out[i]->dataGPU, GPUmask[i], in[i]->dataGPU, threshold, scale);
-                checkCUDA(__LINE__,cudaGetLastError());
+                Kernel_dropout_forward <<< CUDA_GET_BLOCKS(SIZEmask[i]), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(SIZEmask[i]), SIZEmask[i], out[i]->dataGPU, GPUmask[i], in[i]->dataGPU, threshold, scale);
+                checkCUDA(__LINE__, cudaGetLastError());
             }
-        }else{
-            for (int i=0;i<in.size();++i){
-                if (out[i]!=in[i]){
-                    checkCUDA(__LINE__,cudaMemcpy(out[i]->dataGPU, in[i]->dataGPU, sizeofStorageT*SIZEmask[i], cudaMemcpyDeviceToDevice));
+        } else {
+            for (int i = 0; i < in.size(); ++i) {
+                if (out[i] != in[i]) {
+                    checkCUDA(__LINE__, cudaMemcpy(out[i]->dataGPU, in[i]->dataGPU, sizeofStorageT * SIZEmask[i], cudaMemcpyDeviceToDevice));
                 }
             }
         }
     };
-    void backward(Phase phase_){
-        if ( phase_==Training ){
-            for (int i=0;i<in.size();++i){
-                if (in[i]->need_diff){
-                    Kernel_dropout_backward<<<CUDA_GET_BLOCKS(SIZEmask[i]), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(SIZEmask[i]),SIZEmask[i],out[i]->dataGPU, GPUmask[i], in[i]->dataGPU, threshold, scale);
+    void backward(Phase phase_) {
+        if ( phase_ == Training ) {
+            for (int i = 0; i < in.size(); ++i) {
+                if (in[i]->need_diff) {
+                    Kernel_dropout_backward <<< CUDA_GET_BLOCKS(SIZEmask[i]), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(SIZEmask[i]), SIZEmask[i], out[i]->dataGPU, GPUmask[i], in[i]->dataGPU, threshold, scale);
                 }
             }
-        }else{
-            std::cerr<<"there should be no backward for testing"<<std::endl;
+        } else {
+            std::cerr << "there should be no backward for testing" << std::endl;
             FatalError(__LINE__);
-            for (int i=0;i<in.size();++i){
-                if (out[i]!=in[i]){
-                    checkCUDA(__LINE__,cudaMemcpy(in[i]->diffGPU, out[i]->diffGPU, sizeofStorageT*SIZEmask[i], cudaMemcpyDeviceToDevice));
+            for (int i = 0; i < in.size(); ++i) {
+                if (out[i] != in[i]) {
+                    checkCUDA(__LINE__, cudaMemcpy(in[i]->diffGPU, out[i]->diffGPU, sizeofStorageT * SIZEmask[i], cudaMemcpyDeviceToDevice));
                 }
             }
         }
@@ -5095,23 +5158,23 @@ class SoftmaxLayer : public Layer {
 public:
     bool stable_gradient;
 
-    SoftmaxLayer(std::string name_): Layer(name_), stable_gradient(true){};
+    SoftmaxLayer(std::string name_): Layer(name_), stable_gradient(true) {};
 
-    SoftmaxLayer(JSON* json){
+    SoftmaxLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,           TrainingTesting)
         SetValue(json, stable_gradient, true)
     };
 
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
         size_t memoryBytes = 0;
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
 
-        if (in.size()==0) { std::cout<<std::endl<<"SoftmaxLayer in shouldn't be empty"<<std::endl; FatalError(__LINE__); }
-        if (in.size()!=out.size()) { std::cout<<std::endl<<"SoftmaxLayer #in should be the same as #out"<<std::endl; FatalError(__LINE__); }
+        if (in.size() == 0) { std::cout << std::endl << "SoftmaxLayer in shouldn't be empty" << std::endl; FatalError(__LINE__); }
+        if (in.size() != out.size()) { std::cout << std::endl << "SoftmaxLayer #in should be the same as #out" << std::endl; FatalError(__LINE__); }
 
-        for (int i=0;i<out.size();++i){
+        for (int i = 0; i < out.size(); ++i) {
             out[i]->need_diff = in[i]->need_diff;
             out[i]->receptive_field = in[i]->receptive_field;
             out[i]->receptive_gap = in[i]->receptive_gap;
@@ -5120,32 +5183,32 @@ public:
         }
         return memoryBytes;
     };
-    void forward(Phase phase_){
-        for (int i=0;i<in.size();++i){
-            checkCUDNN(__LINE__,cudnnSoftmaxForward(cudnnHandle,
-                                              CUDNN_SOFTMAX_ACCURATE ,
-                                              CUDNN_SOFTMAX_MODE_CHANNEL,
-                                              one,
-                                              in[i]->desc, in[i]->dataGPU,
-                                              zero,
-                                              out[i]->desc, out[i]->dataGPU));
+    void forward(Phase phase_) {
+        for (int i = 0; i < in.size(); ++i) {
+            checkCUDNN(__LINE__, cudnnSoftmaxForward(cudnnHandle,
+                       CUDNN_SOFTMAX_ACCURATE ,
+                       CUDNN_SOFTMAX_MODE_CHANNEL,
+                       one,
+                       in[i]->desc, in[i]->dataGPU,
+                       zero,
+                       out[i]->desc, out[i]->dataGPU));
         }
     };
-    void backward(Phase phase_){
-        for (int i=0;i<in.size();++i){
+    void backward(Phase phase_) {
+        for (int i = 0; i < in.size(); ++i) {
             // if bottom still needs to compute gradients
-            if (in[i]->need_diff){
-                if (stable_gradient){
-                    if (in[i]->diffGPU != out[i]->diffGPU){
+            if (in[i]->need_diff) {
+                if (stable_gradient) {
+                    if (in[i]->diffGPU != out[i]->diffGPU) {
                         xpy(numel(in[i]->dim), out[i]->diffGPU, in[i]->diffGPU);
                     }
-                }else{
-                    checkCUDNN(__LINE__,cudnnSoftmaxBackward(cudnnHandle, CUDNN_SOFTMAX_ACCURATE,
-                                                      CUDNN_SOFTMAX_MODE_INSTANCE, //CUDNN_SOFTMAX_MODE_CHANNEL,
-                                                      one,
-                                                      out[i]->desc, out[i]->dataGPU, out[i]->desc, out[i]->diffGPU,
-                                                      zero, //one, //bbb
-                                                      in[i]->desc, in[i]->diffGPU));
+                } else {
+                    checkCUDNN(__LINE__, cudnnSoftmaxBackward(cudnnHandle, CUDNN_SOFTMAX_ACCURATE,
+                               CUDNN_SOFTMAX_MODE_INSTANCE, //CUDNN_SOFTMAX_MODE_CHANNEL,
+                               one,
+                               out[i]->desc, out[i]->dataGPU, out[i]->desc, out[i]->diffGPU,
+                               zero, //one, //bbb
+                               in[i]->desc, in[i]->diffGPU));
                 }
             }
 
@@ -5160,21 +5223,21 @@ public:
 
     ActivationLayer(std::string name_, cudnnActivationMode_t mode_): Layer(name_), mode(mode_) {};
 
-    ActivationLayer(JSON* json){
+    ActivationLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, mode,                CUDNN_ACTIVATION_RELU)
         SetValue(json, phase,               TrainingTesting)
     };
 
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
         size_t memoryBytes = 0;
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
 
-        if (in.size()==0) { std::cout<<std::endl<<"ActivationLayer in shouldn't be empty"<<std::endl; FatalError(__LINE__); }
-        if (in.size()!=out.size()) { std::cout<<std::endl<<"ActivationLayer #in should be the same as #out"<<std::endl; FatalError(__LINE__); }
+        if (in.size() == 0) { std::cout << std::endl << "ActivationLayer in shouldn't be empty" << std::endl; FatalError(__LINE__); }
+        if (in.size() != out.size()) { std::cout << std::endl << "ActivationLayer #in should be the same as #out" << std::endl; FatalError(__LINE__); }
 
-        for (int i=0;i<out.size();++i){
+        for (int i = 0; i < out.size(); ++i) {
             out[i]->need_diff = in[i]->need_diff;
             out[i]->receptive_field = in[i]->receptive_field;
             out[i]->receptive_gap = in[i]->receptive_gap;
@@ -5183,28 +5246,28 @@ public:
         }
         return memoryBytes;
     };
-    void forward(Phase phase_){
-        for (int i=0;i<in.size();++i){
+    void forward(Phase phase_) {
+        for (int i = 0; i < in.size(); ++i) {
             // CUDNN bug
-            checkCUDNN(__LINE__,cudnnActivationForward(cudnnHandle,
-                                                mode,
-                                                one,
-                                                in[i]->desc, in[i]->dataGPU,
-                                                zero,
-                                                out[i]->desc, out[i]->dataGPU));
+            checkCUDNN(__LINE__, cudnnActivationForward(cudnnHandle,
+                       mode,
+                       one,
+                       in[i]->desc, in[i]->dataGPU,
+                       zero,
+                       out[i]->desc, out[i]->dataGPU));
         }
     };
-    void backward(Phase phase_){
-        for (int i=0;i<in.size();++i){
+    void backward(Phase phase_) {
+        for (int i = 0; i < in.size(); ++i) {
             // if bottom still needs to compute gradients
-            if (in[i]->need_diff){
-                checkCUDNN(__LINE__,cudnnActivationBackward(cudnnHandle,
-                                                    mode,
-                                                    one,
-                                                    out[i]->desc, out[i]->dataGPU, out[i]->desc, out[i]->diffGPU,
-                                                    in[i]->desc, in[i]->dataGPU,
-                                                    zero, //one, //bbb
-                                                    in[i]->desc, in[i]->diffGPU));
+            if (in[i]->need_diff) {
+                checkCUDNN(__LINE__, cudnnActivationBackward(cudnnHandle,
+                           mode,
+                           one,
+                           out[i]->desc, out[i]->dataGPU, out[i]->desc, out[i]->diffGPU,
+                           in[i]->desc, in[i]->dataGPU,
+                           zero, //one, //bbb
+                           in[i]->desc, in[i]->diffGPU));
             }
         }
     };
@@ -5218,57 +5281,57 @@ public:
     std::vector<int> padding;
     std::vector<int> stride;
 
-    void init(){
-        checkCUDNN(__LINE__,cudnnCreatePoolingDescriptor(&desc) );
-        checkCUDNN(__LINE__,cudnnSetPoolingNdDescriptor(desc,
-                                                mode,
-                                                window.size(),
-                                                &window[0],
-                                                &padding[0],
-                                                &stride[0]));
+    void init() {
+        checkCUDNN(__LINE__, cudnnCreatePoolingDescriptor(&desc) );
+        checkCUDNN(__LINE__, cudnnSetPoolingNdDescriptor(desc,
+                   mode,
+                   window.size(),
+                   &window[0],
+                   &padding[0],
+                   &stride[0]));
     };
 
-    PoolingLayer(std::string name_, cudnnPoolingMode_t mode_, std::vector<int> window_, std::vector<int> padding_, std::vector<int> stride_): Layer(name_), mode(mode_), window(window_), padding(padding_), stride(stride_){
+    PoolingLayer(std::string name_, cudnnPoolingMode_t mode_, std::vector<int> window_, std::vector<int> padding_, std::vector<int> stride_): Layer(name_), mode(mode_), window(window_), padding(padding_), stride(stride_) {
         init();
     };
 
-    PoolingLayer(JSON* json){
+    PoolingLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,               TrainingTesting)
         SetValue(json, mode,                CUDNN_POOLING_MAX)
         SetOrDie(json, window               )
-        std::vector<int> zeros = std::vector<int>(window.size(),0);
+        std::vector<int> zeros = std::vector<int>(window.size(), 0);
         SetValue(json, padding,             zeros)
         SetValue(json, stride,              window)
 
         init();
     };
 
-    size_t Malloc(Phase phase_){
-        size_t memoryBytes=0;
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
+    size_t Malloc(Phase phase_) {
+        size_t memoryBytes = 0;
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
 
-        if (in.size()==0) { std::cout<<std::endl<<"PoolingLayer in shouldn't be empty"<<std::endl; FatalError(__LINE__); }
-        if (in.size()!=out.size()) { std::cout<<std::endl<<"PoolingLayer #in should be the same as #out"<<std::endl; FatalError(__LINE__); }
+        if (in.size() == 0) { std::cout << std::endl << "PoolingLayer in shouldn't be empty" << std::endl; FatalError(__LINE__); }
+        if (in.size() != out.size()) { std::cout << std::endl << "PoolingLayer #in should be the same as #out" << std::endl; FatalError(__LINE__); }
 
-        for (int i=0;i<out.size();++i){
+        for (int i = 0; i < out.size(); ++i) {
             out[i]->need_diff = in[i]->need_diff;
 
             // compute the size to allocate memory
             std::vector<int> dimOut(in[i]->dim.size());
             dimOut[0] = in[i]->dim[0]; // size of mini-bath
             dimOut[1] = in[i]->dim[1]; // channels
-            for (int d=2;d<in[i]->dim.size();++d){
-              dimOut[d] = 1 + static_cast<int>(ceil(static_cast<float>(in[i]->dim[d] + 2*padding[d-2] - window[d-2])/stride[d-2]));
+            for (int d = 2; d < in[i]->dim.size(); ++d) {
+                dimOut[d] = 1 + static_cast<int>(ceil(static_cast<float>(in[i]->dim[d] + 2 * padding[d - 2] - window[d - 2]) / stride[d - 2]));
             }
 
             size_t dall = in[i]->receptive_field.size();
             out[i]->receptive_field .resize(dall);
             out[i]->receptive_gap   .resize(dall);
             out[i]->receptive_offset.resize(dall);
-            for(size_t d=0;d<dall;++d){
-                out[i]->receptive_field[d] = in[i]->receptive_field[d] + ComputeT(window[d]-1) * in[i]->receptive_gap[d];
+            for (size_t d = 0; d < dall; ++d) {
+                out[i]->receptive_field[d] = in[i]->receptive_field[d] + ComputeT(window[d] - 1) * in[i]->receptive_gap[d];
                 out[i]->receptive_gap[d] = stride[d] * in[i]->receptive_gap[d];
                 out[i]->receptive_offset[d] = in[i]->receptive_offset[d] - ComputeT(padding[d]) * in[i]->receptive_gap[d];
             }
@@ -5277,33 +5340,33 @@ public:
         }
         return memoryBytes;
     };
-    void forward(Phase phase_){
-        for (int i=0;i<in.size();++i){
-            checkCUDNN(__LINE__,cudnnPoolingForward(cudnnHandle,
-                                                desc,
-                                                one,
-                                                in[i]->desc, in[i]->dataGPU,
-                                                zero,
-                                                out[i]->desc, out[i]->dataGPU));
+    void forward(Phase phase_) {
+        for (int i = 0; i < in.size(); ++i) {
+            checkCUDNN(__LINE__, cudnnPoolingForward(cudnnHandle,
+                       desc,
+                       one,
+                       in[i]->desc, in[i]->dataGPU,
+                       zero,
+                       out[i]->desc, out[i]->dataGPU));
 
         }
     };
-    void backward(Phase phase_){
-        for (int i=0;i<in.size();++i){
+    void backward(Phase phase_) {
+        for (int i = 0; i < in.size(); ++i) {
             // if bottom still needs to compute gradients
-            if (in[i]->need_diff){
-                checkCUDNN(__LINE__,cudnnPoolingBackward(cudnnHandle,
-                                                    desc,
-                                                    one,
-                                                    out[i]->desc, out[i]->dataGPU, out[i]->desc, out[i]->diffGPU,
-                                                    in[i]->desc, in[i]->dataGPU,
-                                                    one, //zero, //one, //bbb
-                                                    in[i]->desc, in[i]->diffGPU));
+            if (in[i]->need_diff) {
+                checkCUDNN(__LINE__, cudnnPoolingBackward(cudnnHandle,
+                           desc,
+                           one,
+                           out[i]->desc, out[i]->dataGPU, out[i]->desc, out[i]->diffGPU,
+                           in[i]->desc, in[i]->dataGPU,
+                           one, //zero, //one, //bbb
+                           in[i]->desc, in[i]->diffGPU));
             }
         }
     };
-    ~PoolingLayer(){
-        checkCUDNN(__LINE__,cudnnDestroyPoolingDescriptor(desc) );
+    ~PoolingLayer() {
+        checkCUDNN(__LINE__, cudnnDestroyPoolingDescriptor(desc) );
     };
 };
 
@@ -5317,26 +5380,26 @@ public:
     ComputeT beta;
     ComputeT k;
 
-    void init(){
-        if (local_size<CUDNN_LRN_MIN_N || local_size>CUDNN_LRN_MAX_N){ std::cout<<"LRN local_size out of range ["<< CUDNN_LRN_MIN_N <<","<< CUDNN_LRN_MAX_N <<"]: local_size="<<local_size<<std::endl; FatalError(__LINE__); }
+    void init() {
+        if (local_size < CUDNN_LRN_MIN_N || local_size > CUDNN_LRN_MAX_N) { std::cout << "LRN local_size out of range [" << CUDNN_LRN_MIN_N << "," << CUDNN_LRN_MAX_N << "]: local_size=" << local_size << std::endl; FatalError(__LINE__); }
 
-        if (k<CUDNN_LRN_MIN_K){ std::cout<<"LRN k out of range ["<< CUDNN_LRN_MIN_K <<",Inf): k="<<k<<std::endl; FatalError(__LINE__); }
+        if (k < CUDNN_LRN_MIN_K) { std::cout << "LRN k out of range [" << CUDNN_LRN_MIN_K << ",Inf): k=" << k << std::endl; FatalError(__LINE__); }
 
-        if (beta<CUDNN_LRN_MIN_BETA){ std::cout<<"LRN beta out of range ["<< CUDNN_LRN_MIN_BETA <<",Inf): beta="<<beta<<std::endl; FatalError(__LINE__); }
+        if (beta < CUDNN_LRN_MIN_BETA) { std::cout << "LRN beta out of range [" << CUDNN_LRN_MIN_BETA << ",Inf): beta=" << beta << std::endl; FatalError(__LINE__); }
 
-        checkCUDNN(__LINE__,cudnnCreateLRNDescriptor(&desc) );
-        checkCUDNN(__LINE__,cudnnSetLRNDescriptor(desc, local_size, (double)(alpha), (double)(beta), (double)(k)) );
+        checkCUDNN(__LINE__, cudnnCreateLRNDescriptor(&desc) );
+        checkCUDNN(__LINE__, cudnnSetLRNDescriptor(desc, local_size, (double)(alpha), (double)(beta), (double)(k)) );
     };
 
-    ~LRNLayer(){
-        checkCUDNN(__LINE__,cudnnDestroyLRNDescriptor(desc));
+    ~LRNLayer() {
+        checkCUDNN(__LINE__, cudnnDestroyLRNDescriptor(desc));
     };
 
     LRNLayer(std::string name_, LRN mode_, unsigned int local_size_, ComputeT alpha_, ComputeT beta_, ComputeT k_): Layer(name_), mode(mode_), local_size(local_size_), alpha(alpha_), beta(beta_), k(k_) {
         init();
     };
 
-    LRNLayer(JSON* json){
+    LRNLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,           TrainingTesting)
         SetValue(json, mode,            CrossChannel)
@@ -5347,15 +5410,15 @@ public:
         init();
     };
 
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
         size_t memoryBytes = 0;
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
 
-        if (in.size()==0) { std::cout<<std::endl<<"LRNLayer in shouldn't be empty"<<std::endl; FatalError(__LINE__); }
-        if (in.size()!=out.size()) { std::cout<<std::endl<<"LRNLayer #in should be the same as #out"<<std::endl; FatalError(__LINE__); }
+        if (in.size() == 0) { std::cout << std::endl << "LRNLayer in shouldn't be empty" << std::endl; FatalError(__LINE__); }
+        if (in.size() != out.size()) { std::cout << std::endl << "LRNLayer #in should be the same as #out" << std::endl; FatalError(__LINE__); }
 
-        for (int i=0;i<out.size();++i){
+        for (int i = 0; i < out.size(); ++i) {
             out[i]->need_diff = in[i]->need_diff;
             out[i]->receptive_field = in[i]->receptive_field;
             out[i]->receptive_gap = in[i]->receptive_gap;
@@ -5365,60 +5428,60 @@ public:
         return memoryBytes;
     };
 
-    void forward(Phase phase_){
-        for (int i=0;i<in.size();++i){
-            switch(mode){
-                case CrossChannel:
-                    checkCUDNN(__LINE__,cudnnLRNCrossChannelForward(cudnnHandle, desc, CUDNN_LRN_CROSS_CHANNEL_DIM1,
-                                                        one,
-                                                        in[i]->desc, in[i]->dataGPU,
-                                                        zero,
-                                                        out[i]->desc, out[i]->dataGPU));
+    void forward(Phase phase_) {
+        for (int i = 0; i < in.size(); ++i) {
+            switch (mode) {
+            case CrossChannel:
+                checkCUDNN(__LINE__, cudnnLRNCrossChannelForward(cudnnHandle, desc, CUDNN_LRN_CROSS_CHANNEL_DIM1,
+                           one,
+                           in[i]->desc, in[i]->dataGPU,
+                           zero,
+                           out[i]->desc, out[i]->dataGPU));
                 break;
-                case DivisiveNormalization:
+            case DivisiveNormalization:
 #ifdef CUDNN_DivisiveNormalization
                 // What is the Best Multi-Stage Architecture for Object Recognition?
                 // http://yann.lecun.com/exdb/publis/pdf/jarrett-iccv-09.pdf
-                    std::cout<<"Not implemented yet"<<std::endl;
-                    FatalError(__LINE__);
-                    checkCUDNN(__LINE__,cudnnDivisiveNormalizationForward(cudnnHandle, desc, CUDNN_DIVNORM_PRECOMPUTED_MEANS,
-                                                        one,
-                                                        in[i]->desc, in[i]->dataGPU,
-                                                        srcMeansData, tempData, tempData2,
-                                                        zero,
-                                                        out[i]->desc, out[i]->dataGPU));
+                std::cout << "Not implemented yet" << std::endl;
+                FatalError(__LINE__);
+                checkCUDNN(__LINE__, cudnnDivisiveNormalizationForward(cudnnHandle, desc, CUDNN_DIVNORM_PRECOMPUTED_MEANS,
+                           one,
+                           in[i]->desc, in[i]->dataGPU,
+                           srcMeansData, tempData, tempData2,
+                           zero,
+                           out[i]->desc, out[i]->dataGPU));
 #endif
                 break;
             }
         }
     };
 
-    void backward(Phase phase_){
-        for (int i=0;i<in.size();++i){
+    void backward(Phase phase_) {
+        for (int i = 0; i < in.size(); ++i) {
             // if bottom still needs to compute gradients
-            if (in[i]->need_diff){
-                switch(mode){
-                    case CrossChannel:
-                        checkCUDNN(__LINE__,cudnnLRNCrossChannelBackward(cudnnHandle, desc, CUDNN_LRN_CROSS_CHANNEL_DIM1,
-                                                            one,
-                                                            out[i]->desc /*srcDesc*/, out[i]->dataGPU /*srcData*/,
-                                                            out[i]->desc /*srcDiffDesc*/, out[i]->diffGPU /*srcDiffData*/,
-                                                            in[i]->desc /*destDesc*/, in[i]->dataGPU /*destData*/,
-                                                            zero, //one, //bbb
-                                                            in[i]->desc /*destDiffDesc*/, in[i]->diffGPU /*destDiffData*/));
+            if (in[i]->need_diff) {
+                switch (mode) {
+                case CrossChannel:
+                    checkCUDNN(__LINE__, cudnnLRNCrossChannelBackward(cudnnHandle, desc, CUDNN_LRN_CROSS_CHANNEL_DIM1,
+                               one,
+                               out[i]->desc /*srcDesc*/, out[i]->dataGPU /*srcData*/,
+                               out[i]->desc /*srcDiffDesc*/, out[i]->diffGPU /*srcDiffData*/,
+                               in[i]->desc /*destDesc*/, in[i]->dataGPU /*destData*/,
+                               zero, //one, //bbb
+                               in[i]->desc /*destDiffDesc*/, in[i]->diffGPU /*destDiffData*/));
                     break;
-                    case DivisiveNormalization:
+                case DivisiveNormalization:
 #ifdef CUDNN_DivisiveNormalization
-                        std::cout<<"Not implemented yet"<<std::endl;
-                        FatalError(__LINE__);
-                        checkCUDNN(__LINE__,cudnnDivisiveNormalizationBackward(cudnnHandle, desc, CUDNN_DIVNORM_PRECOMPUTED_MEANS,
-                                                            one,
-                                                            out[i]->desc /*srcDesc*/, out[i]->dataGPU /*srcData*/, srcMeansData /*srcMeansData*/,
-                                                            out[i]->diffGPU /*srcDiffData*/,
-                                                            tempData /*tempData*/, tempData2 /*tempData2*/,
-                                                            zero, //one, //bbb
-                                                            in[i]->desc /*destDataDesc*/, in[i]->diffGPU /*destDataDiff*/,
-                                                            destMeansDiff /*destMeansDiff*/));
+                    std::cout << "Not implemented yet" << std::endl;
+                    FatalError(__LINE__);
+                    checkCUDNN(__LINE__, cudnnDivisiveNormalizationBackward(cudnnHandle, desc, CUDNN_DIVNORM_PRECOMPUTED_MEANS,
+                               one,
+                               out[i]->desc /*srcDesc*/, out[i]->dataGPU /*srcData*/, srcMeansData /*srcMeansData*/,
+                               out[i]->diffGPU /*srcDiffData*/,
+                               tempData /*tempData*/, tempData2 /*tempData2*/,
+                               zero, //one, //bbb
+                               in[i]->desc /*destDataDesc*/, in[i]->diffGPU /*destDataDiff*/,
+                               destMeansDiff /*destMeansDiff*/));
 #endif
                     break;
                 }
@@ -5431,50 +5494,50 @@ public:
 class ReshapeLayer: public Layer {
 public:
     std::vector<int> shape;
-    ReshapeLayer(std::string name_, Phase phase_): Layer(name_){
+    ReshapeLayer(std::string name_, Phase phase_): Layer(name_) {
         phase = phase_;
     };
-    ReshapeLayer(JSON* json){
+    ReshapeLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,       TrainingTesting)
         SetOrDie(json, shape)
         bool remainExist = false;
-        for(int d=0;d<shape.size();++d){
-            if (shape[d]==-1){
-                if (remainExist){
-                    std::cerr<<"ReshapeLayer::shape can only have at most one -1"<<std::endl;
+        for (int d = 0; d < shape.size(); ++d) {
+            if (shape[d] == -1) {
+                if (remainExist) {
+                    std::cerr << "ReshapeLayer::shape can only have at most one -1" << std::endl;
                     FatalError(__LINE__);
-                }else{
+                } else {
                     remainExist = true;
                 }
             }
         }
     };
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
         size_t memoryBytes = 0;
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
 
-        if (in.size()==0) { std::cout<<std::endl<<"ReshapeLayer in shouldn't be empty"<<std::endl; FatalError(__LINE__); }
-        if (in.size()!=out.size()) { std::cout<<std::endl<<"ReshapeLayer #in should be the same as #out"<<std::endl; FatalError(__LINE__); }
+        if (in.size() == 0) { std::cout << std::endl << "ReshapeLayer in shouldn't be empty" << std::endl; FatalError(__LINE__); }
+        if (in.size() != out.size()) { std::cout << std::endl << "ReshapeLayer #in should be the same as #out" << std::endl; FatalError(__LINE__); }
 
-        for (int i=0;i<out.size();++i){
+        for (int i = 0; i < out.size(); ++i) {
             out[i]->need_diff = in[i]->need_diff;
             std::vector<int> dim;
-            for(int d=0;d<shape.size();++d){
-                if (shape[d]==0){
+            for (int d = 0; d < shape.size(); ++d) {
+                if (shape[d] == 0) {
                     dim.push_back(in[i]->dim[d]);
-                }else if (shape[d]==-1){
+                } else if (shape[d] == -1) {
                     dim.push_back(-1);
-                }else{
+                } else {
                     dim.push_back(shape[d]);
                 }
             }
-            int remain = numel(in[i]->dim)/numel(dim);
-            if (remain!=1){
+            int remain = numel(in[i]->dim) / numel(dim);
+            if (remain != 1) {
                 remain = -remain;
-                for(int d=0;d<dim.size();++d){
-                    if (dim[d]==-1){
+                for (int d = 0; d < dim.size(); ++d) {
+                    if (dim[d] == -1) {
                         dim[d] = remain;
                     }
                 }
@@ -5488,16 +5551,16 @@ public:
         return memoryBytes;
     };
 
-    void forward(Phase phase_){
-        for (int i=0;i<in.size();++i){
-            checkCUDA(__LINE__,cudaMemcpy(out[i]->dataGPU, in[i]->dataGPU, in[i]->numBytes(), cudaMemcpyDeviceToDevice));
+    void forward(Phase phase_) {
+        for (int i = 0; i < in.size(); ++i) {
+            checkCUDA(__LINE__, cudaMemcpy(out[i]->dataGPU, in[i]->dataGPU, in[i]->numBytes(), cudaMemcpyDeviceToDevice));
         }
     };
-    void backward(Phase phase_){
-        for(int i=0;i<in.size();i++){
-            if (in[i]->need_diff){
+    void backward(Phase phase_) {
+        for (int i = 0; i < in.size(); i++) {
+            if (in[i]->need_diff) {
                 size_t N = numel(in[i]->dim);
-                Kernel_elementwise_acc<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, in[i]->diffGPU, out[i]->diffGPU);
+                Kernel_elementwise_acc <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, in[i]->diffGPU, out[i]->diffGPU);
             }
         }
     };
@@ -5506,84 +5569,84 @@ public:
 class ROILayer: public Layer {
 public:
     std::vector<int> shape;
-    ROILayer(std::string name_, Phase phase_): Layer(name_){
+    ROILayer(std::string name_, Phase phase_): Layer(name_) {
         phase = phase_;
     };
-    ROILayer(JSON* json){
+    ROILayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,       TrainingTesting)
         SetOrDie(json, shape)
     };
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
         size_t memoryBytes = 0;
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
 
-        if (in.size()==0) { std::cout<<std::endl<<"ROILayer in shouldn't be empty"<<std::endl; FatalError(__LINE__); }
-        if (in.size()!=2 * out.size()) { std::cout<<std::endl<<"ROILayer #in should be twice the size of #out"<<std::endl; FatalError(__LINE__); }
-        if (in[0]->dim.size() != shape.size()+1) { std::cout<<std::endl<<"ROILayer's shape should be one dimension less than in, because the first dimension is the min-batch size."<<std::endl; FatalError(__LINE__); }
+        if (in.size() == 0) { std::cout << std::endl << "ROILayer in shouldn't be empty" << std::endl; FatalError(__LINE__); }
+        if (in.size() != 2 * out.size()) { std::cout << std::endl << "ROILayer #in should be twice the size of #out" << std::endl; FatalError(__LINE__); }
+        if (in[0]->dim.size() != shape.size() + 1) { std::cout << std::endl << "ROILayer's shape should be one dimension less than in, because the first dimension is the min-batch size." << std::endl; FatalError(__LINE__); }
 
-        for (int i=0;i<out.size();++i){
-            out[i]->need_diff = in[i*2]->need_diff;
+        for (int i = 0; i < out.size(); ++i) {
+            out[i]->need_diff = in[i * 2]->need_diff;
 
-            if (! (in[i*2+1]->dim[0] == in[i*2]->dim[0] && sizeofitem(in[i*2+1]->dim) == shape.size())){
-                std::cout<<std::endl<<"ROILayer in["<<i*2+1<<"]->dim is wrong"<<std::endl; FatalError(__LINE__);
+            if (! (in[i * 2 + 1]->dim[0] == in[i * 2]->dim[0] && sizeofitem(in[i * 2 + 1]->dim) == shape.size())) {
+                std::cout << std::endl << "ROILayer in[" << i * 2 + 1 << "]->dim is wrong" << std::endl; FatalError(__LINE__);
             }
 
             std::vector<int> dim;
-            dim.push_back(in[i*2]->dim[0]);
+            dim.push_back(in[i * 2]->dim[0]);
 
-            for(int d=0;d<shape.size();++d){
-                if (shape[d]==0){
-                    dim.push_back(in[i*2]->dim[d+1]);
-                }else{
+            for (int d = 0; d < shape.size(); ++d) {
+                if (shape[d] == 0) {
+                    dim.push_back(in[i * 2]->dim[d + 1]);
+                } else {
                     dim.push_back(shape[d]);
                 }
             }
 
-            out[i]->receptive_field = in[i*2]->receptive_field;
-            out[i]->receptive_gap = in[i*2]->receptive_gap;
-            out[i]->receptive_offset = in[i*2]->receptive_offset;
+            out[i]->receptive_field = in[i * 2]->receptive_field;
+            out[i]->receptive_gap = in[i * 2]->receptive_gap;
+            out[i]->receptive_offset = in[i * 2]->receptive_offset;
             memoryBytes += out[i]->Malloc(dim);
         }
         return memoryBytes;
     };
 
-    void forward(Phase phase_){
-        for (int i=0;i<out.size();++i){
+    void forward(Phase phase_) {
+        for (int i = 0; i < out.size(); ++i) {
             size_t N = numel(out[i]->dim);
-            switch(shape.size()){
-                case 3:
-                    Kernel_ROIforward_2D<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, out[i]->dataGPU, in[i*2]->dataGPU, in[i*2+1]->dataGPU, out[i]->dim[1], out[i]->dim[2], out[i]->dim[3], in[i*2]->dim[1], in[i*2]->dim[2], in[i*2]->dim[3]);
+            switch (shape.size()) {
+            case 3:
+                Kernel_ROIforward_2D <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, out[i]->dataGPU, in[i * 2]->dataGPU, in[i * 2 + 1]->dataGPU, out[i]->dim[1], out[i]->dim[2], out[i]->dim[3], in[i * 2]->dim[1], in[i * 2]->dim[2], in[i * 2]->dim[3]);
                 break;
-                case 4:
-                    Kernel_ROIforward_3D<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, out[i]->dataGPU, in[i*2]->dataGPU, in[i*2+1]->dataGPU, out[i]->dim[1], out[i]->dim[2], out[i]->dim[3], out[i]->dim[4], in[i*2]->dim[1], in[i*2]->dim[2], in[i*2]->dim[3], in[i*2]->dim[4]);
+            case 4:
+                Kernel_ROIforward_3D <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, out[i]->dataGPU, in[i * 2]->dataGPU, in[i * 2 + 1]->dataGPU, out[i]->dim[1], out[i]->dim[2], out[i]->dim[3], out[i]->dim[4], in[i * 2]->dim[1], in[i * 2]->dim[2], in[i * 2]->dim[3], in[i * 2]->dim[4]);
                 break;
-                case 5:
-                    Kernel_ROIforward_4D<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, out[i]->dataGPU, in[i*2]->dataGPU, in[i*2+1]->dataGPU, out[i]->dim[1], out[i]->dim[2], out[i]->dim[3], out[i]->dim[4], out[i]->dim[5], in[i*2]->dim[1], in[i*2]->dim[2], in[i*2]->dim[3], in[i*2]->dim[4], in[i*2]->dim[5]);
+            case 5:
+                Kernel_ROIforward_4D <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, out[i]->dataGPU, in[i * 2]->dataGPU, in[i * 2 + 1]->dataGPU, out[i]->dim[1], out[i]->dim[2], out[i]->dim[3], out[i]->dim[4], out[i]->dim[5], in[i * 2]->dim[1], in[i * 2]->dim[2], in[i * 2]->dim[3], in[i * 2]->dim[4], in[i * 2]->dim[5]);
                 break;
-                default:
-                    std::cerr<<"Haven't implemented yet"<<std::endl; FatalError(__LINE__);
+            default:
+                std::cerr << "Haven't implemented yet" << std::endl; FatalError(__LINE__);
                 break;
             }
         }
     };
-    void backward(Phase phase_){
-        for(int i=0;i<out.size();i++){
-            if (in[i*2]->need_diff){
+    void backward(Phase phase_) {
+        for (int i = 0; i < out.size(); i++) {
+            if (in[i * 2]->need_diff) {
                 size_t N = numel(out[i]->dim);
-                switch(shape.size()){
-                    case 3:
-                        Kernel_ROIbackward_2D<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, out[i]->diffGPU, in[i*2]->diffGPU, in[i*2+1]->dataGPU, out[i]->dim[1], out[i]->dim[2], out[i]->dim[3], in[i*2]->dim[1], in[i*2]->dim[2], in[i*2]->dim[3]);
+                switch (shape.size()) {
+                case 3:
+                    Kernel_ROIbackward_2D <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, out[i]->diffGPU, in[i * 2]->diffGPU, in[i * 2 + 1]->dataGPU, out[i]->dim[1], out[i]->dim[2], out[i]->dim[3], in[i * 2]->dim[1], in[i * 2]->dim[2], in[i * 2]->dim[3]);
                     break;
-                    case 4:
-                        Kernel_ROIbackward_3D<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, out[i]->diffGPU, in[i*2]->diffGPU, in[i*2+1]->dataGPU, out[i]->dim[1], out[i]->dim[2], out[i]->dim[3], out[i]->dim[4], in[i*2]->dim[1], in[i*2]->dim[2], in[i*2]->dim[3], in[i*2]->dim[4]);
+                case 4:
+                    Kernel_ROIbackward_3D <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, out[i]->diffGPU, in[i * 2]->diffGPU, in[i * 2 + 1]->dataGPU, out[i]->dim[1], out[i]->dim[2], out[i]->dim[3], out[i]->dim[4], in[i * 2]->dim[1], in[i * 2]->dim[2], in[i * 2]->dim[3], in[i * 2]->dim[4]);
                     break;
-                    case 5:
-                        Kernel_ROIbackward_4D<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, out[i]->diffGPU, in[i*2]->diffGPU, in[i*2+1]->dataGPU, out[i]->dim[1], out[i]->dim[2], out[i]->dim[3], out[i]->dim[4], out[i]->dim[5], in[i*2]->dim[1], in[i*2]->dim[2], in[i*2]->dim[3], in[i*2]->dim[4], in[i*2]->dim[5]);
+                case 5:
+                    Kernel_ROIbackward_4D <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, out[i]->diffGPU, in[i * 2]->diffGPU, in[i * 2 + 1]->dataGPU, out[i]->dim[1], out[i]->dim[2], out[i]->dim[3], out[i]->dim[4], out[i]->dim[5], in[i * 2]->dim[1], in[i * 2]->dim[2], in[i * 2]->dim[3], in[i * 2]->dim[4], in[i * 2]->dim[5]);
                     break;
-                    default:
-                        std::cerr<<"Haven't implemented yet"<<std::endl; FatalError(__LINE__);
+                default:
+                    std::cerr << "Haven't implemented yet" << std::endl; FatalError(__LINE__);
                     break;
                 }
             }
@@ -5597,50 +5660,50 @@ class ROIPoolingLayer: public Layer {
 public:
     ComputeT spatial_scale;
     std::vector<int> shape;
-    ROIPoolingLayer(std::string name_, Phase phase_): Layer(name_){
+    ROIPoolingLayer(std::string name_, Phase phase_): Layer(name_) {
         phase = phase_;
     };
-    ROIPoolingLayer(JSON* json){
+    ROIPoolingLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,       TrainingTesting)
         SetOrDie(json, shape)
         SetOrDie(json, spatial_scale)
     };
-    ~ROIPoolingLayer(){
-        for (int i=0;i<GPUIndex.size();++i){
-            if (GPUIndex[i]!=NULL){
+    ~ROIPoolingLayer() {
+        for (int i = 0; i < GPUIndex.size(); ++i) {
+            if (GPUIndex[i] != NULL) {
                 checkCUDA(__LINE__, cudaFree(GPUIndex[i]) );
                 GPUIndex[i] = NULL;
             }
         }
     };
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
         size_t memoryBytes = 0;
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
 
-        if (in.size()==0) { std::cout<<std::endl<<"ROILayer in shouldn't be empty"<<std::endl; FatalError(__LINE__); }
-        if (in.size()!=2 * out.size()) { std::cout<<std::endl<<"ROILayer #in should be twice the size of #out"<<std::endl; FatalError(__LINE__); }
-        if (in[0]->dim.size() != shape.size()+2) { std::cout<<std::endl<<"ROILayer's shape should be two dimensions less than in."<<std::endl; FatalError(__LINE__); }
+        if (in.size() == 0) { std::cout << std::endl << "ROILayer in shouldn't be empty" << std::endl; FatalError(__LINE__); }
+        if (in.size() != 2 * out.size()) { std::cout << std::endl << "ROILayer #in should be twice the size of #out" << std::endl; FatalError(__LINE__); }
+        if (in[0]->dim.size() != shape.size() + 2) { std::cout << std::endl << "ROILayer's shape should be two dimensions less than in." << std::endl; FatalError(__LINE__); }
 
         GPUIndex.resize(out.size(), NULL);
 
-        for (int i=0;i<out.size();++i){
-            out[i]->need_diff = in[i*2]->need_diff;
+        for (int i = 0; i < out.size(); ++i) {
+            out[i]->need_diff = in[i * 2]->need_diff;
 
-            if ( sizeofitem(in[i*2+1]->dim) != 1 + 2 * shape.size() ){
-                std::cout<<std::endl<<"ROILayer in["<<i*2+1<<"]->dim is wrong"<<std::endl; FatalError(__LINE__);
+            if ( sizeofitem(in[i * 2 + 1]->dim) != 1 + 2 * shape.size() ) {
+                std::cout << std::endl << "ROILayer in[" << i * 2 + 1 << "]->dim is wrong" << std::endl; FatalError(__LINE__);
             }
 
             std::vector<int> dim;
-            dim.push_back(in[i*2+1]->dim[0]);   // number of boxes
-            dim.push_back(in[i*2]->dim[1]);     // number of channels from convolutions
-            for(int d=0;d<shape.size();++d){
+            dim.push_back(in[i * 2 + 1]->dim[0]); // number of boxes
+            dim.push_back(in[i * 2]->dim[1]);   // number of channels from convolutions
+            for (int d = 0; d < shape.size(); ++d) {
                 dim.push_back(shape[d]);
             }
             memoryBytes += out[i]->Malloc(dim);
 
-            if (in[i*2]->need_diff){
+            if (in[i * 2]->need_diff) {
                 checkCUDA(__LINE__, cudaMalloc(&GPUIndex[i], numel(out[i]->dim) * sizeof(size_t)) );
                 memoryBytes += numel(out[i]->dim) * sizeof(size_t);
             }
@@ -5648,35 +5711,35 @@ public:
         return memoryBytes;
     };
 
-    void forward(Phase phase_){
-        for (int i=0;i<out.size();++i){
+    void forward(Phase phase_) {
+        for (int i = 0; i < out.size(); ++i) {
             size_t N = numel(out[i]->dim);
-            switch(shape.size()){
-                case 2:
-                    Kernel_ROIPoolForward_2D<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, in[i*2]->dataGPU, in[i*2+1]->dataGPU, out[i]->dataGPU, GPUIndex[i], spatial_scale, in[i*2]->dim[1], in[i*2]->dim[2], in[i*2]->dim[3], shape[0], shape[1]);
+            switch (shape.size()) {
+            case 2:
+                Kernel_ROIPoolForward_2D <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, in[i * 2]->dataGPU, in[i * 2 + 1]->dataGPU, out[i]->dataGPU, GPUIndex[i], spatial_scale, in[i * 2]->dim[1], in[i * 2]->dim[2], in[i * 2]->dim[3], shape[0], shape[1]);
                 break;
-                case 3:
-                    Kernel_ROIPoolForward_3D<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, in[i*2]->dataGPU, in[i*2+1]->dataGPU, out[i]->dataGPU, GPUIndex[i], spatial_scale, in[i*2]->dim[1], in[i*2]->dim[2], in[i*2]->dim[3], in[i*2]->dim[4], shape[0], shape[1], shape[2]);
+            case 3:
+                Kernel_ROIPoolForward_3D <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, in[i * 2]->dataGPU, in[i * 2 + 1]->dataGPU, out[i]->dataGPU, GPUIndex[i], spatial_scale, in[i * 2]->dim[1], in[i * 2]->dim[2], in[i * 2]->dim[3], in[i * 2]->dim[4], shape[0], shape[1], shape[2]);
                 break;
-                default:
-                    std::cerr<<"Haven't implemented yet"<<std::endl; FatalError(__LINE__);
+            default:
+                std::cerr << "Haven't implemented yet" << std::endl; FatalError(__LINE__);
                 break;
             }
         }
     };
-    void backward(Phase phase_){
-        for(int i=0;i<out.size();i++){
-            if (in[i*2]->need_diff){
-                size_t N = numel(in[i*2]->dim);
-                switch(shape.size()){
-                    case 2:
-                        Kernel_ROIPoolBackward_2D<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, in[i*2]->diffGPU, in[i*2+1]->dataGPU, out[i]->diffGPU, GPUIndex[i], spatial_scale, in[i*2+1]->dim[0], in[i*2]->dim[1], in[i*2]->dim[2], in[i*2]->dim[3], shape[0], shape[1]);
+    void backward(Phase phase_) {
+        for (int i = 0; i < out.size(); i++) {
+            if (in[i * 2]->need_diff) {
+                size_t N = numel(in[i * 2]->dim);
+                switch (shape.size()) {
+                case 2:
+                    Kernel_ROIPoolBackward_2D <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, in[i * 2]->diffGPU, in[i * 2 + 1]->dataGPU, out[i]->diffGPU, GPUIndex[i], spatial_scale, in[i * 2 + 1]->dim[0], in[i * 2]->dim[1], in[i * 2]->dim[2], in[i * 2]->dim[3], shape[0], shape[1]);
                     break;
-                    case 3:
-                        Kernel_ROIPoolBackward_3D<<<CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, in[i*2]->diffGPU, in[i*2+1]->dataGPU, out[i]->diffGPU, GPUIndex[i], spatial_scale, in[i*2+1]->dim[0], in[i*2]->dim[1], in[i*2]->dim[2], in[i*2]->dim[3], in[i*2]->dim[4], shape[0], shape[1], shape[2]);
+                case 3:
+                    Kernel_ROIPoolBackward_3D <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, in[i * 2]->diffGPU, in[i * 2 + 1]->dataGPU, out[i]->diffGPU, GPUIndex[i], spatial_scale, in[i * 2 + 1]->dim[0], in[i * 2]->dim[1], in[i * 2]->dim[2], in[i * 2]->dim[3], in[i * 2]->dim[4], shape[0], shape[1], shape[2]);
                     break;
-                    default:
-                        std::cerr<<"Haven't implemented yet"<<std::endl; FatalError(__LINE__);
+                default:
+                    std::cerr << "Haven't implemented yet" << std::endl; FatalError(__LINE__);
                     break;
                 }
             }
@@ -5692,100 +5755,100 @@ public:
     bool last_in_is_coeff;
     std::vector<ComputeT> coeff;
 
-    ElementWiseLayer(std::string name_, ElementWiseOp mode_, bool last_in_is_coeff_=false): Layer(name_), mode(mode_), last_in_is_coeff(last_in_is_coeff_){
+    ElementWiseLayer(std::string name_, ElementWiseOp mode_, bool last_in_is_coeff_ = false): Layer(name_), mode(mode_), last_in_is_coeff(last_in_is_coeff_) {
     };
-    ElementWiseLayer(JSON* json){
+    ElementWiseLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,       TrainingTesting)
         SetOrDie(json, mode)
         SetValue(json, last_in_is_coeff, false)
         SetValue(json, coeff,       std::vector<ComputeT>())
     };
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
         size_t memoryBytes = 0;
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
 
-        in_group = in.size()/out.size();
-        if (in.size()!= in_group * out.size()){ std::cout<<"ElementWiseLayer in out size wrong "<<std::endl; FatalError(__LINE__); }
+        in_group = in.size() / out.size();
+        if (in.size() != in_group * out.size()) { std::cout << "ElementWiseLayer in out size wrong " << std::endl; FatalError(__LINE__); }
 
-        if (coeff.size()==0) coeff = std::vector<ComputeT>(last_in_is_coeff? in_group-1: in_group,1);
+        if (coeff.size() == 0) coeff = std::vector<ComputeT>(last_in_is_coeff ? in_group - 1 : in_group, 1);
 
-        for(int j=0;j<out.size();j++){
+        for (int j = 0; j < out.size(); j++) {
             out[j]->need_diff = false;
-            for(int i=j*in_group; i<(j+1)*in_group;i++){
-                if (in[i]->need_diff){
+            for (int i = j * in_group; i < (j + 1)*in_group; i++) {
+                if (in[i]->need_diff) {
                     out[j]->need_diff = true;
                     break;
                 }
             }
 
-            out[j]->receptive_field = in[j*in_group]->receptive_field;
-            out[j]->receptive_gap = in[j*in_group]->receptive_gap;
-            out[j]->receptive_offset = in[j*in_group]->receptive_offset;
-            for(int i=j*in_group+1; i<(j+1)*in_group;i++){
-                for(size_t d=0; d<out[j]->receptive_field.size();++d){
-                    out[j]->receptive_field  [d] = max(out[j]->receptive_field  [d],in[i]->receptive_field  [d]);
-                    out[j]->receptive_gap    [d] = max(out[j]->receptive_gap    [d],in[i]->receptive_gap    [d]);
-                    out[j]->receptive_offset [d] = max(out[j]->receptive_offset [d],in[i]->receptive_offset [d]);
+            out[j]->receptive_field = in[j * in_group]->receptive_field;
+            out[j]->receptive_gap = in[j * in_group]->receptive_gap;
+            out[j]->receptive_offset = in[j * in_group]->receptive_offset;
+            for (int i = j * in_group + 1; i < (j + 1)*in_group; i++) {
+                for (size_t d = 0; d < out[j]->receptive_field.size(); ++d) {
+                    out[j]->receptive_field  [d] = max(out[j]->receptive_field  [d], in[i]->receptive_field  [d]);
+                    out[j]->receptive_gap    [d] = max(out[j]->receptive_gap    [d], in[i]->receptive_gap    [d]);
+                    out[j]->receptive_offset [d] = max(out[j]->receptive_offset [d], in[i]->receptive_offset [d]);
                 }
             }
 
-            memoryBytes += out[j]->Malloc(in[j*in_group]->dim);
+            memoryBytes += out[j]->Malloc(in[j * in_group]->dim);
         }
         return memoryBytes;
     };
-    void forward(Phase phase_){
-        switch(mode){
-            case ElementWise_EQL:
-                for (int i=0;i<out.size();++i){
-                    int n = numel(out[i]->dim);
-                    GPU_set_ones(n, out[i]->dataGPU);
-                    for (int j=i*in_group+1; j<(i+1)*in_group; ++j){
-                        GPU_elementwise_comparison(n, out[i]->dataGPU, in[i*in_group]->dataGPU, in[j]->dataGPU);
-                    }
+    void forward(Phase phase_) {
+        switch (mode) {
+        case ElementWise_EQL:
+            for (int i = 0; i < out.size(); ++i) {
+                int n = numel(out[i]->dim);
+                GPU_set_ones(n, out[i]->dataGPU);
+                for (int j = i * in_group + 1; j < (i + 1)*in_group; ++j) {
+                    GPU_elementwise_comparison(n, out[i]->dataGPU, in[i * in_group]->dataGPU, in[j]->dataGPU);
                 }
+            }
             break;
-            case ElementWise_MUL: std::cout<<"Not implemented yet"<<std::endl; FatalError(__LINE__);
+        case ElementWise_MUL: std::cout << "Not implemented yet" << std::endl; FatalError(__LINE__);
             break;
-            case ElementWise_SUM:
-                for (int j=0;j<out.size();++j){
-                    int i=j*in_group;
-                    StorageT* coeff_data = last_in_is_coeff ? in[i + in_group - 1]->dataGPU : NULL;
-                    size_t N = numel(in[i]->dim);
-                    size_t items = in[i]->dim[0];
-                    size_t dim = in[i]->sizeofitem();
-                    CoeffElementWiseSumReplace<<<CUDA_GET_BLOCKS(N),CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, coeff[0], coeff_data, 0 * items, dim, in[i]->dataGPU, out[j]->dataGPU);
-                    for (i=i+1; i<(j+1)*in_group - last_in_is_coeff; ++i){
-                        size_t ii = i-j*in_group;
-                        CoeffElementWiseSumAccumulate<<<CUDA_GET_BLOCKS(N),CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, coeff[ii], coeff_data, ii * items, dim, in[i]->dataGPU, out[j]->dataGPU);
-                    }
+        case ElementWise_SUM:
+            for (int j = 0; j < out.size(); ++j) {
+                int i = j * in_group;
+                StorageT* coeff_data = last_in_is_coeff ? in[i + in_group - 1]->dataGPU : NULL;
+                size_t N = numel(in[i]->dim);
+                size_t items = in[i]->dim[0];
+                size_t dim = in[i]->sizeofitem();
+                CoeffElementWiseSumReplace <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, coeff[0], coeff_data, 0 * items, dim, in[i]->dataGPU, out[j]->dataGPU);
+                for (i = i + 1; i < (j + 1)*in_group - last_in_is_coeff; ++i) {
+                    size_t ii = i - j * in_group;
+                    CoeffElementWiseSumAccumulate <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, coeff[ii], coeff_data, ii * items, dim, in[i]->dataGPU, out[j]->dataGPU);
                 }
+            }
             break;
-            case ElementWise_MAX: std::cout<<"Not implemented yet"<<std::endl; FatalError(__LINE__);
+        case ElementWise_MAX: std::cout << "Not implemented yet" << std::endl; FatalError(__LINE__);
             break;
         };
     };
-    void backward(Phase phase_){
-        switch(mode){
-            case ElementWise_EQL: std::cout<<"ElementWise_EQL cannot backprop"<<std::endl; FatalError(__LINE__);
+    void backward(Phase phase_) {
+        switch (mode) {
+        case ElementWise_EQL: std::cout << "ElementWise_EQL cannot backprop" << std::endl; FatalError(__LINE__);
             break;
-            case ElementWise_MUL: std::cout<<"Not implemented yet"<<std::endl; FatalError(__LINE__);
+        case ElementWise_MUL: std::cout << "Not implemented yet" << std::endl; FatalError(__LINE__);
             break;
-            case ElementWise_SUM:
-                for (int j=0;j<out.size();++j){
-                    int i=j*in_group;
-                    StorageT* coeff_data = last_in_is_coeff ? in[i + in_group - 1]->dataGPU : NULL;
-                    size_t N = numel(in[i]->dim);
-                    size_t items = in[i]->dim[0];
-                    size_t dim = in[i]->sizeofitem();
-                    for (; i<(j+1)*in_group - last_in_is_coeff; ++i){
-                        size_t ii = i-j*in_group;
-                        CoeffElementWiseSumAccumulate<<<CUDA_GET_BLOCKS(N),CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, coeff[ii], coeff_data, ii * items, dim, out[j]->diffGPU, in[i]->diffGPU);
-                    }
+        case ElementWise_SUM:
+            for (int j = 0; j < out.size(); ++j) {
+                int i = j * in_group;
+                StorageT* coeff_data = last_in_is_coeff ? in[i + in_group - 1]->dataGPU : NULL;
+                size_t N = numel(in[i]->dim);
+                size_t items = in[i]->dim[0];
+                size_t dim = in[i]->sizeofitem();
+                for (; i < (j + 1)*in_group - last_in_is_coeff; ++i) {
+                    size_t ii = i - j * in_group;
+                    CoeffElementWiseSumAccumulate <<< CUDA_GET_BLOCKS(N), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(N), N, coeff[ii], coeff_data, ii * items, dim, out[j]->diffGPU, in[i]->diffGPU);
                 }
+            }
             break;
-            case ElementWise_MAX: std::cout<<"Not implemented yet"<<std::endl; FatalError(__LINE__);
+        case ElementWise_MAX: std::cout << "Not implemented yet" << std::endl; FatalError(__LINE__);
             break;
         };
     };
@@ -5795,42 +5858,42 @@ public:
 class ConcatLayer: public Layer {
     int in_group;
 public:
-    ConcatLayer(std::string name_, Phase phase_): Layer(name_){
+    ConcatLayer(std::string name_, Phase phase_): Layer(name_) {
         phase = phase_;
     };
-    ConcatLayer(JSON* json){
+    ConcatLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,       TrainingTesting)
     };
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
         size_t memoryBytes = 0;
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name<<std::endl;
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name << std::endl;
 
-        in_group = in.size()/out.size();
-        if (in_group<2 || in.size()!= in_group * out.size()){ std::cout<<"ElementWiseLayer in out size wrong "<<std::endl; FatalError(__LINE__); }
+        in_group = in.size() / out.size();
+        if (in_group < 2 || in.size() != in_group * out.size()) { std::cout << "ElementWiseLayer in out size wrong " << std::endl; FatalError(__LINE__); }
 
-        for(int j=0;j<out.size();j++){
+        for (int j = 0; j < out.size(); j++) {
             out[j]->need_diff = false;
-            for(int i=j*in_group; i<(j+1)*in_group;i++){
-                if (in[i]->need_diff){
+            for (int i = j * in_group; i < (j + 1)*in_group; i++) {
+                if (in[i]->need_diff) {
                     out[j]->need_diff = true;
                     break;
                 }
             }
-            std::vector<int> dim = in[j*in_group]->dim;
-            for(int i=j*in_group+1; i<(j+1)*in_group;i++){
+            std::vector<int> dim = in[j * in_group]->dim;
+            for (int i = j * in_group + 1; i < (j + 1)*in_group; i++) {
                 dim[1] += in[i]->dim[1];
             }
 
-            out[j]->receptive_field = in[j*in_group]->receptive_field;
-            out[j]->receptive_gap = in[j*in_group]->receptive_gap;
-            out[j]->receptive_offset = in[j*in_group]->receptive_offset;
-            for(int i=j*in_group+1; i<(j+1)*in_group;i++){
-                for(size_t d=0; d<out[j]->receptive_field.size();++d){
-                    out[j]->receptive_field[d]  = max(out[j]->receptive_field [d],in[i]->receptive_field [d]);
-                    out[j]->receptive_gap  [d]  = max(out[j]->receptive_gap   [d],in[i]->receptive_gap   [d]);
-                    out[j]->receptive_offset[d] = min(out[j]->receptive_offset[d],in[i]->receptive_offset[d]);
+            out[j]->receptive_field = in[j * in_group]->receptive_field;
+            out[j]->receptive_gap = in[j * in_group]->receptive_gap;
+            out[j]->receptive_offset = in[j * in_group]->receptive_offset;
+            for (int i = j * in_group + 1; i < (j + 1)*in_group; i++) {
+                for (size_t d = 0; d < out[j]->receptive_field.size(); ++d) {
+                    out[j]->receptive_field[d]  = max(out[j]->receptive_field [d], in[i]->receptive_field [d]);
+                    out[j]->receptive_gap  [d]  = max(out[j]->receptive_gap   [d], in[i]->receptive_gap   [d]);
+                    out[j]->receptive_offset[d] = min(out[j]->receptive_offset[d], in[i]->receptive_offset[d]);
                 }
             }
 
@@ -5838,22 +5901,22 @@ public:
         }
         return memoryBytes;
     };
-    void forward(Phase phase_){
-        for(int j=0;j<out.size();j++){
+    void forward(Phase phase_) {
+        for (int j = 0; j < out.size(); j++) {
             int offset = 0;
             int numofitems = out[j]->dim[0];
-            for(int i=j*in_group; i<(j+1)*in_group;i++){
+            for (int i = j * in_group; i < (j + 1)*in_group; i++) {
                 copyGPUforward (numofitems, in[i]->dataGPU, out[j]->dataGPU, sizeofitem(in[i]->dim), sizeofitem(out[j]->dim), offset);
                 offset += sizeofitem(in[i]->dim);
             }
         }
     };
-    void backward(Phase phase_){
-        for(int j=0;j<out.size();j++){
+    void backward(Phase phase_) {
+        for (int j = 0; j < out.size(); j++) {
             int offset = 0;
             int numofitems = out[j]->dim[0];
-            for(int i=j*in_group; i<(j+1)*in_group;i++){
-                if (in[i]->need_diff){
+            for (int i = j * in_group; i < (j + 1)*in_group; i++) {
+                if (in[i]->need_diff) {
                     copyGPUbackward(numofitems, in[i]->diffGPU, out[j]->diffGPU, sizeofitem(in[i]->dim), sizeofitem(out[j]->dim), offset);
                 }
                 offset += sizeofitem(in[i]->dim);
@@ -5885,7 +5948,7 @@ public:
         train_me = false;
     };
 
-    LossLayer(JSON* json): loss_values(NULL), loss_weightsGPU(NULL){
+    LossLayer(JSON* json): loss_values(NULL), loss_weightsGPU(NULL) {
         SetOrDie(json, name)
         SetValue(json, phase,       TrainingTesting)
         SetOrDie(json, mode)
@@ -5912,69 +5975,69 @@ public:
         numExamples = in[0]->dim[0];
 
         switch (mode) {
-            case MultinomialLogistic_StableSoftmax:
-            case MultinomialLogistic:
-                if (!(in.size() == 2 || in.size() == 3)) {
-                    std::cout <<
-                    "LossLayer: MultinomialLogistic should have 2 or 3 ins" <<
-                    std::endl;
-                    FatalError(__LINE__);
-                }
+        case MultinomialLogistic_StableSoftmax:
+        case MultinomialLogistic:
+            if (!(in.size() == 2 || in.size() == 3)) {
+                std::cout <<
+                          "LossLayer: MultinomialLogistic should have 2 or 3 ins" <<
+                          std::endl;
+                FatalError(__LINE__);
+            }
             if (!same_dim_EC(in[0]->dim, in[1]->dim)) {
                 std::cout <<
-                "LossLayer: MultinomialLogistic should have the same dimensions except channels" <<
-                std::endl;
+                          "LossLayer: MultinomialLogistic should have the same dimensions except channels" <<
+                          std::endl;
                 FatalError(__LINE__);
             }
             if (in[1]->dim[1] != 1) {
                 std::cout <<
-                "LossLayer: MultinomialLogistic in[1] should have only 1 channel" <<
-                std::endl;
+                          "LossLayer: MultinomialLogistic in[1] should have only 1 channel" <<
+                          std::endl;
                 FatalError(__LINE__);
             }
             if (in.size() == 3 && !(numel(in[0]->dim) == numel(in[2]->dim) ||
                                     sizeofitem(in[0]->dim) ==
                                     numel(in[2]->dim))) {
                 std::cout <<
-                "LossLayer: MultinomialLogistic in[2] size should be either the same with in[0] or should be the same with sizeofitem for in[0]" <<
-                std::endl;
+                          "LossLayer: MultinomialLogistic in[2] size should be either the same with in[0] or should be the same with sizeofitem for in[0]" <<
+                          std::endl;
                 FatalError(__LINE__);
             }
             loss_numel = numExamples * numspel(in[0]->dim);
             break;
-            case SmoothL1:
-                if (!(in.size() == 2 || in.size() == 3)) {
-                    std::cout << "LossLayer: SmoothL1 should have 2 or 3 ins" <<
-                    std::endl;
-                    FatalError(__LINE__);
-                }
+        case SmoothL1:
+            if (!(in.size() == 2 || in.size() == 3)) {
+                std::cout << "LossLayer: SmoothL1 should have 2 or 3 ins" <<
+                          std::endl;
+                FatalError(__LINE__);
+            }
             if (!same_dim(in[0]->dim, in[1]->dim)) {
                 std::cout <<
-                "LossLayer: SmoothL1 should have the same dimensions" <<
-                std::endl;
+                          "LossLayer: SmoothL1 should have the same dimensions" <<
+                          std::endl;
                 FatalError(__LINE__);
             }
             if (in.size() == 3 && !same_dim(in[0]->dim, in[2]->dim)) {
                 std::cout <<
-                "LossLayer: SmoothL1 should have the same dimensions" <<
-                std::endl;
+                          "LossLayer: SmoothL1 should have the same dimensions" <<
+                          std::endl;
                 FatalError(__LINE__);
             }
             loss_numel = numel(in[0]->dim);
             break;
-            case Contrastive:
-                loss_numel = numExamples;
+        case Contrastive:
+            loss_numel = numExamples;
             break;
-            case EuclideanSSE:
-                break;
-            case HingeL1:
-                break;
-            case HingeL2:
-                break;
-            case SigmoidCrossEntropy:
-                break;
-            case Infogain:
-                break;
+        case EuclideanSSE:
+            break;
+        case HingeL1:
+            break;
+        case HingeL2:
+            break;
+        case SigmoidCrossEntropy:
+            break;
+        case Infogain:
+            break;
         }
         scale = loss_weight / loss_numel;
 
@@ -6003,49 +6066,107 @@ public:
         std::cout << " loss = " << loss;
         std::cout << " * " << loss_weight;
         if (mode == MultinomialLogistic_StableSoftmax ||
-            mode == MultinomialLogistic)
+                mode == MultinomialLogistic)
             std::cout << "  eval = " << result;
         std::cout << "   ";
     };
 
-    void eval(){
+    void eval() {
         ComputeT resultSum;
-        switch(mode){
+        switch (mode) {
+        case MultinomialLogistic_StableSoftmax:
+        case MultinomialLogistic:
+            Accuracy_MultinomialLogistic <<< CUDA_GET_BLOCKS(loss_numel),
+                                         CUDA_NUM_THREADS>>>(
+                                             CUDA_GET_LOOPS(loss_numel),
+                                             loss_numel, in[0]->dim[1], numspel(in[0]->dim),
+                                             (in.size() == 3 ? numel(in[2]->dim) : 0),
+                                             in[0]->dataGPU, in[1]->dataGPU, loss_weightsGPU,
+                                             (in.size() == 3 ? in[2]->dataGPU : NULL),
+                                             loss_values);
+            checkCUBLAS(__LINE__, GPUasum(cublasHandle, loss_numel,
+                                          loss_values, 1, &resultSum));
+            result += resultSum / loss_numel;
+            Loss_MultinomialLogistic <<< CUDA_GET_BLOCKS(loss_numel),
+                                     CUDA_NUM_THREADS>>>(
+                                         CUDA_GET_LOOPS(loss_numel),
+                                         loss_numel, in[0]->dim[1], numspel(in[0]->dim),
+                                         (in.size() == 3 ? numel(in[2]->dim) : 0),
+                                         in[0]->dataGPU, in[1]->dataGPU, loss_weightsGPU,
+                                         (in.size() == 3 ? in[2]->dataGPU : NULL),
+                                         loss_values);
+            break;
+        case SmoothL1:
+            Loss_SmoothL1 <<< CUDA_GET_BLOCKS(loss_numel),
+                          CUDA_NUM_THREADS>>>(
+                              CUDA_GET_LOOPS(loss_numel),
+                              loss_numel, in[0]->dataGPU, in[1]->dataGPU,
+                              (in.size() == 3 ? in[2]->dataGPU : NULL), loss_values);
+            break;
+        case Contrastive:
+            Loss_Contrastive <<< CUDA_GET_BLOCKS(numExamples),
+                             CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(loss_numel),
+                                                 loss_numel, in[0]->dim[1],
+                                                 margin, in[0]->dataGPU, in[1]->dataGPU, in[2]->dataGPU,
+                                                 loss_values);
+            break;
+        case EuclideanSSE:
+            break;
+        case HingeL1:
+            break;
+        case HingeL2:
+            break;
+        case SigmoidCrossEntropy:
+            break;
+        case Infogain:
+            break;
+        }
+        ComputeT lossSum;
+        checkCUBLAS(__LINE__, GPUasum(cublasHandle, loss_numel,
+                                      loss_values, 1, &lossSum));
+        loss += lossSum / loss_numel;
+    };
+
+
+    void backward(Phase phase_) {
+        // either write this in Cuda or get both the prediction and ground truth to CPU and do the computation and write the diff back to GPU
+        if (in[0]->need_diff) {
+            switch (mode) {
             case MultinomialLogistic_StableSoftmax:
+                LossGrad_MultinomialLogistic_StableSoftmax <<<
+                CUDA_GET_BLOCKS(loss_numel), CUDA_NUM_THREADS >>> (
+                    CUDA_GET_LOOPS(loss_numel),
+                    loss_numel, in[0]->dim[1], numspel(in[0]->dim),
+                    (in.size() == 3 ? numel(in[2]->dim) : 0), scale,
+                    in[0]->dataGPU, in[1]->dataGPU, loss_weightsGPU,
+                    (in.size() == 3 ? in[2]->dataGPU : NULL),
+                    in[0]->diffGPU);
+                break;
             case MultinomialLogistic:
-                Accuracy_MultinomialLogistic<<<CUDA_GET_BLOCKS(loss_numel),
-                    CUDA_NUM_THREADS>>>(
-                        CUDA_GET_LOOPS(loss_numel),
-                        loss_numel, in[0]->dim[1], numspel(in[0]->dim),
-                        (in.size()==3 ? numel(in[2]->dim) : 0),
-                        in[0]->dataGPU, in[1]->dataGPU, loss_weightsGPU,
-                        (in.size()==3 ? in[2]->dataGPU : NULL),
-                        loss_values);
-                checkCUBLAS(__LINE__, GPUasum(cublasHandle, loss_numel,
-                                              loss_values, 1, &resultSum));
-                result += resultSum / loss_numel;
-                Loss_MultinomialLogistic<<<CUDA_GET_BLOCKS(loss_numel),
-                    CUDA_NUM_THREADS>>>(
-                        CUDA_GET_LOOPS(loss_numel),
-                        loss_numel, in[0]->dim[1], numspel(in[0]->dim),
-                        (in.size()==3 ? numel(in[2]->dim) : 0),
-                        in[0]->dataGPU, in[1]->dataGPU, loss_weightsGPU,
-                        (in.size()==3 ? in[2]->dataGPU : NULL),
-                        loss_values);
+                LossGrad_MultinomialLogistic <<<
+                CUDA_GET_BLOCKS(loss_numel), CUDA_NUM_THREADS >>> (
+                    CUDA_GET_LOOPS(loss_numel),
+                    loss_numel, in[0]->dim[1], numspel(in[0]->dim),
+                    (in.size() == 3 ? numel(in[2]->dim) : 0), scale,
+                    in[0]->dataGPU, in[1]->dataGPU, loss_weightsGPU,
+                    (in.size() == 3 ? in[2]->dataGPU : NULL),
+                    in[0]->diffGPU);
                 break;
             case SmoothL1:
-                Loss_SmoothL1<<<CUDA_GET_BLOCKS(loss_numel),
-                    CUDA_NUM_THREADS>>>(
-                        CUDA_GET_LOOPS(loss_numel),
-                        loss_numel, in[0]->dataGPU, in[1]->dataGPU,
-                        (in.size()==3 ? in[2]->dataGPU : NULL), loss_values);
+                LossGrad_SmoothL1 <<< CUDA_GET_BLOCKS(loss_numel),
+                                  CUDA_NUM_THREADS>>>(
+                                      CUDA_GET_LOOPS(loss_numel),
+                                      loss_numel, scale, in[0]->dataGPU, in[1]->dataGPU,
+                                      (in.size() == 3 ? in[2]->dataGPU : NULL),
+                                      in[0]->diffGPU);
                 break;
             case Contrastive:
-                Loss_Contrastive<<<CUDA_GET_BLOCKS(numExamples),
-                    CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(loss_numel),
-                        loss_numel, in[0]->dim[1],
-                        margin,in[0]->dataGPU, in[1]->dataGPU, in[2]->dataGPU,
-                        loss_values);
+                LossGrad_Contrastive <<< CUDA_GET_BLOCKS(numExamples),
+                                     CUDA_NUM_THREADS>>>(
+                                         CUDA_GET_LOOPS(loss_numel),
+                                         loss_numel, in[0]->dim[1], margin, scale,
+                                         in[0]->dataGPU, in[1]->dataGPU, in[2]->dataGPU,
+                                         in[0]->diffGPU, in[1]->diffGPU);
                 break;
             case EuclideanSSE:
                 break;
@@ -6057,64 +6178,6 @@ public:
                 break;
             case Infogain:
                 break;
-        }
-        ComputeT lossSum;
-        checkCUBLAS(__LINE__, GPUasum(cublasHandle, loss_numel,
-                                      loss_values, 1, &lossSum));
-        loss += lossSum/loss_numel;
-    };
-
-
-    void backward(Phase phase_){
-        // either write this in Cuda or get both the prediction and ground truth to CPU and do the computation and write the diff back to GPU
-        if (in[0]->need_diff){
-            switch(mode){
-                case MultinomialLogistic_StableSoftmax:
-                    LossGrad_MultinomialLogistic_StableSoftmax<<<
-                        CUDA_GET_BLOCKS(loss_numel), CUDA_NUM_THREADS>>>(
-                            CUDA_GET_LOOPS(loss_numel),
-                            loss_numel, in[0]->dim[1], numspel(in[0]->dim),
-                            (in.size()==3 ? numel(in[2]->dim) : 0), scale,
-                            in[0]->dataGPU, in[1]->dataGPU, loss_weightsGPU,
-                            (in.size()==3 ? in[2]->dataGPU : NULL),
-                            in[0]->diffGPU);
-                    break;
-                case MultinomialLogistic:
-                    LossGrad_MultinomialLogistic<<<
-                        CUDA_GET_BLOCKS(loss_numel), CUDA_NUM_THREADS>>>(
-                            CUDA_GET_LOOPS(loss_numel),
-                            loss_numel, in[0]->dim[1], numspel(in[0]->dim),
-                            (in.size()==3 ? numel(in[2]->dim) : 0), scale,
-                            in[0]->dataGPU, in[1]->dataGPU, loss_weightsGPU,
-                            (in.size()==3 ? in[2]->dataGPU : NULL),
-                            in[0]->diffGPU);
-                    break;
-                case SmoothL1:
-                    LossGrad_SmoothL1<<<CUDA_GET_BLOCKS(loss_numel),
-                        CUDA_NUM_THREADS>>>(
-                            CUDA_GET_LOOPS(loss_numel),
-                            loss_numel, scale, in[0]->dataGPU, in[1]->dataGPU,
-                            (in.size()==3 ? in[2]->dataGPU : NULL),
-                            in[0]->diffGPU);
-                    break;
-                case Contrastive:
-                    LossGrad_Contrastive<<<CUDA_GET_BLOCKS(numExamples),
-                        CUDA_NUM_THREADS>>>(
-                            CUDA_GET_LOOPS(loss_numel),
-                            loss_numel, in[0]->dim[1], margin, scale,
-                            in[0]->dataGPU, in[1]->dataGPU, in[2]->dataGPU,
-                            in[0]->diffGPU, in[1]->diffGPU);
-                    break;
-                case EuclideanSSE:
-                    break;
-                case HingeL1:
-                    break;
-                case HingeL2:
-                    break;
-                case SigmoidCrossEntropy:
-                    break;
-                case Infogain:
-                    break;
             }
 
         }
@@ -6132,17 +6195,17 @@ public:
  */
 
 __device__ ComputeT sigmoid(const ComputeT x) {
-  return ComputeT(1) / (ComputeT(1) + exp(-x));
+    return ComputeT(1) / (ComputeT(1) + exp(-x));
 }
 
 __device__ ComputeT tanh(const ComputeT x) {
-  return ComputeT(2) * sigmoid(ComputeT(2) * x) - ComputeT(1);
+    return ComputeT(2) * sigmoid(ComputeT(2) * x) - ComputeT(1);
 }
 
 __global__ void LSTMActsForward(size_t CUDA_NUM_LOOPS, size_t N, const int dim, const StorageT* X, StorageT* X_acts) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t index = idxBase; index < min(N,idxBase+CUDA_NUM_LOOPS); ++index ){
+    for (size_t index = idxBase; index < min(N, idxBase + CUDA_NUM_LOOPS); ++index ) {
         const int x_dim = 4 * dim;
         const int d = index % x_dim;
         if (d < 3 * dim) {
@@ -6156,7 +6219,7 @@ __global__ void LSTMActsForward(size_t CUDA_NUM_LOOPS, size_t N, const int dim, 
 __global__ void LSTMUnitForward(size_t CUDA_NUM_LOOPS, size_t N, const size_t dim, const StorageT* C_prev, const StorageT* X, const StorageT* flush, StorageT* C, StorageT* H) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t index = idxBase; index < min(N,idxBase+CUDA_NUM_LOOPS); ++index ){
+    for (size_t index = idxBase; index < min(N, idxBase + CUDA_NUM_LOOPS); ++index ) {
         const size_t n = index / dim;
         const size_t d = index % dim;
         const size_t offset = 4 * dim * n;
@@ -6173,7 +6236,7 @@ __global__ void LSTMUnitForward(size_t CUDA_NUM_LOOPS, size_t N, const size_t di
 __global__ void LSTMUnitBackward(size_t CUDA_NUM_LOOPS, size_t N, const size_t dim, const StorageT* C_prev, const StorageT* X, const StorageT* C, const StorageT* H, const StorageT* flush, const StorageT* C_diff, const StorageT* H_diff, StorageT* C_prev_diff, StorageT* X_diff) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t index = idxBase; index < min(N,idxBase+CUDA_NUM_LOOPS); ++index ){
+    for (size_t index = idxBase; index < min(N, idxBase + CUDA_NUM_LOOPS); ++index ) {
         const size_t n = index / dim;
         const size_t d = index % dim;
         const size_t offset = 4 * dim * n;
@@ -6201,7 +6264,7 @@ __global__ void LSTMUnitBackward(size_t CUDA_NUM_LOOPS, size_t N, const size_t d
 __global__ void LSTMActsBackward(size_t CUDA_NUM_LOOPS, size_t N, const size_t dim, const StorageT* X_acts, const StorageT* X_acts_diff, StorageT* X_diff) {
     const size_t idxBase = size_t(CUDA_NUM_LOOPS) * (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) + size_t(threadIdx.x));
     if (idxBase >= N) return;
-    for (size_t index = idxBase; index < min(N,idxBase+CUDA_NUM_LOOPS); ++index ){
+    for (size_t index = idxBase; index < min(N, idxBase + CUDA_NUM_LOOPS); ++index ) {
         const size_t x_dim = 4 * dim;
         const size_t d = index % x_dim;
         const ComputeT X_act = GPUStorage2ComputeT(X_acts[index]);
@@ -6221,7 +6284,7 @@ class LSTMUnitLayer : public Layer {
 public:
     StorageT* X_acts;
     StorageT* X_acts_diff;
-    LSTMUnitLayer(std::string name_): Layer(name_), X_acts(NULL), X_acts_diff(NULL){};
+    LSTMUnitLayer(std::string name_): Layer(name_), X_acts(NULL), X_acts_diff(NULL) {};
     size_t Malloc(Phase phase_) {
         std::cout << (train_me ? "* " : "  ");
         std::cout << name << std::endl;
@@ -6233,17 +6296,17 @@ public:
         hidden_dim = numspel(in[0]->dim);
         return memoryBytes;
     };
-    ~LSTMUnitLayer(){
-        
-        if (X_acts_diff!=NULL)  checkCUDA(__LINE__, cudaFree(X_acts_diff));
+    ~LSTMUnitLayer() {
+
+        if (X_acts_diff != NULL)  checkCUDA(__LINE__, cudaFree(X_acts_diff));
     };
-    void forward(Phase phase_){
-        LSTMActsForward<<<CUDA_GET_BLOCKS(X_count), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(X_count), X_count, hidden_dim, in[1]->dataGPU, X_acts);
-        LSTMUnitForward<<<CUDA_GET_BLOCKS(count), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(count), count, hidden_dim, in[0]->dataGPU, X_acts, in[2]->dataGPU, out[0]->dataGPU, out[1]->dataGPU);
+    void forward(Phase phase_) {
+        LSTMActsForward <<< CUDA_GET_BLOCKS(X_count), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(X_count), X_count, hidden_dim, in[1]->dataGPU, X_acts);
+        LSTMUnitForward <<< CUDA_GET_BLOCKS(count), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(count), count, hidden_dim, in[0]->dataGPU, X_acts, in[2]->dataGPU, out[0]->dataGPU, out[1]->dataGPU);
     };
-    void backward(Phase phase_){
-        LSTMUnitBackward<<<CUDA_GET_BLOCKS(count), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(count), count, hidden_dim, in[0]->dataGPU, X_acts, out[0]->dataGPU, out[1]->dataGPU, in[2]->dataGPU, out[0]->diffGPU, out[1]->diffGPU, in[0]->diffGPU, X_acts_diff);
-        LSTMActsBackward<<<CUDA_GET_BLOCKS(X_count), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(X_count), X_count, hidden_dim, X_acts, X_acts_diff, in[1]->diffGPU);
+    void backward(Phase phase_) {
+        LSTMUnitBackward <<< CUDA_GET_BLOCKS(count), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(count), count, hidden_dim, in[0]->dataGPU, X_acts, out[0]->dataGPU, out[1]->dataGPU, in[2]->dataGPU, out[0]->diffGPU, out[1]->diffGPU, in[0]->diffGPU, X_acts_diff);
+        LSTMActsBackward <<< CUDA_GET_BLOCKS(X_count), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(X_count), X_count, hidden_dim, X_acts, X_acts_diff, in[1]->diffGPU);
     };
 };
 
@@ -6278,9 +6341,9 @@ public:
     int num_output;
 
     LSTMLayer(std::string name_,
-            int num_output_,
-            ComputeT weight_lr_mult_,   Filler weight_filler_, ComputeT weight_filler_param_,
-            ComputeT bias_lr_mult_,     Filler bias_filler_,   ComputeT  bias_filler_param_): Layer(name_),num_output(num_output_),debug_mode(false){
+              int num_output_,
+              ComputeT weight_lr_mult_,   Filler weight_filler_, ComputeT weight_filler_param_,
+              ComputeT bias_lr_mult_,     Filler bias_filler_,   ComputeT  bias_filler_param_): Layer(name_), num_output(num_output_), debug_mode(false) {
         weight_filler = weight_filler_;
         weight_filler_param = weight_filler_param_;
         bias_filler = bias_filler_;
@@ -6290,7 +6353,7 @@ public:
         train_me = true;
     };
 
-    LSTMLayer(JSON* json){
+    LSTMLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,               TrainingTesting)
         SetValue(json, train_me,            true)
@@ -6306,7 +6369,7 @@ public:
         SetValue(json, debug_mode,          false)
     };
 
-    size_t FillUnrolledNet(Phase phase_){
+    size_t FillUnrolledNet(Phase phase_) {
 
         size_t memoryBytes = 0;
         std::vector<int> dim;
@@ -6324,10 +6387,10 @@ public:
 
         // slice out[0] into h_[1...T]
         size_t items_h_t = numel(dim);
-        for (int t=1;t<seq_length_T+1;++t){
-            Response* pResponse_h_t = new Response("h_"+int_to_str(t), train_me);
+        for (int t = 1; t < seq_length_T + 1; ++t) {
+            Response* pResponse_h_t = new Response("h_" + int_to_str(t), train_me);
             pResponse_h_t->cublasHandle = cublasHandle;
-            pResponse_h_t->Malloc(dim, out[0]->dataGPU + items_h_t * (t-1), out[0]->diffGPU + items_h_t * (t-1));
+            pResponse_h_t->Malloc(dim, out[0]->dataGPU + items_h_t * (t - 1), out[0]->diffGPU + items_h_t * (t - 1));
             responses_h_.push_back(pResponse_h_t);
         }
 
@@ -6336,8 +6399,8 @@ public:
         dim[0] = 1;
         size_t items_cont_t = numel(dim); //in[1]->sizeofitem();
         //std::cout<<"bytes_cont_t="<<bytes_cont_t<<std::endl;
-        for (int t=0;t<seq_length_T;++t){
-            Response* pResponse_cont_t = new Response("cont_"+int_to_str(t), false);
+        for (int t = 0; t < seq_length_T; ++t) {
+            Response* pResponse_cont_t = new Response("cont_" + int_to_str(t), false);
             pResponse_cont_t->cublasHandle = cublasHandle;
             pResponse_cont_t->Malloc(dim, in[1]->dataGPU + items_cont_t*t, NULL);
             //std::cout<<"pResponse_cont_t="<<pResponse_cont_t->dataGPU<<std::endl;
@@ -6348,14 +6411,14 @@ public:
         dim = in[0]->dim;
         dim.erase(dim.begin());
         dim[0] *= in[0]->dim[0];
-        while (dim.size()<3) dim.push_back(1);
-        in0 = new Response(this->in[0]->name+"_proxy", in[0]->need_diff);
+        while (dim.size() < 3) dim.push_back(1);
+        in0 = new Response(this->in[0]->name + "_proxy", in[0]->need_diff);
         in0->cublasHandle = cublasHandle;
         in0->Malloc(dim, in[0]->dataGPU, in[0]->diffGPU);
 
         // Add layer to transform all timesteps of x to the hidden state dimension.
         //     W_xc_x = W_xc * x + b_c
-        pLayer_x_transform = new InnerProductLayer("x_transform", num_output*4, true, weight_lr_mult, weight_filler, weight_filler_param, bias_lr_mult, bias_filler, bias_filler_param);
+        pLayer_x_transform = new InnerProductLayer("x_transform", num_output * 4, true, weight_lr_mult, weight_filler, weight_filler_param, bias_lr_mult, bias_filler, bias_filler_param);
         pLayer_x_transform->cudnnHandle = cudnnHandle;
         pLayer_x_transform->cublasHandle = cublasHandle;
         pLayer_x_transform->GPU = GPU;
@@ -6370,19 +6433,19 @@ public:
         dim.clear();
         dim.push_back(1);
         dim.push_back(in[0]->dim[1]);
-        dim.push_back(num_output*4);
+        dim.push_back(num_output * 4);
         size_t items_W_xc_x_t = numel(dim);
-        for (int t=0;t<seq_length_T;++t){
-            Response* pResponse_W_xc_x_t = new Response("W_xc_x_"+int_to_str(t), train_me);
+        for (int t = 0; t < seq_length_T; ++t) {
+            Response* pResponse_W_xc_x_t = new Response("W_xc_x_" + int_to_str(t), train_me);
             pResponse_W_xc_x_t->cublasHandle = cublasHandle;
             pResponse_W_xc_x_t->Malloc(dim, pResponse_W_xc_x->dataGPU + items_W_xc_x_t*t, pResponse_W_xc_x->diffGPU  + items_W_xc_x_t*t);
             responses_W_xc_x_.push_back(pResponse_W_xc_x_t);
         }
 
-        if (in.size()>2){
+        if (in.size() > 2) {
             // Add layer to transform x_static to the gate dimension.
             //     W_xc_x_static = W_xc_static * x_static
-            pLayer_x_static_transform = new InnerProductLayer("W_xc_x_static", num_output*4, false, weight_lr_mult, weight_filler, weight_filler_param, bias_lr_mult, bias_filler, bias_filler_param);
+            pLayer_x_static_transform = new InnerProductLayer("W_xc_x_static", num_output * 4, false, weight_lr_mult, weight_filler, weight_filler_param, bias_lr_mult, bias_filler, bias_filler_param);
             pLayer_x_static_transform->cudnnHandle = cudnnHandle;
             pLayer_x_static_transform->cublasHandle = cublasHandle;
             pLayer_x_static_transform->GPU = GPU;
@@ -6399,8 +6462,8 @@ public:
         dim.push_back(batch_size_N);
         dim.push_back(num_output);
         // all c
-        for (int t=0;t<seq_length_T+1;++t){
-            Response* pResponse_c_t = new Response("c_"+int_to_str(t), train_me);
+        for (int t = 0; t < seq_length_T + 1; ++t) {
+            Response* pResponse_c_t = new Response("c_" + int_to_str(t), train_me);
             pResponse_c_t->cublasHandle = cublasHandle;
             pResponse_c_t->Malloc(dim);
             responses_c_.push_back(pResponse_c_t);
@@ -6411,8 +6474,8 @@ public:
         dim.push_back(num_output);
         dim.push_back(1);
         // all h_conted_
-        for (int t=0;t<seq_length_T;++t){
-            Response* pResponse_h_conted_t = new Response("h_conted_"+int_to_str(t), train_me);
+        for (int t = 0; t < seq_length_T; ++t) {
+            Response* pResponse_h_conted_t = new Response("h_conted_" + int_to_str(t), train_me);
             pResponse_h_conted_t->cublasHandle = cublasHandle;
             pResponse_h_conted_t->Malloc(dim);
             responses_h_conted_.push_back(pResponse_h_conted_t);
@@ -6423,30 +6486,30 @@ public:
         dim.clear();
         dim.push_back(1);
         dim.push_back(batch_size_N);
-        dim.push_back(num_output*4);
+        dim.push_back(num_output * 4);
         //responses_W_hc_h_
-        for (int t=0;t<seq_length_T;++t){
-            Response* pResponse_W_hc_h_t = new Response("W_hc_h_"+int_to_str(t), train_me);
+        for (int t = 0; t < seq_length_T; ++t) {
+            Response* pResponse_W_hc_h_t = new Response("W_hc_h_" + int_to_str(t), train_me);
             pResponse_W_hc_h_t->cublasHandle = cublasHandle;
             pResponse_W_hc_h_t->Malloc(dim);
             responses_W_hc_h_.push_back(pResponse_W_hc_h_t);
         }
-        
+
         dim.clear();
         dim.push_back(batch_size_N);
         dim.push_back(4);
         dim.push_back(num_output);
 
         //responses_gate_input_
-        for (int t=0;t<seq_length_T;++t){
-            Response* pResponse_gate_input_t = new Response("gate_input_"+int_to_str(t), train_me);
+        for (int t = 0; t < seq_length_T; ++t) {
+            Response* pResponse_gate_input_t = new Response("gate_input_" + int_to_str(t), train_me);
             pResponse_gate_input_t->cublasHandle = cublasHandle;
             pResponse_gate_input_t->Malloc(dim);
             responses_gate_input_.push_back(pResponse_gate_input_t);
         }
 
         size_t X_bytes = sizeofStorageT * numel(dim);
-        for (int t=0;t<seq_length_T;++t){
+        for (int t = 0; t < seq_length_T; ++t) {
             StorageT* X_acts;
             checkCUDA(__LINE__, cudaMalloc(&X_acts, X_bytes) );
             X_acts_.push_back(X_acts);
@@ -6472,10 +6535,10 @@ public:
 
         // Add layer to compute
         //     W_hc_h_{t-1} := W_hc * h_conted_{t-1}
-        pLayer_transform = new InnerProductLayer("transform", num_output*4, false, weight_lr_mult, weight_filler, weight_filler_param, bias_lr_mult, bias_filler, bias_filler_param);
+        pLayer_transform = new InnerProductLayer("transform", num_output * 4, false, weight_lr_mult, weight_filler, weight_filler_param, bias_lr_mult, bias_filler, bias_filler_param);
         pLayer_transform->cudnnHandle = cudnnHandle;
         pLayer_transform->cublasHandle = cublasHandle;
-        pLayer_transform->GPU = GPU;                    
+        pLayer_transform->GPU = GPU;
         pLayer_transform->addIn(responses_h_conted_[0]);
         pLayer_transform->addOut(responses_W_hc_h_[0]);
         memoryBytes += pLayer_transform->Malloc(phase_);
@@ -6487,12 +6550,12 @@ public:
         pLayer_gate_input = new ElementWiseLayer("gate_input", ElementWise_SUM);
         pLayer_gate_input->cudnnHandle = cudnnHandle;
         pLayer_gate_input->cublasHandle = cublasHandle;
-        pLayer_gate_input->GPU = GPU;                    
+        pLayer_gate_input->GPU = GPU;
         pLayer_gate_input->addIn(responses_W_hc_h_[0]);
         pLayer_gate_input->addIn(responses_W_xc_x_[0]);
-        if (in.size()>2) {
+        if (in.size() > 2) {
             pLayer_gate_input->addIn(pResponse_W_xc_x_static);
-        }        
+        }
         pLayer_gate_input->addOut(responses_gate_input_[0]);
         memoryBytes += pLayer_gate_input->Malloc(phase_);
         sub_layers.push_back(pLayer_gate_input);
@@ -6513,7 +6576,7 @@ public:
         pLayer_lstm_unit = new LSTMUnitLayer("lstm_unit");
         pLayer_lstm_unit->cudnnHandle = cudnnHandle;
         pLayer_lstm_unit->cublasHandle = cublasHandle;
-        pLayer_lstm_unit->GPU = GPU;                    
+        pLayer_lstm_unit->GPU = GPU;
         pLayer_lstm_unit->addIn(responses_c_[0]);
         pLayer_lstm_unit->addIn(responses_gate_input_[0]);
         pLayer_lstm_unit->addIn(responses_cont_[0]);
@@ -6525,29 +6588,29 @@ public:
         return memoryBytes;
     };
 
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
         size_t memoryBytes = 0;
         train_me = train_me && phase_ != Testing;
 
-        std::cout<< (train_me? "* " : "  ");
-        std::cout<<name;
+        std::cout << (train_me ? "* " : "  ");
+        std::cout << name;
 
-        if (!(in.size()==2 || in.size()==3)) { std::cout<<std::endl<<"LSTMLayer #in should be 2 or 3."<<std::endl; FatalError(__LINE__); }
-        if (out.size()!=1) { std::cout<<std::endl<<"LSTMLayer #out should be 1."<<std::endl; FatalError(__LINE__); }
+        if (!(in.size() == 2 || in.size() == 3)) { std::cout << std::endl << "LSTMLayer #in should be 2 or 3." << std::endl; FatalError(__LINE__); }
+        if (out.size() != 1) { std::cout << std::endl << "LSTMLayer #out should be 1." << std::endl; FatalError(__LINE__); }
 
         seq_length_T = in[0]->dim[0];
         batch_size_N = in[0]->dim[1];
 
-        std::cout<<" T="<<seq_length_T;
-        std::cout<<" N="<<batch_size_N;
-        std::cout<<" num_output="<<num_output;
-        std::cout<<std::endl;
+        std::cout << " T=" << seq_length_T;
+        std::cout << " N=" << batch_size_N;
+        std::cout << " num_output=" << num_output;
+        std::cout << std::endl;
 
         out[0]->need_diff = train_me || in[0]->need_diff; // if one of them need the grad
-        if (in.size()==3) out[0]->need_diff = out[0]->need_diff || in[2]->need_diff;
+        if (in.size() == 3) out[0]->need_diff = out[0]->need_diff || in[2]->need_diff;
 
         std::vector<int> dimOut(3);
-        dimOut[0] = seq_length_T*batch_size_N;
+        dimOut[0] = seq_length_T * batch_size_N;
         dimOut[1] = num_output;
         dimOut[2] = 1;
 
@@ -6561,51 +6624,51 @@ public:
         return memoryBytes;
     };
 
-    void reset(){
-        checkCUDA(__LINE__,cudaMemset(responses_c_[0]->dataGPU, 0, responses_c_[0]->numBytes()));        
-        checkCUDA(__LINE__,cudaMemset(responses_h_[0]->dataGPU, 0, responses_h_[0]->numBytes()));
+    void reset() {
+        checkCUDA(__LINE__, cudaMemset(responses_c_[0]->dataGPU, 0, responses_c_[0]->numBytes()));
+        checkCUDA(__LINE__, cudaMemset(responses_h_[0]->dataGPU, 0, responses_h_[0]->numBytes()));
     };
 
-    void forward(Phase phase_){
+    void forward(Phase phase_) {
 
         // copy c[T] to c[0]
-        checkCUDA(__LINE__,cudaMemcpy(responses_c_[responses_c_.size()-1]->dataGPU, responses_c_[0]->dataGPU, responses_c_[0]->numBytes(), cudaMemcpyDeviceToDevice));
+        checkCUDA(__LINE__, cudaMemcpy(responses_c_[responses_c_.size() - 1]->dataGPU, responses_c_[0]->dataGPU, responses_c_[0]->numBytes(), cudaMemcpyDeviceToDevice));
 
         // copy h[T] to h[0]
-        checkCUDA(__LINE__,cudaMemcpy(responses_h_[responses_h_.size()-1]->dataGPU, responses_h_[0]->dataGPU, responses_h_[0]->numBytes(), cudaMemcpyDeviceToDevice));
+        checkCUDA(__LINE__, cudaMemcpy(responses_h_[responses_h_.size() - 1]->dataGPU, responses_h_[0]->dataGPU, responses_h_[0]->numBytes(), cudaMemcpyDeviceToDevice));
 
         ComputeT avg;
 
-        if (debug_mode){
+        if (debug_mode) {
             avg = in0->ameanData();
-            std::cout<< in0->name << ".data_amean: " << avg ;
+            std::cout << in0->name << ".data_amean: " << avg ;
             in0->checkNaN();
-            std::cout<< std::endl;
+            std::cout << std::endl;
         }
         pLayer_x_transform->forward(phase_);
-        if (debug_mode){
-            std::cout<< "Layer: W_xc_x = W_xc * x + b_c      ";
-            avg = pLayer_x_transform->ameanWeightData(); if (avg!=-1) std::cout<<" weight.data: "<< avg;
+        if (debug_mode) {
+            std::cout << "Layer: W_xc_x = W_xc * x + b_c      ";
+            avg = pLayer_x_transform->ameanWeightData(); if (avg != -1) std::cout << " weight.data: " << avg;
             pLayer_x_transform->checkNaNWeight();
-            avg = pLayer_x_transform->ameanBiasData();   if (avg!=-1) std::cout<<" bias.data: "<< avg;            
+            avg = pLayer_x_transform->ameanBiasData();   if (avg != -1) std::cout << " bias.data: " << avg;
             pLayer_x_transform->checkNaNBias();
-            std::cout<< std::endl;
+            std::cout << std::endl;
         }
-        if (debug_mode){
+        if (debug_mode) {
             avg = pResponse_W_xc_x->ameanData();
-            std::cout<< pResponse_W_xc_x->name << ".data_amean: " << avg ;
+            std::cout << pResponse_W_xc_x->name << ".data_amean: " << avg ;
             pResponse_W_xc_x->checkNaN();
-            std::cout<< std::endl;
+            std::cout << std::endl;
         }
 
-        if (in.size()>2){
+        if (in.size() > 2) {
             pLayer_x_static_transform->forward(phase_);
         }
 
-        for (int t=0;t<seq_length_T;++t){
-            
+        for (int t = 0; t < seq_length_T; ++t) {
+
             if (debug_mode)
-                std::cout<<"====================================================================================================================================="<<std::endl;
+                std::cout << "=====================================================================================================================================" << std::endl;
 
             // Add layers to flush the hidden state when beginning a new
             // sequence, as indicated by cont_t.
@@ -6614,88 +6677,88 @@ public:
             // Normally, cont_t is binary (i.e., 0 or 1), so:
             //     h_conted_{t-1} := h_{t-1} if cont_t == 1, and 0 otherwise
 
-            if (debug_mode){
+            if (debug_mode) {
                 avg = responses_h_[t]->ameanData();
-                std::cout<< responses_h_[t]->name << ".data_amean: " << avg ;
+                std::cout << responses_h_[t]->name << ".data_amean: " << avg ;
                 responses_h_[t]->checkNaN();
-                std::cout<< std::endl;
+                std::cout << std::endl;
             }
 
-            if (debug_mode){
+            if (debug_mode) {
                 avg = responses_cont_[t]->ameanData();
-                std::cout<< responses_cont_[t]->name << ".data_amean: " << avg ;
+                std::cout << responses_cont_[t]->name << ".data_amean: " << avg ;
                 responses_cont_[t]->checkNaN();
-                std::cout<< std::endl;
+                std::cout << std::endl;
             }
 
-            pLayer_h_conted->in [0]=responses_h_[t];
-            pLayer_h_conted->in [1]=responses_cont_[t];
-            pLayer_h_conted->out[0]=responses_h_conted_[t];
+            pLayer_h_conted->in [0] = responses_h_[t];
+            pLayer_h_conted->in [1] = responses_cont_[t];
+            pLayer_h_conted->out[0] = responses_h_conted_[t];
             pLayer_h_conted->forward(phase_);
 
-            if (debug_mode){
-                std::cout<< "Layer: h_conted_{t-1} := cont_t * h_{t-1}"<< std::endl;
+            if (debug_mode) {
+                std::cout << "Layer: h_conted_{t-1} := cont_t * h_{t-1}" << std::endl;
             }
 
-            if (debug_mode){
+            if (debug_mode) {
                 avg = responses_h_conted_[t]->ameanData();
-                std::cout<< responses_h_conted_[t]->name << ".data_amean: " << avg ;
+                std::cout << responses_h_conted_[t]->name << ".data_amean: " << avg ;
                 responses_h_conted_[t]->checkNaN();
-                std::cout<< std::endl;
+                std::cout << std::endl;
             }
 
             // Add layer to compute
             //     W_hc_h_{t-1} := W_hc * h_conted_{t-1}
-            pLayer_transform->in[0]=responses_h_conted_[t];
-            pLayer_transform->out[0]=responses_W_hc_h_[t];
+            pLayer_transform->in[0] = responses_h_conted_[t];
+            pLayer_transform->out[0] = responses_W_hc_h_[t];
             pLayer_transform->forward(phase_);
 
-            if (debug_mode){
-                std::cout<< "Layer: W_hc_h_{t-1} := W_hc * h_conted_{t-1}";
-                std::cout<<"  bias_numel="<<pLayer_transform->bias_numel<< "  ";
-                avg = pLayer_transform->ameanWeightData(); if (avg!=-1) std::cout<<" weight.data: "<< avg;
-                pLayer_transform->checkNaNWeight();                
-                std::cout<< std::endl;
+            if (debug_mode) {
+                std::cout << "Layer: W_hc_h_{t-1} := W_hc * h_conted_{t-1}";
+                std::cout << "  bias_numel=" << pLayer_transform->bias_numel << "  ";
+                avg = pLayer_transform->ameanWeightData(); if (avg != -1) std::cout << " weight.data: " << avg;
+                pLayer_transform->checkNaNWeight();
+                std::cout << std::endl;
             }
 
-            if (debug_mode){
+            if (debug_mode) {
                 avg = responses_W_hc_h_[t]->ameanData();
-                std::cout<< responses_W_hc_h_[t]->name << ".data_amean: " << avg ;
+                std::cout << responses_W_hc_h_[t]->name << ".data_amean: " << avg ;
                 responses_W_hc_h_[t]->checkNaN();
-                std::cout<< std::endl;
+                std::cout << std::endl;
             }
 
-            if (debug_mode){
+            if (debug_mode) {
                 avg = responses_W_xc_x_[t]->ameanData();
-                std::cout<< responses_W_xc_x_[t]->name << ".data_amean: " << avg ;
+                std::cout << responses_W_xc_x_[t]->name << ".data_amean: " << avg ;
                 responses_W_xc_x_[t]->checkNaN();
-                std::cout<< std::endl;
-            }            
+                std::cout << std::endl;
+            }
 
             // Add the outputs of the linear transformations to compute the gate input.
             //     gate_input_t := W_hc * h_conted_{t-1} + W_xc * x_t + b_c
             //                   = W_hc_h_{t-1} + W_xc_x_t + b_c
-            pLayer_gate_input->in[0]=responses_W_hc_h_[t];
-            pLayer_gate_input->in[1]=responses_W_xc_x_[t];
-            pLayer_gate_input->out[0]=responses_gate_input_[t];
+            pLayer_gate_input->in[0] = responses_W_hc_h_[t];
+            pLayer_gate_input->in[1] = responses_W_xc_x_[t];
+            pLayer_gate_input->out[0] = responses_gate_input_[t];
             pLayer_gate_input->forward(phase_);
 
-            if (debug_mode){
-                std::cout<< "Layer: gate_input_t := W_hc * h_conted_{t-1} + W_xc * x_t + b_c"<< std::endl;
+            if (debug_mode) {
+                std::cout << "Layer: gate_input_t := W_hc * h_conted_{t-1} + W_xc * x_t + b_c" << std::endl;
             }
 
-            if (debug_mode){
+            if (debug_mode) {
                 avg = responses_gate_input_[t]->ameanData();
-                std::cout<< responses_gate_input_[t]->name << ".data_amean: " << avg ;
+                std::cout << responses_gate_input_[t]->name << ".data_amean: " << avg ;
                 responses_gate_input_[t]->checkNaN();
-                std::cout<< std::endl;
+                std::cout << std::endl;
             }
 
-            if (debug_mode){
+            if (debug_mode) {
                 avg = responses_c_[t]->ameanData();
-                std::cout<< responses_c_[t]->name << ".data_amean: " << avg ;
+                std::cout << responses_c_[t]->name << ".data_amean: " << avg ;
                 responses_c_[t]->checkNaN();
-                std::cout<< std::endl;
+                std::cout << std::endl;
             }
 
             // Add LSTMUnit layer to compute the cell & hidden vectors c_t and h_t.
@@ -6711,85 +6774,85 @@ public:
             //         g_t := \tanh[g_t']
             //         c_t := cont_t * (f_t .* c_{t-1}) + (i_t .* g_t)
             //         h_t := o_t .* \tanh[c_t]
-            pLayer_lstm_unit->in[0]=responses_c_[t];
-            pLayer_lstm_unit->in[1]=responses_gate_input_[t];
-            pLayer_lstm_unit->in[2]=responses_cont_[t];
-            pLayer_lstm_unit->out[0]=responses_c_[t+1];
-            pLayer_lstm_unit->out[1]=responses_h_[t+1];
+            pLayer_lstm_unit->in[0] = responses_c_[t];
+            pLayer_lstm_unit->in[1] = responses_gate_input_[t];
+            pLayer_lstm_unit->in[2] = responses_cont_[t];
+            pLayer_lstm_unit->out[0] = responses_c_[t + 1];
+            pLayer_lstm_unit->out[1] = responses_h_[t + 1];
             pLayer_lstm_unit->X_acts = X_acts_[t];
             pLayer_lstm_unit->forward(phase_);
 
-            if (debug_mode){
-                std::cout<< "Layer: LSTMUnit"<< std::endl;
-            }            
-
-            if (debug_mode){
-                avg = responses_c_[t+1]->ameanData();
-                std::cout<< responses_c_[t+1]->name << ".data_amean: " << avg ;
-                responses_c_[t+1]->checkNaN();
-                std::cout<< std::endl;
+            if (debug_mode) {
+                std::cout << "Layer: LSTMUnit" << std::endl;
             }
 
-            if (debug_mode){
-                avg = responses_h_[t+1]->ameanData();
-                std::cout<< responses_h_[t+1]->name << ".data_amean: " << avg ;
-                responses_h_[t+1]->checkNaN();
-                std::cout<< std::endl;
-            }            
+            if (debug_mode) {
+                avg = responses_c_[t + 1]->ameanData();
+                std::cout << responses_c_[t + 1]->name << ".data_amean: " << avg ;
+                responses_c_[t + 1]->checkNaN();
+                std::cout << std::endl;
+            }
+
+            if (debug_mode) {
+                avg = responses_h_[t + 1]->ameanData();
+                std::cout << responses_h_[t + 1]->name << ".data_amean: " << avg ;
+                responses_h_[t + 1]->checkNaN();
+                std::cout << std::endl;
+            }
 
         }
     };
 
-    void backward(Phase phase_){
-        if (in.size()>2) pResponse_W_xc_x_static->clearDiff();
+    void backward(Phase phase_) {
+        if (in.size() > 2) pResponse_W_xc_x_static->clearDiff();
         pResponse_W_xc_x->clearDiff();
-        for (int r=0;r<responses_W_xc_x_.size();++r) responses_W_xc_x_[r]->clearDiff();
-        for (int r=0;r<responses_cont_.size();++r) responses_cont_[r]->clearDiff();
-        for (int r=0;r<responses_c_.size();++r) responses_c_[r]->clearDiff();
-        for (int r=0;r<responses_h_.size();++r) responses_h_[r]->clearDiff();
-        for (int r=0;r<responses_h_conted_.size();++r) responses_h_conted_[r]->clearDiff();
-        for (int r=0;r<responses_W_hc_h_.size();++r) responses_W_hc_h_[r]->clearDiff();
-        for (int r=0;r<responses_gate_input_.size();++r) responses_gate_input_[r]->clearDiff();
+        for (int r = 0; r < responses_W_xc_x_.size(); ++r) responses_W_xc_x_[r]->clearDiff();
+        for (int r = 0; r < responses_cont_.size(); ++r) responses_cont_[r]->clearDiff();
+        for (int r = 0; r < responses_c_.size(); ++r) responses_c_[r]->clearDiff();
+        for (int r = 0; r < responses_h_.size(); ++r) responses_h_[r]->clearDiff();
+        for (int r = 0; r < responses_h_conted_.size(); ++r) responses_h_conted_[r]->clearDiff();
+        for (int r = 0; r < responses_W_hc_h_.size(); ++r) responses_W_hc_h_[r]->clearDiff();
+        for (int r = 0; r < responses_gate_input_.size(); ++r) responses_gate_input_[r]->clearDiff();
 
-        if (in.size()>2) pLayer_x_static_transform->clearDiff();
+        if (in.size() > 2) pLayer_x_static_transform->clearDiff();
         pLayer_x_transform->clearDiff();
         pLayer_h_conted->clearDiff();
         pLayer_transform->clearDiff();
         pLayer_gate_input->clearDiff();
         pLayer_lstm_unit->clearDiff();
 
-        for (int t=seq_length_T-1;t>=0;--t){
-            pLayer_lstm_unit->in[0]=responses_c_[t];
-            pLayer_lstm_unit->in[1]=responses_gate_input_[t];
-            pLayer_lstm_unit->in[2]=responses_cont_[t];
-            pLayer_lstm_unit->out[0]=responses_c_[t+1];
-            pLayer_lstm_unit->out[1]=responses_h_[t+1];
+        for (int t = seq_length_T - 1; t >= 0; --t) {
+            pLayer_lstm_unit->in[0] = responses_c_[t];
+            pLayer_lstm_unit->in[1] = responses_gate_input_[t];
+            pLayer_lstm_unit->in[2] = responses_cont_[t];
+            pLayer_lstm_unit->out[0] = responses_c_[t + 1];
+            pLayer_lstm_unit->out[1] = responses_h_[t + 1];
             pLayer_lstm_unit->X_acts = X_acts_[t];
             pLayer_lstm_unit->backward(phase_);
 
-            pLayer_gate_input->in[0]=responses_W_hc_h_[t];
-            pLayer_gate_input->in[1]=responses_W_xc_x_[t];
-            pLayer_gate_input->out[0]=responses_gate_input_[t];
+            pLayer_gate_input->in[0] = responses_W_hc_h_[t];
+            pLayer_gate_input->in[1] = responses_W_xc_x_[t];
+            pLayer_gate_input->out[0] = responses_gate_input_[t];
             pLayer_gate_input->backward(phase_);
 
-            pLayer_transform->in[0]=responses_h_conted_[t];
-            pLayer_transform->out[0]=responses_W_hc_h_[t];
-            pLayer_transform->backward(phase_);            
+            pLayer_transform->in[0] = responses_h_conted_[t];
+            pLayer_transform->out[0] = responses_W_hc_h_[t];
+            pLayer_transform->backward(phase_);
 
-            pLayer_h_conted->in [0]=responses_h_[t];
-            pLayer_h_conted->in [1]=responses_cont_[t];
-            pLayer_h_conted->out[0]=responses_h_conted_[t];
+            pLayer_h_conted->in [0] = responses_h_[t];
+            pLayer_h_conted->in [1] = responses_cont_[t];
+            pLayer_h_conted->out[0] = responses_h_conted_[t];
             pLayer_h_conted->backward(phase_);
         }
-        if (in.size()>2){
+        if (in.size() > 2) {
             pLayer_x_static_transform->backward(phase_);
         }
         pLayer_x_transform->backward(phase_);
     };
 
-    ~LSTMLayer(){
+    ~LSTMLayer() {
         delete pLayer_x_transform;
-        if (in.size()>2)
+        if (in.size() > 2)
             delete pLayer_x_static_transform;
         delete pLayer_h_conted;
         delete pLayer_transform;
@@ -6799,19 +6862,19 @@ public:
         delete in0;
         delete pResponse_W_xc_x_static;
         delete pResponse_W_xc_x;
-        for (int r=0;r<responses_W_xc_x_.size();++r) delete responses_W_xc_x_[r];
-        for (int r=0;r<responses_cont_.size();++r) delete responses_cont_[r];
-        for (int r=0;r<responses_c_.size();++r) delete responses_c_[r];
-        for (int r=0;r<responses_h_.size();++r) delete responses_h_[r];
-        for (int r=0;r<responses_h_conted_.size();++r) delete responses_h_conted_[r];
-        for (int r=0;r<responses_W_hc_h_.size();++r) delete responses_W_hc_h_[r];
-        for (int r=0;r<responses_gate_input_.size();++r) delete responses_gate_input_[r];
+        for (int r = 0; r < responses_W_xc_x_.size(); ++r) delete responses_W_xc_x_[r];
+        for (int r = 0; r < responses_cont_.size(); ++r) delete responses_cont_[r];
+        for (int r = 0; r < responses_c_.size(); ++r) delete responses_c_[r];
+        for (int r = 0; r < responses_h_.size(); ++r) delete responses_h_[r];
+        for (int r = 0; r < responses_h_conted_.size(); ++r) delete responses_h_conted_[r];
+        for (int r = 0; r < responses_W_hc_h_.size(); ++r) delete responses_W_hc_h_[r];
+        for (int r = 0; r < responses_gate_input_.size(); ++r) delete responses_gate_input_[r];
 
-        for (int t=0;t<X_acts_.size();++t)  checkCUDA(__LINE__, cudaFree(X_acts_[t]));
+        for (int t = 0; t < X_acts_.size(); ++t)  checkCUDA(__LINE__, cudaFree(X_acts_[t]));
     };
 };
 
-class BatchNormalizationLayer : public Layer{
+class BatchNormalizationLayer : public Layer {
     cudnnTensorDescriptor_t bnScaleBiasMeanVarDesc;
     cudnnBatchNormMode_t mode;
     double epsilon;
@@ -6829,10 +6892,10 @@ class BatchNormalizationLayer : public Layer{
     // StorageT* resultBnBiasDiff;      => bias_diffGPU
 public:
 
-    BatchNormalizationLayer(JSON* json){
-        if (in.size() != out.size()){ std::cout << "BatchNormalizationLayer " << name << " needs same number of input and output responses" << std::endl; FatalError(__LINE__); }
-        for (int i = 1; i < in.size(); ++i){
-            if (!same_dim(in[0]->dim, in[i]->dim)){ std::cout <<"BatchNormalizationLayer" << name << " requires same dim for each input" << std::endl; FatalError(__LINE__); }
+    BatchNormalizationLayer(JSON* json) {
+        if (in.size() != out.size()) { std::cout << "BatchNormalizationLayer " << name << " needs same number of input and output responses" << std::endl; FatalError(__LINE__); }
+        for (int i = 1; i < in.size(); ++i) {
+            if (!same_dim(in[0]->dim, in[i]->dim)) { std::cout << "BatchNormalizationLayer" << name << " requires same dim for each input" << std::endl; FatalError(__LINE__); }
         }
 
         SetOrDie(json, name)
@@ -6851,11 +6914,11 @@ public:
     };
     // BatchNormalizationLayer(attributes)
 
-    size_t Malloc(Phase phase_){
+    size_t Malloc(Phase phase_) {
         size_t memoryBytes = 0;
 
         train_me = train_me && phase_ != Testing;
-        std::cout << (train_me? "* " : "  ");
+        std::cout << (train_me ? "* " : "  ");
         std::cout << name;
 
         // NOTE: calculated by cudnnDeriveBNTensorDescriptor
@@ -6900,8 +6963,8 @@ public:
 
         // In Spatial mode, we have 1xCx1x1 tensor for batch normalization
         // statistic in 2D images and 1xCx1x1x1 in 3D
-        if (mode == CUDNN_BATCHNORM_SPATIAL){
-            for (int j = 2; j < dim.size(); ++j){
+        if (mode == CUDNN_BATCHNORM_SPATIAL) {
+            for (int j = 2; j < dim.size(); ++j) {
                 dim[j] = 1;
             }
         }
@@ -6912,7 +6975,7 @@ public:
         // We check that the dimensions of all in responses are the same, so this is OK
         checkCUDNN(__LINE__, cudnnCreateTensorDescriptor(&bnScaleBiasMeanVarDesc) );
         checkCUDNN(__LINE__, cudnnDeriveBNTensorDescriptor(bnScaleBiasMeanVarDesc, in[0]->getDesc(), mode) );
-        
+
         // These should be the same, but for clarity
         weight_numel = numel(weight_dim);
         bias_numel = numel(bias_dim);
@@ -6932,49 +6995,49 @@ public:
         checkCUDA(__LINE__, cudaMalloc( &resultSaveInvVariance,     sizeofBNScaleBiasMeanVar * in.size()) );
         memoryBytes += sizeofBNScaleBiasMeanVar * 4 * in.size();
 
-        for (int i = 0; i < out.size(); ++i){
+        for (int i = 0; i < out.size(); ++i) {
             out[i]->need_diff = train_me || in[i]->need_diff; // if one of them need the grad
             out[i]->receptive_field = in[i]->receptive_field;
             out[i]->receptive_gap = in[i]->receptive_gap;
             out[i]->receptive_offset = in[i]->receptive_offset;
             memoryBytes += out[i]->Malloc(in[i]->dim);
         }
-        
+
         return memoryBytes;
     };
 
     // TODO: 'Much higher performance for HW-packed tensors for both x and y'
     // TODO: We should keep running tally of where we are in dataGPU and diffGPU
     // TODO: Implement groups?
-    void forward(Phase phase_){    
-        for (int i = 0; i < in.size(); ++i){
-            if (phase_ == Training){
+    void forward(Phase phase_) {
+        for (int i = 0; i < in.size(); ++i) {
+            if (phase_ == Training) {
 
                 int weight_index = i * weight_numel;
                 int bias_index = i * bias_numel;
 
                 checkCUDNN(__LINE__, cudnnBatchNormalizationForwardTraining(
-                    cudnnHandle,
-                    mode,
-                    one,
-                    zero,
-                    in[i]->getDesc(),
-                    in[i]->dataGPU,
-                    out[i]->getDesc(),
-                    out[i]->dataGPU,
-                    bnScaleBiasMeanVarDesc,
-                    weight_dataGPU,
-                    bias_dataGPU,
-                    1 / (1 + numForwardTrainingPasses),
-                    resultRunningMean + weight_index,
-                    resultRunningInvVariance + bias_index,
-                    epsilon,
-                    resultSaveMean + weight_index,
-                    resultSaveInvVariance + bias_index) );
+                               cudnnHandle,
+                               mode,
+                               one,
+                               zero,
+                               in[i]->getDesc(),
+                               in[i]->dataGPU,
+                               out[i]->getDesc(),
+                               out[i]->dataGPU,
+                               bnScaleBiasMeanVarDesc,
+                               weight_dataGPU,
+                               bias_dataGPU,
+                               1 / (1 + numForwardTrainingPasses),
+                               resultRunningMean + weight_index,
+                               resultRunningInvVariance + bias_index,
+                               epsilon,
+                               resultSaveMean + weight_index,
+                               resultSaveInvVariance + bias_index) );
 
                 // We want the next in response to use the running
                 // mean/variance we have just computed
-                if (i < in.size() - 1) {                    
+                if (i < in.size() - 1) {
                     checkCUDA(__LINE__, cudaMemcpy(resultRunningMean + weight_index + weight_numel, resultRunningMean + weight_index, sizeofStorageT * weight_numel, cudaMemcpyDeviceToDevice));
                     checkCUDA(__LINE__, cudaMemcpy(resultRunningInvVariance + bias_index + bias_numel, resultRunningInvVariance + bias_index, sizeofStorageT * bias_numel, cudaMemcpyDeviceToDevice));
                     checkCUDA(__LINE__, cudaMemcpy(resultSaveMean + weight_index + weight_numel, resultSaveMean + weight_index, sizeofStorageT * weight_numel, cudaMemcpyDeviceToDevice));
@@ -6982,25 +7045,25 @@ public:
                 }
 
                 numForwardTrainingPasses++;
-            } else{
+            } else {
                 checkCUDNN(__LINE__, cudnnBatchNormalizationForwardTraining(
-                    cudnnHandle,
-                    mode,
-                    one,
-                    zero,
-                    in[i]->getDesc(),
-                    in[i]->dataGPU,
-                    out[i]->getDesc(),
-                    out[i]->dataGPU,
-                    bnScaleBiasMeanVarDesc,
-                    weight_dataGPU,
-                    bias_dataGPU,
-                    1,
-                    NULL,
-                    NULL,
-                    epsilon,
-                    NULL,
-                    NULL) );
+                               cudnnHandle,
+                               mode,
+                               one,
+                               zero,
+                               in[i]->getDesc(),
+                               in[i]->dataGPU,
+                               out[i]->getDesc(),
+                               out[i]->dataGPU,
+                               bnScaleBiasMeanVarDesc,
+                               weight_dataGPU,
+                               bias_dataGPU,
+                               1,
+                               NULL,
+                               NULL,
+                               epsilon,
+                               NULL,
+                               NULL) );
             }
             // TODO: Filed bug report with NVIDIA
             //     checkCUDNN(__LINE__, cudnnBatchNormalizationForwardInference(
@@ -7025,40 +7088,40 @@ public:
     // TODO: 'Much higher performance when HW-packed tensors are used for all of x, dy, dx'
     // TODO: We should keep running tally of where we are in dataGPU and diffGPU
     // TODO: Implement groups?
-    void backward(Phase phase_){
+    void backward(Phase phase_) {
 
         int last_weight_index = (in.size() - 1) * weight_numel;
         int last_bias_index = (in.size() - 1) * bias_numel;
 
-        for (int i = 0; i < in.size(); ++i){
+        for (int i = 0; i < in.size(); ++i) {
 
             int weight_index = i * weight_numel;
             int bias_index = i * bias_numel;
 
             checkCUDNN(__LINE__, cudnnBatchNormalizationBackward(
-                cudnnHandle,
-                mode,
-                one,
-                zero,
-                in[0]->getDesc(),
-                in[0]->dataGPU,
-                out[0]->getDesc(),
-                out[0]->diffGPU,
-                in[0]->getDesc(),
-                in[0]->diffGPU,
-                bnScaleBiasMeanVarDesc,
-                weight_dataGPU,
-                weight_diffGPU,
-                bias_diffGPU,
-                epsilon,
-                resultSaveMean + weight_index,
-                resultSaveInvVariance + bias_index) );
+                           cudnnHandle,
+                           mode,
+                           one,
+                           zero,
+                           in[0]->getDesc(),
+                           in[0]->dataGPU,
+                           out[0]->getDesc(),
+                           out[0]->diffGPU,
+                           in[0]->getDesc(),
+                           in[0]->diffGPU,
+                           bnScaleBiasMeanVarDesc,
+                           weight_dataGPU,
+                           weight_diffGPU,
+                           bias_diffGPU,
+                           epsilon,
+                           resultSaveMean + weight_index,
+                           resultSaveInvVariance + bias_index) );
 
-        // Copy running statistic from last in response to earlier in
-        // responses. Technically, we only need to copy to the first one since
-        // the next forward pass should take care of propagating new running
-        // values
-            if (i < in.size() - 1) {                    
+            // Copy running statistic from last in response to earlier in
+            // responses. Technically, we only need to copy to the first one since
+            // the next forward pass should take care of propagating new running
+            // values
+            if (i < in.size() - 1) {
                 checkCUDA(__LINE__, cudaMemcpy(resultRunningMean + weight_index, resultRunningMean + last_weight_index, sizeofStorageT * weight_numel, cudaMemcpyDeviceToDevice));
                 checkCUDA(__LINE__, cudaMemcpy(resultRunningInvVariance + bias_index, resultRunningInvVariance + last_bias_index, sizeofStorageT * weight_numel, cudaMemcpyDeviceToDevice));
                 checkCUDA(__LINE__, cudaMemcpy(resultSaveMean + weight_index, resultSaveMean + last_weight_index, sizeofStorageT * weight_numel, cudaMemcpyDeviceToDevice));
@@ -7067,7 +7130,7 @@ public:
         }
     };
 
-    ~BatchNormalizationLayer(){
+    ~BatchNormalizationLayer() {
         checkCUDNN(__LINE__, cudnnDestroyTensorDescriptor(bnScaleBiasMeanVarDesc) );
 
         if (resultRunningMean != NULL)          checkCUDA(__LINE__, cudaFree(resultRunningMean) );
@@ -7085,7 +7148,7 @@ public:
 // Net
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-class Net{
+class Net {
 public:
     Phase phase;
     std::vector<Layer*> layers;
@@ -7100,15 +7163,15 @@ public:
     cudnnHandle_t cudnnHandle;
     cublasHandle_t cublasHandle;
 
-    void init(JSON* architecture_obj){
-        checkCUDA(__LINE__,cudaSetDevice(GPU));
+    void init(JSON* architecture_obj) {
+        checkCUDA(__LINE__, cudaSetDevice(GPU));
 
-        checkCUDNN(__LINE__,cudnnCreate(&cudnnHandle) );
+        checkCUDNN(__LINE__, cudnnCreate(&cudnnHandle) );
         checkCUBLAS(__LINE__, cublasCreate(&cublasHandle) );
 
         std::vector<SequenceGenerationLayer*> sequence_layers;
 
-        for (int l=0;l<architecture_obj->array.size();++l){
+        for (int l = 0; l < architecture_obj->array.size(); ++l) {
 
             JSON* p = (JSON*)(architecture_obj->array[l]);
 
@@ -7117,73 +7180,43 @@ public:
             Layer* pLayer;
             Response* pResponse;
 
-                 if (0==type.compare("MemoryData"))     pLayer = new MemoryDataLayer(p);
-            else if (0==type.compare("DiskData")){
+            if (0 == type.compare("MemoryData"))     pLayer = new MemoryDataLayer(p);
+            else if (0 == type.compare("DiskData")) {
                 uint8_t fpTypeid = readTypeID(p->member["file_data"]->returnString());
-                     if (fpTypeid==typeID(typeid(half)))        pLayer = new DiskDataLayer<half>(p);
-                else if (fpTypeid==typeID(typeid(float)))       pLayer = new DiskDataLayer<float>(p);
-                else if (fpTypeid==typeID(typeid(double)))      pLayer = new DiskDataLayer<double>(p);
-                else if (fpTypeid==typeID(typeid(uint8_t)))     pLayer = new DiskDataLayer<uint8_t>(p);
-                else if (fpTypeid==typeID(typeid(uint16_t)))    pLayer = new DiskDataLayer<uint16_t>(p);
-                else if (fpTypeid==typeID(typeid(uint32_t)))    pLayer = new DiskDataLayer<uint32_t>(p);
-                else if (fpTypeid==typeID(typeid(uint64_t)))    pLayer = new DiskDataLayer<uint64_t>(p);
-                else if (fpTypeid==typeID(typeid(int8_t)))      pLayer = new DiskDataLayer<int8_t>(p);
-                else if (fpTypeid==typeID(typeid(int16_t)))     pLayer = new DiskDataLayer<int16_t>(p);
-                else if (fpTypeid==typeID(typeid(int32_t)))     pLayer = new DiskDataLayer<int32_t>(p);
-                else if (fpTypeid==typeID(typeid(int64_t)))     pLayer = new DiskDataLayer<int64_t>(p);
-                else if (fpTypeid==typeID(typeid(char)))        pLayer = new DiskDataLayer<char>(p);
-                else if (fpTypeid==typeID(typeid(bool)))        pLayer = new DiskDataLayer<bool>(p);
+                if (fpTypeid == typeID(typeid(half)))        pLayer = new DiskDataLayer<half>(p);
+                else if (fpTypeid == typeID(typeid(float)))       pLayer = new DiskDataLayer<float>(p);
+                else if (fpTypeid == typeID(typeid(double)))      pLayer = new DiskDataLayer<double>(p);
+                else if (fpTypeid == typeID(typeid(uint8_t)))     pLayer = new DiskDataLayer<uint8_t>(p);
+                else if (fpTypeid == typeID(typeid(uint16_t)))    pLayer = new DiskDataLayer<uint16_t>(p);
+                else if (fpTypeid == typeID(typeid(uint32_t)))    pLayer = new DiskDataLayer<uint32_t>(p);
+                else if (fpTypeid == typeID(typeid(uint64_t)))    pLayer = new DiskDataLayer<uint64_t>(p);
+                else if (fpTypeid == typeID(typeid(int8_t)))      pLayer = new DiskDataLayer<int8_t>(p);
+                else if (fpTypeid == typeID(typeid(int16_t)))     pLayer = new DiskDataLayer<int16_t>(p);
+                else if (fpTypeid == typeID(typeid(int32_t)))     pLayer = new DiskDataLayer<int32_t>(p);
+                else if (fpTypeid == typeID(typeid(int64_t)))     pLayer = new DiskDataLayer<int64_t>(p);
+                else if (fpTypeid == typeID(typeid(char)))        pLayer = new DiskDataLayer<char>(p);
+                else if (fpTypeid == typeID(typeid(bool)))        pLayer = new DiskDataLayer<bool>(p);
             }
-            else if (0==type.compare("PeriodMemoryData")){
-                uint8_t fpTypeid = readTypeID(p->member["file_data"]->returnString());
-                     if (fpTypeid==typeID(typeid(half)))        pLayer = new PeriodMemoryDataLayer<half>(p);
-                else if (fpTypeid==typeID(typeid(float)))       pLayer = new PeriodMemoryDataLayer<float>(p);
-                else if (fpTypeid==typeID(typeid(double)))      pLayer = new PeriodMemoryDataLayer<double>(p);
-                else if (fpTypeid==typeID(typeid(uint8_t)))     pLayer = new PeriodMemoryDataLayer<uint8_t>(p);
-                else if (fpTypeid==typeID(typeid(uint16_t)))    pLayer = new PeriodMemoryDataLayer<uint16_t>(p);
-                else if (fpTypeid==typeID(typeid(uint32_t)))    pLayer = new PeriodMemoryDataLayer<uint32_t>(p);
-                else if (fpTypeid==typeID(typeid(uint64_t)))    pLayer = new PeriodMemoryDataLayer<uint64_t>(p);
-                else if (fpTypeid==typeID(typeid(int8_t)))      pLayer = new PeriodMemoryDataLayer<int8_t>(p);
-                else if (fpTypeid==typeID(typeid(int16_t)))     pLayer = new PeriodMemoryDataLayer<int16_t>(p);
-                else if (fpTypeid==typeID(typeid(int32_t)))     pLayer = new PeriodMemoryDataLayer<int32_t>(p);
-                else if (fpTypeid==typeID(typeid(int64_t)))     pLayer = new PeriodMemoryDataLayer<int64_t>(p);
-                else if (fpTypeid==typeID(typeid(char)))        pLayer = new PeriodMemoryDataLayer<char>(p);
-                else if (fpTypeid==typeID(typeid(bool)))        pLayer = new PeriodMemoryDataLayer<bool>(p);
-            }
-            else if (0==type.compare("PeriodTrainData")){
-                uint8_t fpTypeid = readTypeID(p->member["file_data"]->returnString());
-                     if (fpTypeid==typeID(typeid(half)))        pLayer = new PeriodTrainDataLayer<half>(p);
-                else if (fpTypeid==typeID(typeid(float)))       pLayer = new PeriodTrainDataLayer<float>(p);
-                else if (fpTypeid==typeID(typeid(double)))      pLayer = new PeriodTrainDataLayer<double>(p);
-                else if (fpTypeid==typeID(typeid(uint8_t)))     pLayer = new PeriodTrainDataLayer<uint8_t>(p);
-                else if (fpTypeid==typeID(typeid(uint16_t)))    pLayer = new PeriodTrainDataLayer<uint16_t>(p);
-                else if (fpTypeid==typeID(typeid(uint32_t)))    pLayer = new PeriodTrainDataLayer<uint32_t>(p);
-                else if (fpTypeid==typeID(typeid(uint64_t)))    pLayer = new PeriodTrainDataLayer<uint64_t>(p);
-                else if (fpTypeid==typeID(typeid(int8_t)))      pLayer = new PeriodTrainDataLayer<int8_t>(p);
-                else if (fpTypeid==typeID(typeid(int16_t)))     pLayer = new PeriodTrainDataLayer<int16_t>(p);
-                else if (fpTypeid==typeID(typeid(int32_t)))     pLayer = new PeriodTrainDataLayer<int32_t>(p);
-                else if (fpTypeid==typeID(typeid(int64_t)))     pLayer = new PeriodTrainDataLayer<int64_t>(p);
-                else if (fpTypeid==typeID(typeid(char)))        pLayer = new PeriodTrainDataLayer<char>(p);
-                else if (fpTypeid==typeID(typeid(bool)))        pLayer = new PeriodTrainDataLayer<bool>(p);
-            }
-            else if (0==type.compare("ElementWise"))            pLayer = new ElementWiseLayer(p);
-            else if (0==type.compare("Concat"))                 pLayer = new ConcatLayer(p);
-            else if (0==type.compare("Convolution"))            pLayer = new ConvolutionLayer(p);
-            else if (0==type.compare("Reshape"))                pLayer = new ReshapeLayer(p);
-            else if (0==type.compare("InnerProduct"))           pLayer = new InnerProductLayer(p);
-            else if (0==type.compare("Pooling"))                pLayer = new PoolingLayer(p);
-            else if (0==type.compare("Dropout"))                pLayer = new DropoutLayer(p);
-            else if (0==type.compare("Activation"))             pLayer = new ActivationLayer(p);
-            else if (0==type.compare("LRN"))                    pLayer = new LRNLayer(p);
-            else if (0==type.compare("Softmax"))                pLayer = new SoftmaxLayer(p);
-            else if (0==type.compare("ROI"))                    pLayer = new ROILayer(p);
-            else if (0==type.compare("ROIPooling"))             pLayer = new ROIPoolingLayer(p);
-            else if (0==type.compare("Tensor"))                 pLayer = new TensorLayer(p);
-            else if (0==type.compare("LSTM"))                   pLayer = new LSTMLayer(p);
-            else if (0==type.compare("SequenceGeneration"))    {pLayer = new SequenceGenerationLayer(p); sequence_layers.push_back((SequenceGenerationLayer*)pLayer);   }
-            else if (0==type.compare("BatchNormalization"))     pLayer = new BatchNormalizationLayer(p);
-            else if (0==type.compare("Loss"))                  {pLayer = new LossLayer(p); loss_layers.push_back((LossLayer*)pLayer);   }
-            else { std::cout<<"ERROR: recognizable layer in JSON file: "<<type<<std::endl; FatalError(__LINE__);};
+            else if (0 == type.compare("PeriodMemoryData"))       pLayer = new PeriodMemoryDataLayer<float>(p);
+            else if (0 == type.compare("PeriodTrainData"))        pLayer = new PeriodTrainDataLayer<float>(p);
+            else if (0 == type.compare("ElementWise"))            pLayer = new ElementWiseLayer(p);
+            else if (0 == type.compare("Concat"))                 pLayer = new ConcatLayer(p);
+            else if (0 == type.compare("Convolution"))            pLayer = new ConvolutionLayer(p);
+            else if (0 == type.compare("Reshape"))                pLayer = new ReshapeLayer(p);
+            else if (0 == type.compare("InnerProduct"))           pLayer = new InnerProductLayer(p);
+            else if (0 == type.compare("Pooling"))                pLayer = new PoolingLayer(p);
+            else if (0 == type.compare("Dropout"))                pLayer = new DropoutLayer(p);
+            else if (0 == type.compare("Activation"))             pLayer = new ActivationLayer(p);
+            else if (0 == type.compare("LRN"))                    pLayer = new LRNLayer(p);
+            else if (0 == type.compare("Softmax"))                pLayer = new SoftmaxLayer(p);
+            else if (0 == type.compare("ROI"))                    pLayer = new ROILayer(p);
+            else if (0 == type.compare("ROIPooling"))             pLayer = new ROIPoolingLayer(p);
+            else if (0 == type.compare("Tensor"))                 pLayer = new TensorLayer(p);
+            else if (0 == type.compare("LSTM"))                   pLayer = new LSTMLayer(p);
+            else if (0 == type.compare("SequenceGeneration"))    {pLayer = new SequenceGenerationLayer(p); sequence_layers.push_back((SequenceGenerationLayer*)pLayer);   }
+            else if (0 == type.compare("BatchNormalization"))     pLayer = new BatchNormalizationLayer(p);
+            else if (0 == type.compare("Loss"))                  {pLayer = new LossLayer(p); loss_layers.push_back((LossLayer*)pLayer);   }
+            else { std::cout << "ERROR: recognizable layer in JSON file: " << type << std::endl; FatalError(__LINE__);};
 
             pLayer->cudnnHandle = cudnnHandle;
             pLayer->cublasHandle = cublasHandle;
@@ -7191,11 +7224,11 @@ public:
 
             addLayer(pLayer);
 
-            if (p->member.find("out") != p->member.end()){
+            if (p->member.find("out") != p->member.end()) {
                 std::vector<std::string> out = p->member["out"]->returnStringVector();
-                for (int i=0;i<out.size();i++){
+                for (int i = 0; i < out.size(); i++) {
                     pResponse = getResponse(out[i]);
-                    if (pResponse==NULL){
+                    if (pResponse == NULL) {
                         pResponse = addResponse(new Response(out[i]));
                         pResponse->cublasHandle = cublasHandle;
                     }
@@ -7203,11 +7236,11 @@ public:
                 }
             }
 
-            if (p->member.find("in") != p->member.end()){
+            if (p->member.find("in") != p->member.end()) {
                 std::vector<std::string> in = p->member["in"]->returnStringVector();
-                for (int i=0;i<in.size();i++){
+                for (int i = 0; i < in.size(); i++) {
                     pResponse = getResponse(in[i]);
-                    if (pResponse==NULL){
+                    if (pResponse == NULL) {
                         pResponse = addResponse(new Response(in[i]));
                         pResponse->cublasHandle = cublasHandle;
                     }
@@ -7216,13 +7249,13 @@ public:
             }
         }
 
-        for (int l=0;l<sequence_layers.size();++l){
+        for (int l = 0; l < sequence_layers.size(); ++l) {
             sequence_layers[l]->resultResponse = getResponse(sequence_layers[l]->result);
         }
     };
 
 
-    Net(std::string filename){
+    Net(std::string filename) {
         JSON* test_obj = new JSON;
         JSON* architecture_obj = new JSON;
         parseNetworkJSON(filename, NULL, test_obj, architecture_obj);
@@ -7236,252 +7269,252 @@ public:
         delete architecture_obj;
     };
 
-    Net(JSON* architecture_obj, int GPU_ = 0): GPU(GPU_){
+    Net(JSON* architecture_obj, int GPU_ = 0): GPU(GPU_) {
         init(architecture_obj);
     };
 
-    ~Net(){
-        checkCUDA(__LINE__,cudaSetDevice(GPU));
+    ~Net() {
+        checkCUDA(__LINE__, cudaSetDevice(GPU));
 
-        for (int i=0;i<layers.size();++i){
+        for (int i = 0; i < layers.size(); ++i) {
             delete layers[i];
         }
-        for (int i=0;i<responses.size();++i){
+        for (int i = 0; i < responses.size(); ++i) {
             delete responses[i];
         }
-        checkCUDNN(__LINE__,cudnnDestroy(cudnnHandle) );
+        checkCUDNN(__LINE__, cudnnDestroy(cudnnHandle) );
         checkCUBLAS(__LINE__, cublasDestroy(cublasHandle) );
     };
 
-    Layer* getLayer(std::string name){
-        for (int l=0; l<layers.size();++l){
-            if (layers[l]->name == name){
+    Layer* getLayer(std::string name) {
+        for (int l = 0; l < layers.size(); ++l) {
+            if (layers[l]->name == name) {
                 return layers[l];
             }
         }
         return NULL;
     };
 
-    Response* getResponse(std::string name){
-        for (int r=0; r<responses.size();++r){
-            if (responses[r]->name == name){
+    Response* getResponse(std::string name) {
+        for (int r = 0; r < responses.size(); ++r) {
+            if (responses[r]->name == name) {
                 return responses[r];
             }
         }
         return NULL;
     };
 
-    Layer* addLayer(Layer* pLayer){
+    Layer* addLayer(Layer* pLayer) {
         layers.push_back(pLayer);
         return pLayer;
     };
 
-    Response* addResponse(Response* pResponse){
+    Response* addResponse(Response* pResponse) {
         responses.push_back(pResponse);
         return pResponse;
     };
 
-    void randInit(){
-        checkCUDA(__LINE__,cudaSetDevice(GPU));
-        for (int l=0; l<layers.size();++l){
+    void randInit() {
+        checkCUDA(__LINE__, cudaSetDevice(GPU));
+        for (int l = 0; l < layers.size(); ++l) {
             layers[l]->randInit();
         }
     };
 
-    void loadWeights(std::vector<Tensor<StorageT>*> weights, bool diff=false){
-        checkCUDA(__LINE__,cudaSetDevice(GPU));
+    void loadWeights(std::vector<Tensor<StorageT>*> weights, bool diff = false) {
+        checkCUDA(__LINE__, cudaSetDevice(GPU));
         // let the layers find their weights based on their names
-        for (int l=0; l<layers.size();++l){
+        for (int l = 0; l < layers.size(); ++l) {
             layers[l]->setWeights(weights);
             if (diff) layers[l]->setDiffs(weights);
         }
     };
 
-    void loadWeights(std::string filename, bool diff=false){
-        std::cout<< "====================================================================================================================================="<<std::endl;
+    void loadWeights(std::string filename, bool diff = false) {
+        std::cout << "=====================================================================================================================================" << std::endl;
 
         std::vector<Tensor<StorageT>*> weights = readTensors<StorageT>(filename);
         loadWeights(weights, diff);
 
         // release memory for the weights
-        for (int i=0; i<weights.size();++i){
+        for (int i = 0; i < weights.size(); ++i) {
             delete weights[i];
         }
     };
 
-    void saveWeights(std::string filename, bool diff=false){
-        FILE* fp = fopen(filename.c_str(),"wb");
-        while (fp==NULL) {
-            std::cerr<<"Net::saveWeights: fail to open file "<<filename<<". Please provide it first. Will retry after 5 seconds."<<std::endl;
+    void saveWeights(std::string filename, bool diff = false) {
+        FILE* fp = fopen(filename.c_str(), "wb");
+        while (fp == NULL) {
+            std::cerr << "Net::saveWeights: fail to open file " << filename << ". Please provide it first. Will retry after 5 seconds." << std::endl;
             std::this_thread::sleep_for(std::chrono::seconds(5));
-            fp = fopen(filename.c_str(),"wb");
+            fp = fopen(filename.c_str(), "wb");
         }
 
-        for (int l=0; l<layers.size();++l){
+        for (int l = 0; l < layers.size(); ++l) {
             layers[l]->saveWeights(fp);
             if (diff) layers[l]->saveDiffs(fp);
         }
         fclose(fp);
     };
 
-    size_t Malloc(Phase phase_ = Testing){
-        checkCUDA(__LINE__,cudaSetDevice(GPU));
+    size_t Malloc(Phase phase_ = Testing) {
+        checkCUDA(__LINE__, cudaSetDevice(GPU));
 
         phase = phase_;
 
-        std::cout<< "====================================================================================================================================="<<std::endl;
-        std::cout<< "  Layers:                                                                        Responses:                                          "<<std::endl;
-        std::cout<< "====================================================================================================================================="<<std::endl;
+        std::cout << "=====================================================================================================================================" << std::endl;
+        std::cout << "  Layers:                                                                        Responses:                                          " << std::endl;
+        std::cout << "=====================================================================================================================================" << std::endl;
 
         size_t memoryBytes = 0;
 
-        for (int l=0;l<layers.size();++l){
+        for (int l = 0; l < layers.size(); ++l) {
             memoryBytes += layers[l]->Malloc(phase);
         }
 
-        std::cout<< "====================================================================================================================================="<<std::endl;
-        std::cout<< "GPU " << GPU << ": Total GPU memory: ";    memorySizePrint(memoryBytes);   std::cout<<std::endl;
+        std::cout << "=====================================================================================================================================" << std::endl;
+        std::cout << "GPU " << GPU << ": Total GPU memory: ";    memorySizePrint(memoryBytes);   std::cout << std::endl;
 
         return memoryBytes;
     };
 
-    void forward(){
-        for (int l=0; l<layers.size();++l){
-            if (layers[l]->phase == phase || layers[l]->phase == TrainingTesting){
-                if (debug_mode){
-                    std::cout<<"[Forward] Layer["<<l<<"] "<<layers[l]->name;
+    void forward() {
+        for (int l = 0; l < layers.size(); ++l) {
+            if (layers[l]->phase == phase || layers[l]->phase == TrainingTesting) {
+                if (debug_mode) {
+                    std::cout << "[Forward] Layer[" << l << "] " << layers[l]->name;
                     ComputeT avg;
-                    avg = layers[l]->ameanWeightData(); if (avg!=-1) std::cout<<" weight.data: "<< avg;
-                    avg = layers[l]->ameanBiasData();   if (avg!=-1) std::cout<<" bias.data: "<< avg;
+                    avg = layers[l]->ameanWeightData(); if (avg != -1) std::cout << " weight.data: " << avg;
+                    avg = layers[l]->ameanBiasData();   if (avg != -1) std::cout << " bias.data: " << avg;
                     tic();
                 }
 
                 layers[l]->forward(phase);
 
-                if (debug_mode){
-                    checkCUDA(__LINE__,cudaDeviceSynchronize()); checkCUDA(__LINE__,cudaGetLastError());
-                    if (layers[l]->out.size()>0){
-                        for (size_t o=0; o<layers[l]->out.size();++o){
+                if (debug_mode) {
+                    checkCUDA(__LINE__, cudaDeviceSynchronize()); checkCUDA(__LINE__, cudaGetLastError());
+                    if (layers[l]->out.size() > 0) {
+                        for (size_t o = 0; o < layers[l]->out.size(); ++o) {
                             ComputeT avg = layers[l]->out[o]->ameanData();
-                            if (avg!=-1) std::cout<<" out[" << o << "].data("<< layers[l]->out[o]->name << "): " << avg;
+                            if (avg != -1) std::cout << " out[" << o << "].data(" << layers[l]->out[o]->name << "): " << avg;
                             layers[l]->out[o]->checkNaN();
                         }
                     }
-                    std::cout<<std::endl; toc();
+                    std::cout << std::endl; toc();
                 }
             }
         }
     };
 
-    void backward(){
-        for (int r=0;r<responses.size();++r){
+    void backward() {
+        for (int r = 0; r < responses.size(); ++r) {
             responses[r]->clearDiff();
         }
 
-        for (int l=layers.size()-1;l>=0; --l){
-            if (layers[l]->phase == phase || layers[l]->phase == TrainingTesting){
+        for (int l = layers.size() - 1; l >= 0; --l) {
+            if (layers[l]->phase == phase || layers[l]->phase == TrainingTesting) {
 
-                if (debug_mode){
-                    std::cout<<"[Backward] Layer["<<l<<"] "<<layers[l]->name;
+                if (debug_mode) {
+                    std::cout << "[Backward] Layer[" << l << "] " << layers[l]->name;
                     tic();
                 }
 
                 layers[l]->backward(phase);
 
-                if (debug_mode){
-                    checkCUDA(__LINE__,cudaDeviceSynchronize()); checkCUDA(__LINE__,cudaGetLastError());
+                if (debug_mode) {
+                    checkCUDA(__LINE__, cudaDeviceSynchronize()); checkCUDA(__LINE__, cudaGetLastError());
                     ComputeT avg;
-                    avg = layers[l]->ameanWeightDiff(); if (avg!=-1) std::cout<<" weight.diff: "<<avg;
-                    avg = layers[l]->ameanBiasDiff();   if (avg!=-1) std::cout<<" bias.diff: "<<avg;
+                    avg = layers[l]->ameanWeightDiff(); if (avg != -1) std::cout << " weight.diff: " << avg;
+                    avg = layers[l]->ameanBiasDiff();   if (avg != -1) std::cout << " bias.diff: " << avg;
 
-                    if (layers[l]->in.size()>0){
-                        for (size_t i=0;i<layers[l]->in.size();++i){
-                            avg = layers[l]->in[i]->ameanDiff(); if (avg!=-1) std::cout<<" in[" << i << "].diff(" << layers[l]->in[i]->name << "): "<<avg;
+                    if (layers[l]->in.size() > 0) {
+                        for (size_t i = 0; i < layers[l]->in.size(); ++i) {
+                            avg = layers[l]->in[i]->ameanDiff(); if (avg != -1) std::cout << " in[" << i << "].diff(" << layers[l]->in[i]->name << "): " << avg;
                         }
                     }
-                    std::cout<<std::endl; toc();
+                    std::cout << std::endl; toc();
                 }
             }
         }
     };
 
-    void update(){
-        for (int l=0; l<layers.size();++l){
+    void update() {
+        for (int l = 0; l < layers.size(); ++l) {
             layers[l]->update();
         }
     };
 
-    void resetLoss(){
-        for (int l=0; l<loss_layers.size();++l){
+    void resetLoss() {
+        for (int l = 0; l < loss_layers.size(); ++l) {
             loss_layers[l]->result = ComputeT(0);
             loss_layers[l]->loss   = ComputeT(0);
         }
     };
 
-    void eval(bool sync){
-        checkCUDA(__LINE__,cudaSetDevice(GPU));
-        for (int l=0; l<loss_layers.size();++l){
+    void eval(bool sync) {
+        checkCUDA(__LINE__, cudaSetDevice(GPU));
+        for (int l = 0; l < loss_layers.size(); ++l) {
             if (loss_layers[l]->phase == phase || loss_layers[l]->phase == TrainingTesting)
                 loss_layers[l]->eval();
         }
-        if(sync) checkCUDA(__LINE__,cudaDeviceSynchronize());
+        if (sync) checkCUDA(__LINE__, cudaDeviceSynchronize());
     };
 
-    void stepTest(bool sync){
-        checkCUDA(__LINE__,cudaSetDevice(GPU));
+    void stepTest(bool sync) {
+        checkCUDA(__LINE__, cudaSetDevice(GPU));
 
         resetLoss();
-        for (int i=0; i < test_iter; ++i){
+        for (int i = 0; i < test_iter; ++i) {
             forward();
             eval(false);
         }
-        for (int l=0; l<loss_layers.size();++l){
+        for (int l = 0; l < loss_layers.size(); ++l) {
             loss_layers[l]->result /= test_iter;
             loss_layers[l]->loss   /= test_iter;
         }
 
-        if(sync) checkCUDA(__LINE__,cudaDeviceSynchronize());
+        if (sync) checkCUDA(__LINE__, cudaDeviceSynchronize());
     };
 
 
-    void stepTrain(bool sync){
-        checkCUDA(__LINE__,cudaSetDevice(GPU));
+    void stepTrain(bool sync) {
+        checkCUDA(__LINE__, cudaSetDevice(GPU));
 
         update();
 
         resetLoss();
-        for (int l=0; l<layers.size();++l){
+        for (int l = 0; l < layers.size(); ++l) {
             layers[l]->clearDiff();
         }
 
-        for (int i=0; i < train_iter; ++i){
+        for (int i = 0; i < train_iter; ++i) {
             forward();
             backward();
         }
 
-        for (int l=0; l<loss_layers.size();++l){
+        for (int l = 0; l < loss_layers.size(); ++l) {
             loss_layers[l]->result /= train_iter;
             loss_layers[l]->loss   /= train_iter;
         }
 
-        if(sync) checkCUDA(__LINE__,cudaDeviceSynchronize());
+        if (sync) checkCUDA(__LINE__, cudaDeviceSynchronize());
     };
 
 
-    void getTopActivations(std::string dataResponseName, std::vector<std::string> responseNames, std::vector<std::vector<int> > responseChannels, std::string saveFilePrefix, int topK, int maxIterations){
+    void getTopActivations(std::string dataResponseName, std::vector<std::string> responseNames, std::vector<std::vector<int> > responseChannels, std::string saveFilePrefix, int topK, int maxIterations) {
 
         phase = Training;
 
         DataLayer* pDataLayer = NULL;
-        for (int l=0; l<layers.size();++l){
-            if (layers[l]->phase == phase || layers[l]->phase == TrainingTesting){
-                if (layers[l]->isDataLayer()){
+        for (int l = 0; l < layers.size(); ++l) {
+            if (layers[l]->phase == phase || layers[l]->phase == TrainingTesting) {
+                if (layers[l]->isDataLayer()) {
                     pDataLayer = (DataLayer*) layers[l];
                     break;
                 }
             }
         }
-        if (pDataLayer==NULL) { std::cerr<<"No data layer."<<std::endl; FatalError(__LINE__);};
+        if (pDataLayer == NULL) { std::cerr << "No data layer." << std::endl; FatalError(__LINE__);};
 
         Response* rData = getResponse(dataResponseName);
 
@@ -7491,7 +7524,7 @@ public:
         data.resize(responseChannels.size());
         scores.resize(responseChannels.size());
         scoresLowest.resize(responseChannels.size());
-        for(int i=0;i<responseNames.size();++i){
+        for (int i = 0; i < responseNames.size(); ++i) {
             data[i].resize(responseChannels[i].size());
             scores[i].resize(responseChannels[i].size());
             scoresLowest[i].resize(responseChannels[i].size());
@@ -7503,15 +7536,15 @@ public:
 
         int iter = 0;
 
-        while(pDataLayer->epoch == 0 && iter < maxIterations){
+        while (pDataLayer->epoch == 0 && iter < maxIterations) {
             resetLoss();
             forward();
             eval(false);
 
             // display
             std::cout << "Iteration " << iter << "  ";
-            for (int i=0;i<loss_layers.size();++i){
-                if (loss_layers[i]->phase == phase || loss_layers[i]->phase == TrainingTesting){
+            for (int i = 0; i < loss_layers.size(); ++i) {
+                if (loss_layers[i]->phase == phase || loss_layers[i]->phase == TrainingTesting) {
                     loss_layers[i]->display();
                 }
             }
@@ -7519,8 +7552,8 @@ public:
 
             rdataTensor->readGPU(rData->dataGPU);
 
-            for(int i=0;i<responseNames.size();++i){
-                Response* r= getResponse(responseNames[i]);
+            for (int i = 0; i < responseNames.size(); ++i) {
+                Response* r = getResponse(responseNames[i]);
                 Tensor<StorageT>* features = new Tensor<StorageT>(r->dim);
                 features->readGPU(r->dataGPU);
 
@@ -7530,43 +7563,43 @@ public:
                 std::vector<int> receptive_offset;      receptive_offset.resize(r->receptive_field.size());
                 std::vector<int> receptive_gap;         receptive_gap.resize(r->receptive_field.size());
 
-                for (int d=0;d<r->receptive_field.size();++d){
-                    receptive_field [d] = r->receptive_field[d] /rData->receptive_field[d];
-                    receptive_offset[d] = r->receptive_offset[d]/rData->receptive_field[d];
-                    receptive_gap   [d] = r->receptive_gap[d]   /rData->receptive_field[d];
+                for (int d = 0; d < r->receptive_field.size(); ++d) {
+                    receptive_field [d] = r->receptive_field[d] / rData->receptive_field[d];
+                    receptive_offset[d] = r->receptive_offset[d] / rData->receptive_field[d];
+                    receptive_gap   [d] = r->receptive_gap[d]   / rData->receptive_field[d];
                 }
 
                 std::vector<int> dataDim;
                 dataDim.push_back(dataChannels);
                 dataDim.insert( dataDim.end(), receptive_field.begin(), receptive_field.end() );
 
-                for (int j=0;j<responseChannels[i].size();++j){
+                for (int j = 0; j < responseChannels[i].size(); ++j) {
                     int c = responseChannels[i][j];
-                    if (c<0 || c >= r->dim[1]){
-                        std::cerr<<"Channel exceeds maximal channel: Indexing Channel "<<c<<" outof "<<r->dim[1]<<" channels in "<<responseNames[i]<<std::endl;
+                    if (c < 0 || c >= r->dim[1]) {
+                        std::cerr << "Channel exceeds maximal channel: Indexing Channel " << c << " outof " << r->dim[1] << " channels in " << responseNames[i] << std::endl;
                         FatalError(__LINE__);
                     }
-                    for(int n=0; n<r->dim[0]; ++n){
-                        for(size_t k=0; k<spel; ++k){
+                    for (int n = 0; n < r->dim[0]; ++n) {
+                        for (size_t k = 0; k < spel; ++k) {
                             size_t idx = (n * r->dim[1] + c) * spel + k;
                             ComputeT val = CPUStorage2ComputeT(features->CPUmem[idx]);
 
-                            if (scores[i][j].size()<topK || scoresLowest[i][j]< val){
+                            if (scores[i][j].size() < topK || scoresLowest[i][j] < val) {
                                 Tensor<StorageT>* toSave = new Tensor<StorageT>(dataDim);
 
                                 toSave->initialize(CPUCompute2StorageT(0));
 
                                 // copy the n-th, all channesl, all spatal
-                                if (dataDim.size()==3){
+                                if (dataDim.size() == 3) {
                                     // convert k to sx and sy
                                     int sx = receptive_offset[0] + k / features->dim[3] * receptive_gap[0];
                                     int sy = receptive_offset[1] + k % features->dim[3] * receptive_gap[1];
 
-                                    for (int ic=0;ic<dataDim[0];++ic){
-                                        for(int x=0; x<dataDim[1];++x){
-                                            for(int y=0; y<dataDim[2];++y){
-                                                if ( 0<=sx+x && sx+x< rData->dim[2] && 0<=sy+y && sy+y< rData->dim[3] ) {
-                                                    size_t idxData  = ((n * rData->dim[1] + ic) * rData->dim[2] + (sx+x)) * rData->dim[3] + (sy+y);
+                                    for (int ic = 0; ic < dataDim[0]; ++ic) {
+                                        for (int x = 0; x < dataDim[1]; ++x) {
+                                            for (int y = 0; y < dataDim[2]; ++y) {
+                                                if ( 0 <= sx + x && sx + x < rData->dim[2] && 0 <= sy + y && sy + y < rData->dim[3] ) {
+                                                    size_t idxData  = ((n * rData->dim[1] + ic) * rData->dim[2] + (sx + x)) * rData->dim[3] + (sy + y);
                                                     size_t idxWrite = (ic * dataDim[1] + x) * dataDim[2] + y;
                                                     toSave->CPUmem[idxWrite] = rdataTensor->CPUmem[idxData];
                                                 }
@@ -7574,18 +7607,18 @@ public:
                                         }
                                     }
 
-                                }else if (dataDim.size()==4){
+                                } else if (dataDim.size() == 4) {
                                     // convert k to sx and sy
                                     int sx = receptive_offset[0] + k / (features->dim[3] * features->dim[4]) * receptive_gap[0];
                                     int sy = receptive_offset[1] + (k / features->dim[4]) % features->dim[3] * receptive_gap[1];
                                     int sz = receptive_offset[2] + k % features->dim[4] * receptive_gap[2];
 
-                                    for (int ic=0;ic<dataDim[0];++ic){
-                                        for(int x=0; x<dataDim[1];++x){
-                                            for(int y=0; y<dataDim[2];++y){
-                                                for(int z=0; z<dataDim[3];++z){
-                                                    if ( 0<=sx+x && sx+x< rData->dim[2] && 0<=sy+y && sy+y< rData->dim[3] && 0<=sz+z && sz+z< rData->dim[4]) {
-                                                        size_t idxData  = (((n * rData->dim[1] + ic) * rData->dim[2] + (sx+x)) * rData->dim[3] + (sy+y)) * rData->dim[4] + (sz+z);
+                                    for (int ic = 0; ic < dataDim[0]; ++ic) {
+                                        for (int x = 0; x < dataDim[1]; ++x) {
+                                            for (int y = 0; y < dataDim[2]; ++y) {
+                                                for (int z = 0; z < dataDim[3]; ++z) {
+                                                    if ( 0 <= sx + x && sx + x < rData->dim[2] && 0 <= sy + y && sy + y < rData->dim[3] && 0 <= sz + z && sz + z < rData->dim[4]) {
+                                                        size_t idxData  = (((n * rData->dim[1] + ic) * rData->dim[2] + (sx + x)) * rData->dim[3] + (sy + y)) * rData->dim[4] + (sz + z);
                                                         size_t idxWrite = ((ic * dataDim[1] + x) * dataDim[2] + y) * dataDim[3] + z;
                                                         toSave->CPUmem[idxWrite] = rdataTensor->CPUmem[idxData];
                                                     }
@@ -7593,26 +7626,26 @@ public:
                                             }
                                         }
                                     }
-                                }else{
-                                    std::cerr<<"No implemented."<<std::endl;
+                                } else {
+                                    std::cerr << "No implemented." << std::endl;
                                     FatalError(__LINE__);
                                 }
 
-                                if (scores[i][j].size()<topK){
+                                if (scores[i][j].size() < topK) {
                                     scores[i][j].push_back(val);
                                     data[i][j].push_back(toSave);
-                                    if (scores[i][j].size()==topK){
+                                    if (scores[i][j].size() == topK) {
                                         std::vector<ComputeT>::iterator minEl = min_element(scores[i][j].begin(), scores[i][j].end());
-                                        scoresLowest[i][j]= *minEl;
+                                        scoresLowest[i][j] = *minEl;
                                     }
-                                }else{
+                                } else {
                                     std::vector<ComputeT>::iterator minEl = min_element(scores[i][j].begin(), scores[i][j].end());
                                     int minID = std::distance(scores[i][j].begin(), minEl);
-                                    scores[i][j][minID]=val;
+                                    scores[i][j][minID] = val;
                                     delete data[i][j][minID];
                                     data[i][j][minID] = toSave;
                                     minEl = min_element(scores[i][j].begin(), scores[i][j].end());
-                                    scoresLowest[i][j]= *minEl;
+                                    scoresLowest[i][j] = *minEl;
                                 }
                             }
                         }
@@ -7626,26 +7659,26 @@ public:
         delete rdataTensor;
 
         // saving
-        for(int i=0;i<responseNames.size();++i){
-            for (int j=0;j<responseChannels[i].size();++j){
+        for (int i = 0; i < responseNames.size(); ++i) {
+            for (int j = 0; j < responseChannels[i].size(); ++j) {
                 std::vector<size_t> indices = sort_indexes(scores[i][j]);
                 std::vector<Tensor<StorageT>*> toWrite;
                 toWrite.resize(indices.size());
-                std::cout<<responseNames[i]<<"_"<<responseChannels[i][j]<<": ";
-                for(size_t k=0;k<indices.size();++k){
-                    std::cout<<scores[i][j][indices[indices.size()-1-k]]<<" ";
-                    toWrite[k]= data[i][j][indices[indices.size()-1-k]];
+                std::cout << responseNames[i] << "_" << responseChannels[i][j] << ": ";
+                for (size_t k = 0; k < indices.size(); ++k) {
+                    std::cout << scores[i][j][indices[indices.size() - 1 - k]] << " ";
+                    toWrite[k] = data[i][j][indices[indices.size() - 1 - k]];
                 }
-                std::cout<<std::endl;
+                std::cout << std::endl;
 
                 std::string Fname = saveFilePrefix + responseNames[i] + "_" + std::to_string(responseChannels[i][j]) + ".tensor";
-                while (is_file_exist(Fname)){
-                    std::cerr<<"File "<<Fname<<" exists. Please delete it first. Will retry after 5 seconds."<<std::endl;
+                while (is_file_exist(Fname)) {
+                    std::cerr << "File " << Fname << " exists. Please delete it first. Will retry after 5 seconds." << std::endl;
                     std::this_thread::sleep_for (std::chrono::seconds(5));
                 }
 
                 writeTensors<StorageT>(Fname, toWrite);
-                for(size_t k=0;k<toWrite.size();++k){
+                for (size_t k = 0; k < toWrite.size(); ++k) {
                     delete toWrite[k];
                 }
             }
@@ -7653,97 +7686,97 @@ public:
     };
 
     // for testing or extract feature, have to call after Malloc
-    std::vector<ComputeT> test(std::vector<std::string> responseNames = std::vector<std::string>(), std::vector<std::string> saveFilenames = std::vector<std::string>(), int itersPerSave=0){
+    std::vector<ComputeT> test(std::vector<std::string> responseNames = std::vector<std::string>(), std::vector<std::string> saveFilenames = std::vector<std::string>(), int itersPerSave = 0) {
 
         phase = Testing;
 
         std::vector<ComputeT> result(loss_layers.size(), 0);
-        std::vector<Tensor<StorageT>*> features(responseNames.size(),NULL);
+        std::vector<Tensor<StorageT>*> features(responseNames.size(), NULL);
 
-        std::vector<FILE*> files(responseNames.size(),NULL);
+        std::vector<FILE*> files(responseNames.size(), NULL);
 
         DataLayer* pDataLayer = NULL;
-        for (int l=0; l<layers.size();++l){
-            if (layers[l]->phase == phase || layers[l]->phase == TrainingTesting){
-                if (layers[l]->isDataLayer()){
+        for (int l = 0; l < layers.size(); ++l) {
+            if (layers[l]->phase == phase || layers[l]->phase == TrainingTesting) {
+                if (layers[l]->isDataLayer()) {
                     pDataLayer = (DataLayer*) layers[l];
                     break;
                 }
             }
         }
-        if (pDataLayer==NULL) { std::cerr<<"No data layer for Testing."<<std::endl; FatalError(__LINE__);};
+        if (pDataLayer == NULL) { std::cerr << "No data layer for Testing." << std::endl; FatalError(__LINE__);};
 
         std::vector<size_t> total_size(responseNames.size());
-        for(int i=0;i<responseNames.size();++i){
+        for (int i = 0; i < responseNames.size(); ++i) {
             Response* r = getResponse(responseNames[i]);
             std::vector<int> dim = r->dim;
             dim[0] = pDataLayer->numofitems();
             total_size[i] = numel(dim);
         }
 
-        std::vector<int> file_counter(responseNames.size(),0);
+        std::vector<int> file_counter(responseNames.size(), 0);
 
-        std::cout<< "====================================================================================================================================="<<std::endl;
+        std::cout << "=====================================================================================================================================" << std::endl;
 
         int iter = 0;
 
-        while(pDataLayer->epoch == 0){
+        while (pDataLayer->epoch == 0) {
             resetLoss();
             forward();
             eval(false);
 
             // display
-            if (display_iter >0 && iter % display_iter ==0) std::cout << "Iteration " << iter << "  ";
-            for (int i=0;i<loss_layers.size();++i){
-                if (loss_layers[i]->phase == phase || loss_layers[i]->phase == TrainingTesting){
-                    if (display_iter >0 && iter % display_iter ==0) loss_layers[i]->display();
+            if (display_iter > 0 && iter % display_iter == 0) std::cout << "Iteration " << iter << "  ";
+            for (int i = 0; i < loss_layers.size(); ++i) {
+                if (loss_layers[i]->phase == phase || loss_layers[i]->phase == TrainingTesting) {
+                    if (display_iter > 0 && iter % display_iter == 0) loss_layers[i]->display();
                     result[i] += loss_layers[i]->result;
                 }
             }
-            if (display_iter >0 && iter % display_iter ==0) std::cout << std::endl;
+            if (display_iter > 0 && iter % display_iter == 0) std::cout << std::endl;
 
             // get features
-            if (responseNames.size()>0){
-                for(int i=0;i<responseNames.size();++i){
-                    Response* r= getResponse(responseNames[i]);
-                    if ((itersPerSave ==0 && iter==0) || (itersPerSave !=0 && iter % itersPerSave ==0)){
+            if (responseNames.size() > 0) {
+                for (int i = 0; i < responseNames.size(); ++i) {
+                    Response* r = getResponse(responseNames[i]);
+                    if ((itersPerSave == 0 && iter == 0) || (itersPerSave != 0 && iter % itersPerSave == 0)) {
 
                         std::string Fname = saveFilenames[i];
 
-                        if (itersPerSave!=0){
+                        if (itersPerSave != 0) {
                             Fname = Fname + '_' + std::to_string(file_counter[i]) + ".tensor";
                         }
 
-                        while (is_file_exist(Fname)){
-                            std::cerr<<"File "<<Fname<<" exists. Please delete it first. Will retry after 5 seconds."<<std::endl;
+                        while (is_file_exist(Fname)) {
+                            std::cerr << "File " << Fname << " exists. Please delete it first. Will retry after 5 seconds." << std::endl;
                             std::this_thread::sleep_for (std::chrono::seconds(5));
                         }
 
                         Response* r = getResponse(responseNames[i]);
-                        if (features[i]==NULL)
+                        if (features[i] == NULL)
                             features[i] = new Tensor<StorageT>(r->dim);
-                        files[i] = fopen(Fname.c_str(),"wb");
+                        files[i] = fopen(Fname.c_str(), "wb");
 
-                        while (files[i]==NULL){
-                            std::cerr<<"Open file "<<Fname<<" fails. Please check availablility of free disk space. Will retry after 5 seconds."<<std::endl;
+                        while (files[i] == NULL) {
+                            std::cerr << "Open file " << Fname << " fails. Please check availablility of free disk space. Will retry after 5 seconds." << std::endl;
                             std::this_thread::sleep_for(std::chrono::seconds(5));
-                            files[i] = fopen(Fname.c_str(),"wb");
+                            files[i] = fopen(Fname.c_str(), "wb");
                         }
 
                         std::vector<int> dim = r->dim;
-                        if (itersPerSave==0){
+                        if (itersPerSave == 0) {
                             dim[0] = pDataLayer->numofitems();
-                        }else{
-                            int samplesPerFile = r->dim[0]*itersPerSave;
+                        } else {
+                            int samplesPerFile = r->dim[0] * itersPerSave;
                             int samplesSaved = samplesPerFile * file_counter[i];
 
-                            if (samplesSaved + samplesPerFile <= pDataLayer->numofitems()){
-                                dim[0] = r->dim[0]*itersPerSave;
-                            }else{
+                            if (samplesSaved + samplesPerFile <= pDataLayer->numofitems()) {
+                                dim[0] = r->dim[0] * itersPerSave;
+                            } else {
                                 dim[0] = pDataLayer->numofitems() - samplesSaved;
                             }
                         }
-                        features[i]->writeHeader(files[i],dim);
+                        features[i]->writeHeader(files[i], dim);
 
                         file_counter[i]++;
                     }
@@ -7752,7 +7785,7 @@ public:
                     features[i]->writeData(files[i], total_size[i]);
                     total_size[i] -= features[i]->numel();
 
-                    if (itersPerSave !=0 && iter % itersPerSave == itersPerSave-1){
+                    if (itersPerSave != 0 && iter % itersPerSave == itersPerSave - 1) {
                         fclose(files[i]);
                         files[i] = NULL;
                     }
@@ -7761,21 +7794,21 @@ public:
             ++iter;
         }
 
-        for(int i=0;i<responseNames.size();++i){
-            if (files[i] != NULL){
+        for (int i = 0; i < responseNames.size(); ++i) {
+            if (files[i] != NULL) {
                 fclose(files[i]);
                 files[i] = NULL;
             }
             delete(features[i]);
         }
 
-        for (int i=0;i<result.size();++i){
+        for (int i = 0; i < result.size(); ++i) {
             result[i] /= iter;
         }
 
         std::cout << "Average over " << iter << " iterations  ";
-        for (int i=0;i<result.size();++i){
-            if (loss_layers[i]->phase == phase || loss_layers[i]->phase == TrainingTesting){
+        for (int i = 0; i < result.size(); ++i) {
+            if (loss_layers[i]->phase == phase || loss_layers[i]->phase == TrainingTesting) {
                 std::cout << " eval = " << result[i];
                 std::cout << "  ";
             }
@@ -7791,7 +7824,7 @@ public:
 // Solver
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-class Solver{
+class Solver {
     bool singleGPU;
 public:
     Phase phase;
@@ -7829,7 +7862,7 @@ public:
     bool debug_mode;
 
 
-    Solver(std::string filename=std::string()){
+    Solver(std::string filename = std::string()) {
 
         // construct the network from the file in JSON
         JSON* train_obj = new JSON;
@@ -7857,33 +7890,33 @@ public:
         SetValue(train_obj, test_iter,      100)
         SetValue(train_obj, test_interval,  500)
         SetValue(train_obj, debug_mode,     false)
-        SetValue(train_obj, GPU,            veci(1,0))
+        SetValue(train_obj, GPU,            veci(1, 0))
         SetOrDie(train_obj, path            )
         SetValue(train_obj, GPU_solver,     -1)
 
-        if (GPU_solver==-1) GPU_solver=GPU[0];
+        if (GPU_solver == -1) GPU_solver = GPU[0];
 
-        singleGPU = GPU.size()==1 && GPU_solver==GPU[0];
+        singleGPU = GPU.size() == 1 && GPU_solver == GPU[0];
 
         int nGPUs = 0;
         checkCUDA(__LINE__, cudaGetDeviceCount(&nGPUs));
-        if (nGPUs==0){
-            std::cerr<<"There is no NVIDIA GPU available in this machine."<<std::endl;
+        if (nGPUs == 0) {
+            std::cerr << "There is no NVIDIA GPU available in this machine." << std::endl;
             FatalError(__LINE__);
-        }else if (nGPUs==1){
-            std::cout<<"There is 1 NVIDIA GPU available in this machine."<<std::endl;
-        }else{
-            std::cout<<"There are "<< nGPUs<< " NVIDIA GPUs available in this machine."<<std::endl;
+        } else if (nGPUs == 1) {
+            std::cout << "There is 1 NVIDIA GPU available in this machine." << std::endl;
+        } else {
+            std::cout << "There are " << nGPUs << " NVIDIA GPUs available in this machine." << std::endl;
         }
         std::vector<int>::iterator largestGPUid = max_element(GPU.begin(), GPU.end());
-        if (*largestGPUid>=nGPUs){
-            std::cerr<<"Largest GPU ID request for GPU #"<<*largestGPUid<<" exceeds the number of available GPUs"<<std::endl;
+        if (*largestGPUid >= nGPUs) {
+            std::cerr << "Largest GPU ID request for GPU #" << *largestGPUid << " exceeds the number of available GPUs" << std::endl;
             FatalError(__LINE__);
         }
 
         nets.resize(GPU.size());
         threads.resize(GPU.size());
-        for (int n=0;n<nets.size();++n){
+        for (int n = 0; n < nets.size(); ++n) {
             nets[n] = new Net(architecture_obj, GPU[n]);
             nets[n]->debug_mode = debug_mode;
             nets[n]->train_iter = train_iter;
@@ -7893,15 +7926,15 @@ public:
         delete train_obj;
         delete architecture_obj;
 
-        if (GPU.size()>1){
-            for (int n=0;n<GPU.size();++n){
-                if (GPU[n]!=GPU_solver){
+        if (GPU.size() > 1) {
+            for (int n = 0; n < GPU.size(); ++n) {
+                if (GPU[n] != GPU_solver) {
 
                     int canAccessPeer;
                     checkCUDA(__LINE__, cudaDeviceCanAccessPeer(&canAccessPeer, GPU[n], GPU_solver));
 
-                    if (canAccessPeer==0){
-                        std::cerr<<"Slave GPU #"<<GPU[n]<<" cannot access Master GPU #"<<GPU_solver<<std::endl;
+                    if (canAccessPeer == 0) {
+                        std::cerr << "Slave GPU #" << GPU[n] << " cannot access Master GPU #" << GPU_solver << std::endl;
                         FatalError(__LINE__);
                     }
 
@@ -7913,125 +7946,125 @@ public:
 
     };
 
-    ComputeT learning_rate(){
+    ComputeT learning_rate() {
         ComputeT rate;
-        switch(lr_policy){
-            case LR_fixed:
-                rate = base_lr;
-                break;
-            case LR_step:
-                current_step = iter / lr_stepsize;
-                rate = base_lr * pow(lr_gamma, current_step);
-                break;
-            case LR_exp:
-                rate = base_lr * pow(lr_gamma, iter);
-                break;
-            case LR_inv:
-                rate = base_lr * pow(ComputeT(1) + lr_gamma * iter, - lr_power);
-                break;
-            case LR_multistep:
-                if (current_step < stepvalue.size() && iter >= stepvalue[current_step] ) {
-                    current_step++;
-                    std::cout << "MultiStep Status: Iteration " << iter << ", step = " << current_step << std::endl;
-                }
-                rate = base_lr * pow(lr_gamma, current_step);
-                break;
-            case LR_poly:
-                rate = base_lr * pow(ComputeT(1) - (ComputeT(iter) / ComputeT(max_iter)), lr_power);
-                break;
-            case LR_sigmoid:
-                rate = base_lr * (ComputeT(1) /  (ComputeT(1) + exp(-lr_gamma * (ComputeT(iter) - ComputeT(lr_stepsize)))));
-                break;
-            case LR_cyclical: // from http://arxiv.org/abs/1506.01186
-                rate = 0; // TODO: place holder for now
-                break;
+        switch (lr_policy) {
+        case LR_fixed:
+            rate = base_lr;
+            break;
+        case LR_step:
+            current_step = iter / lr_stepsize;
+            rate = base_lr * pow(lr_gamma, current_step);
+            break;
+        case LR_exp:
+            rate = base_lr * pow(lr_gamma, iter);
+            break;
+        case LR_inv:
+            rate = base_lr * pow(ComputeT(1) + lr_gamma * iter, - lr_power);
+            break;
+        case LR_multistep:
+            if (current_step < stepvalue.size() && iter >= stepvalue[current_step] ) {
+                current_step++;
+                std::cout << "MultiStep Status: Iteration " << iter << ", step = " << current_step << std::endl;
+            }
+            rate = base_lr * pow(lr_gamma, current_step);
+            break;
+        case LR_poly:
+            rate = base_lr * pow(ComputeT(1) - (ComputeT(iter) / ComputeT(max_iter)), lr_power);
+            break;
+        case LR_sigmoid:
+            rate = base_lr * (ComputeT(1) /  (ComputeT(1) + exp(-lr_gamma * (ComputeT(iter) - ComputeT(lr_stepsize)))));
+            break;
+        case LR_cyclical: // from http://arxiv.org/abs/1506.01186
+            rate = 0; // TODO: place holder for now
+            break;
         }
         return rate;
     };
 
-    size_t Malloc(Phase phase_ = Training){
+    size_t Malloc(Phase phase_ = Training) {
         phase = phase_;
 
         int nGPUs = 0;
         checkCUDA(__LINE__, cudaGetDeviceCount(&nGPUs));
-        std::vector<size_t> memoryBytes(nGPUs,0);
+        std::vector<size_t> memoryBytes(nGPUs, 0);
 
-        for (int n=0;n<nets.size();++n){
+        for (int n = 0; n < nets.size(); ++n) {
             memoryBytes[GPU[n]] += nets[n]->Malloc(phase);
         }
 
         size_t extraHistoryCount;
 
-        switch (solver){
-            case SGD:
-                extraHistoryCount = 0;
-                break;
-            case AdaDelta:
-                extraHistoryCount = 2;
-                break;
-            case AdaGrad:
-                extraHistoryCount = 1;
-                break;
-            case Adam:
-                extraHistoryCount = 2;
-                break;
-            case NAG:
-                extraHistoryCount = 1;
-                break;
-            case RMSprop:
-                extraHistoryCount = 1;
-                break;
+        switch (solver) {
+        case SGD:
+            extraHistoryCount = 0;
+            break;
+        case AdaDelta:
+            extraHistoryCount = 2;
+            break;
+        case AdaGrad:
+            extraHistoryCount = 1;
+            break;
+        case Adam:
+            extraHistoryCount = 2;
+            break;
+        case NAG:
+            extraHistoryCount = 1;
+            break;
+        case RMSprop:
+            extraHistoryCount = 1;
+            break;
         }
 
-        if (phase == Training || phase == TrainingTesting){
-            checkCUDA(__LINE__,cudaSetDevice(GPU_solver));
-            for (int l=0; l<nets[0]->layers.size(); ++l){
-                if (nets[0]->layers[l]->train_me){
+        if (phase == Training || phase == TrainingTesting) {
+            checkCUDA(__LINE__, cudaSetDevice(GPU_solver));
+            for (int l = 0; l < nets[0]->layers.size(); ++l) {
+                if (nets[0]->layers[l]->train_me) {
                     size_t weight_numel = nets[0]->layers[l]->weight_numel;
                     size_t   bias_numel = nets[0]->layers[l]->bias_numel;
-                    if (weight_numel>0){
+                    if (weight_numel > 0) {
                         size_t weight_bytes = (1 + nets.size() + extraHistoryCount) * weight_numel * sizeofStorageT;
                         checkCUDA(__LINE__, cudaMalloc(&(nets[0]->layers[l]->weight_histGPU), weight_bytes));
                         checkCUDA(__LINE__, cudaMemset(nets[0]->layers[l]->weight_histGPU, 0, weight_bytes));
                         memoryBytes[GPU_solver] += weight_bytes;
-                        for (int n=0;n<nets.size();++n){
+                        for (int n = 0; n < nets.size(); ++n) {
                             nets[n]->layers[l]->weight_histGPU = nets[0]->layers[l]->weight_histGPU;
-                            nets[n]->layers[l]->weight_diffGPU = nets[0]->layers[l]->weight_histGPU + weight_numel * (n+1);
+                            nets[n]->layers[l]->weight_diffGPU = nets[0]->layers[l]->weight_histGPU + weight_numel * (n + 1);
                         }
                     }
-                    if (bias_numel>0){
+                    if (bias_numel > 0) {
                         size_t bias_bytes = (1 + nets.size() + extraHistoryCount) * bias_numel * sizeofStorageT;
                         checkCUDA(__LINE__, cudaMalloc(&(nets[0]->layers[l]->bias_histGPU), bias_bytes));
                         checkCUDA(__LINE__, cudaMemset(nets[0]->layers[l]->bias_histGPU, 0, bias_bytes));
                         memoryBytes[GPU_solver] += bias_bytes;
-                        for (int n=0;n<nets.size();++n){
+                        for (int n = 0; n < nets.size(); ++n) {
                             nets[n]->layers[l]->bias_histGPU = nets[0]->layers[l]->bias_histGPU;
-                            nets[n]->layers[l]->bias_diffGPU = nets[0]->layers[l]->bias_histGPU + bias_numel * (n+1);
+                            nets[n]->layers[l]->bias_diffGPU = nets[0]->layers[l]->bias_histGPU + bias_numel * (n + 1);
                         }
                     }
-                    
-                    for (int ll=0;ll<nets[0]->layers[l]->sub_layers.size(); ++ll){
-                        if (nets[0]->layers[l]->sub_layers[ll]->train_me){
+
+                    for (int ll = 0; ll < nets[0]->layers[l]->sub_layers.size(); ++ll) {
+                        if (nets[0]->layers[l]->sub_layers[ll]->train_me) {
                             size_t weight_numel = nets[0]->layers[l]->sub_layers[ll]->weight_numel;
                             size_t   bias_numel = nets[0]->layers[l]->sub_layers[ll]->bias_numel;
-                            if (weight_numel>0){
+                            if (weight_numel > 0) {
                                 size_t weight_bytes = (1 + nets.size() + extraHistoryCount) * weight_numel * sizeofStorageT;
                                 checkCUDA(__LINE__, cudaMalloc(&(nets[0]->layers[l]->sub_layers[ll]->weight_histGPU), weight_bytes));
                                 checkCUDA(__LINE__, cudaMemset(nets[0]->layers[l]->sub_layers[ll]->weight_histGPU, 0, weight_bytes));
                                 memoryBytes[GPU_solver] += weight_bytes;
-                                for (int n=0;n<nets.size();++n){
+                                for (int n = 0; n < nets.size(); ++n) {
                                     nets[n]->layers[l]->sub_layers[ll]->weight_histGPU = nets[0]->layers[l]->sub_layers[ll]->weight_histGPU;
-                                    nets[n]->layers[l]->sub_layers[ll]->weight_diffGPU = nets[0]->layers[l]->sub_layers[ll]->weight_histGPU + weight_numel * (n+1);
+                                    nets[n]->layers[l]->sub_layers[ll]->weight_diffGPU = nets[0]->layers[l]->sub_layers[ll]->weight_histGPU + weight_numel * (n + 1);
                                 }
                             }
-                            if (bias_numel>0){
+                            if (bias_numel > 0) {
                                 size_t bias_bytes = (1 + nets.size() + extraHistoryCount) * bias_numel * sizeofStorageT;
                                 checkCUDA(__LINE__, cudaMalloc(&(nets[0]->layers[l]->sub_layers[ll]->bias_histGPU), bias_bytes));
                                 checkCUDA(__LINE__, cudaMemset(nets[0]->layers[l]->sub_layers[ll]->bias_histGPU, 0, bias_bytes));
                                 memoryBytes[GPU_solver] += bias_bytes;
-                                for (int n=0;n<nets.size();++n){
+                                for (int n = 0; n < nets.size(); ++n) {
                                     nets[n]->layers[l]->sub_layers[ll]->bias_histGPU = nets[0]->layers[l]->sub_layers[ll]->bias_histGPU;
-                                    nets[n]->layers[l]->sub_layers[ll]->bias_diffGPU = nets[0]->layers[l]->sub_layers[ll]->bias_histGPU + bias_numel * (n+1);
+                                    nets[n]->layers[l]->sub_layers[ll]->bias_diffGPU = nets[0]->layers[l]->sub_layers[ll]->bias_histGPU + bias_numel * (n + 1);
                                 }
                             }
                         }
@@ -8041,41 +8074,41 @@ public:
             }
         }
 
-        std::cout<< "====================================================================================================================================="<<std::endl;
-        for (int n=0;n<nGPUs;++n){
-            if (memoryBytes[n]>0){
-                std::cout<< "GPU " << n << ": Total GPU memory: ";  memorySizePrint(memoryBytes[n]);    std::cout<<std::endl;
+        std::cout << "=====================================================================================================================================" << std::endl;
+        for (int n = 0; n < nGPUs; ++n) {
+            if (memoryBytes[n] > 0) {
+                std::cout << "GPU " << n << ": Total GPU memory: ";  memorySizePrint(memoryBytes[n]);    std::cout << std::endl;
             }
         }
 
         size_t totalMemory = memoryBytes[0];
-        for (int n=1;n<nGPUs;++n){
+        for (int n = 1; n < nGPUs; ++n) {
             totalMemory += memoryBytes[n];
         }
 
-        std::cout<< "All GPUs: Total GPU memory: "; memorySizePrint(totalMemory);   std::cout<<std::endl;
+        std::cout << "All GPUs: Total GPU memory: "; memorySizePrint(totalMemory);   std::cout << std::endl;
 
         return totalMemory;
     };
 
-    ~Solver(){
-        checkCUDA(__LINE__,cudaSetDevice(GPU_solver));
-        for (int l=0; l<nets[0]->layers.size(); ++l){
-            if (nets[0]->layers[l]->train_me){
-                if (nets[0]->layers[l]->weight_numel>0){
-                    if (nets[0]->layers[l]->weight_histGPU!=NULL) checkCUDA(__LINE__, cudaFree(nets[0]->layers[l]->weight_histGPU));
+    ~Solver() {
+        checkCUDA(__LINE__, cudaSetDevice(GPU_solver));
+        for (int l = 0; l < nets[0]->layers.size(); ++l) {
+            if (nets[0]->layers[l]->train_me) {
+                if (nets[0]->layers[l]->weight_numel > 0) {
+                    if (nets[0]->layers[l]->weight_histGPU != NULL) checkCUDA(__LINE__, cudaFree(nets[0]->layers[l]->weight_histGPU));
                 }
-                if (nets[0]->layers[l]->bias_numel>0){
-                    if (nets[0]->layers[l]->bias_histGPU!=NULL) checkCUDA(__LINE__, cudaFree(nets[0]->layers[l]->bias_histGPU));
+                if (nets[0]->layers[l]->bias_numel > 0) {
+                    if (nets[0]->layers[l]->bias_histGPU != NULL) checkCUDA(__LINE__, cudaFree(nets[0]->layers[l]->bias_histGPU));
                 }
 
-                for(int ll=0; ll<nets[0]->layers[l]->sub_layers.size(); ++ll){
-                    if (nets[0]->layers[l]->sub_layers[ll]->train_me){
-                        if (nets[0]->layers[l]->sub_layers[ll]->weight_numel>0){
-                            if (nets[0]->layers[l]->sub_layers[ll]->weight_histGPU!=NULL) checkCUDA(__LINE__, cudaFree(nets[0]->layers[l]->sub_layers[ll]->weight_histGPU));
+                for (int ll = 0; ll < nets[0]->layers[l]->sub_layers.size(); ++ll) {
+                    if (nets[0]->layers[l]->sub_layers[ll]->train_me) {
+                        if (nets[0]->layers[l]->sub_layers[ll]->weight_numel > 0) {
+                            if (nets[0]->layers[l]->sub_layers[ll]->weight_histGPU != NULL) checkCUDA(__LINE__, cudaFree(nets[0]->layers[l]->sub_layers[ll]->weight_histGPU));
                         }
-                        if (nets[0]->layers[l]->sub_layers[ll]->bias_numel>0){
-                            if (nets[0]->layers[l]->sub_layers[ll]->bias_histGPU!=NULL) checkCUDA(__LINE__, cudaFree(nets[0]->layers[l]->sub_layers[ll]->bias_histGPU));
+                        if (nets[0]->layers[l]->sub_layers[ll]->bias_numel > 0) {
+                            if (nets[0]->layers[l]->sub_layers[ll]->bias_histGPU != NULL) checkCUDA(__LINE__, cudaFree(nets[0]->layers[l]->sub_layers[ll]->bias_histGPU));
                         }
                     }
                 }
@@ -8083,34 +8116,34 @@ public:
         }
     };
 
-    void randInit(){
+    void randInit() {
         nets[0]->randInit();
-        for (int n=1;n<nets.size();++n){
-            for (int l=0; l<nets[0]->layers.size(); ++l){
-                if (nets[0]->layers[l]->weight_numel>0) checkCUDA(__LINE__, cudaMemcpy(nets[n]->layers[l]->weight_dataGPU, nets[0]->layers[l]->weight_dataGPU, nets[0]->layers[l]->weight_numel*sizeofStorageT, cudaMemcpyDeviceToDevice) );
-                if (nets[0]->layers[l]->bias_numel>0)   checkCUDA(__LINE__, cudaMemcpy(nets[n]->layers[l]->bias_dataGPU, nets[0]->layers[l]->bias_dataGPU, nets[0]->layers[l]->bias_numel*sizeofStorageT, cudaMemcpyDeviceToDevice) );
-                for(int ll=0; ll<nets[0]->layers[l]->sub_layers.size(); ++ll){
-                    if (nets[0]->layers[l]->sub_layers[ll]->weight_numel>0) checkCUDA(__LINE__, cudaMemcpy(nets[n]->layers[l]->sub_layers[ll]->weight_dataGPU, nets[0]->layers[l]->sub_layers[ll]->weight_dataGPU, nets[0]->layers[l]->sub_layers[ll]->weight_numel*sizeofStorageT, cudaMemcpyDeviceToDevice) );
-                    if (nets[0]->layers[l]->sub_layers[ll]->bias_numel>0)   checkCUDA(__LINE__, cudaMemcpy(nets[n]->layers[l]->sub_layers[ll]->bias_dataGPU, nets[0]->layers[l]->sub_layers[ll]->bias_dataGPU, nets[0]->layers[l]->sub_layers[ll]->bias_numel*sizeofStorageT, cudaMemcpyDeviceToDevice) );
+        for (int n = 1; n < nets.size(); ++n) {
+            for (int l = 0; l < nets[0]->layers.size(); ++l) {
+                if (nets[0]->layers[l]->weight_numel > 0) checkCUDA(__LINE__, cudaMemcpy(nets[n]->layers[l]->weight_dataGPU, nets[0]->layers[l]->weight_dataGPU, nets[0]->layers[l]->weight_numel * sizeofStorageT, cudaMemcpyDeviceToDevice) );
+                if (nets[0]->layers[l]->bias_numel > 0)   checkCUDA(__LINE__, cudaMemcpy(nets[n]->layers[l]->bias_dataGPU, nets[0]->layers[l]->bias_dataGPU, nets[0]->layers[l]->bias_numel * sizeofStorageT, cudaMemcpyDeviceToDevice) );
+                for (int ll = 0; ll < nets[0]->layers[l]->sub_layers.size(); ++ll) {
+                    if (nets[0]->layers[l]->sub_layers[ll]->weight_numel > 0) checkCUDA(__LINE__, cudaMemcpy(nets[n]->layers[l]->sub_layers[ll]->weight_dataGPU, nets[0]->layers[l]->sub_layers[ll]->weight_dataGPU, nets[0]->layers[l]->sub_layers[ll]->weight_numel * sizeofStorageT, cudaMemcpyDeviceToDevice) );
+                    if (nets[0]->layers[l]->sub_layers[ll]->bias_numel > 0)   checkCUDA(__LINE__, cudaMemcpy(nets[n]->layers[l]->sub_layers[ll]->bias_dataGPU, nets[0]->layers[l]->sub_layers[ll]->bias_dataGPU, nets[0]->layers[l]->sub_layers[ll]->bias_numel * sizeofStorageT, cudaMemcpyDeviceToDevice) );
                 }
             }
         }
     };
 
-    void solve(ComputeT learning_rate){
-        checkCUDA(__LINE__,cudaSetDevice(GPU_solver));
-        for (int l=0; l<nets[0]->layers.size(); ++l){
-            if (nets[0]->layers[l]->train_me){
-                if (nets[0]->layers[l]->weight_numel>0)
+    void solve(ComputeT learning_rate) {
+        checkCUDA(__LINE__, cudaSetDevice(GPU_solver));
+        for (int l = 0; l < nets[0]->layers.size(); ++l) {
+            if (nets[0]->layers[l]->train_me) {
+                if (nets[0]->layers[l]->weight_numel > 0)
                     update_solver(solver, regularizer, iter, nets[0]->layers[l]->weight_numel, nets.size(), weight_decay * nets[0]->layers[l]->weight_decay_mult, momentum, momentum2, delta, rms_decay, learning_rate * nets[0]->layers[l]->weight_lr_mult, nets[0]->layers[l]->weight_dataGPU, nets[0]->layers[l]->weight_histGPU);
-                if (nets[0]->layers[l]->bias_numel>0)
+                if (nets[0]->layers[l]->bias_numel > 0)
                     update_solver(solver, regularizer, iter, nets[0]->layers[l]->bias_numel, nets.size(), weight_decay * nets[0]->layers[l]->bias_decay_mult, momentum, momentum2, delta, rms_decay, learning_rate * nets[0]->layers[l]->bias_lr_mult, nets[0]->layers[l]->bias_dataGPU, nets[0]->layers[l]->bias_histGPU);
 
-                for(int ll=0; ll<nets[0]->layers[l]->sub_layers.size(); ++ll){
-                    if (nets[0]->layers[l]->sub_layers[ll]->train_me){
-                        if (nets[0]->layers[l]->sub_layers[ll]->weight_numel>0)
+                for (int ll = 0; ll < nets[0]->layers[l]->sub_layers.size(); ++ll) {
+                    if (nets[0]->layers[l]->sub_layers[ll]->train_me) {
+                        if (nets[0]->layers[l]->sub_layers[ll]->weight_numel > 0)
                             update_solver(solver, regularizer, iter, nets[0]->layers[l]->sub_layers[ll]->weight_numel, nets.size(), weight_decay * nets[0]->layers[l]->sub_layers[ll]->weight_decay_mult, momentum, momentum2, delta, rms_decay, learning_rate * nets[0]->layers[l]->sub_layers[ll]->weight_lr_mult, nets[0]->layers[l]->sub_layers[ll]->weight_dataGPU, nets[0]->layers[l]->sub_layers[ll]->weight_histGPU);
-                        if (nets[0]->layers[l]->sub_layers[ll]->bias_numel>0)
+                        if (nets[0]->layers[l]->sub_layers[ll]->bias_numel > 0)
                             update_solver(solver, regularizer, iter, nets[0]->layers[l]->sub_layers[ll]->bias_numel, nets.size(), weight_decay * nets[0]->layers[l]->sub_layers[ll]->bias_decay_mult, momentum, momentum2, delta, rms_decay, learning_rate * nets[0]->layers[l]->sub_layers[ll]->bias_lr_mult, nets[0]->layers[l]->sub_layers[ll]->bias_dataGPU, nets[0]->layers[l]->sub_layers[ll]->bias_histGPU);
                     }
                 }
@@ -8119,64 +8152,64 @@ public:
         }
     };
 
-    void loadWeights(std::string filename, bool diff=false){
+    void loadWeights(std::string filename, bool diff = false) {
 
-        std::cout<< "====================================================================================================================================="<<std::endl;
+        std::cout << "=====================================================================================================================================" << std::endl;
 
         std::vector<Tensor<StorageT>*> weights = readTensors<StorageT>(filename);
 
-        for (int i=0;i<nets.size();++i){
+        for (int i = 0; i < nets.size(); ++i) {
             nets[i]->loadWeights(weights, diff);
         }
 
-        for (int i=0; i<weights.size();++i){
+        for (int i = 0; i < weights.size(); ++i) {
             delete weights[i];
         }
     };
 
-    void saveWeights(std::string filename, bool diff=false){
+    void saveWeights(std::string filename, bool diff = false) {
         nets[0]->saveWeights(filename, diff);
     };
 
-    void train(int iter_begin = 0){
+    void train(int iter_begin = 0) {
 
-        checkCUDA(__LINE__,cudaSetDevice(GPU_solver));
+        checkCUDA(__LINE__, cudaSetDevice(GPU_solver));
 
         phase = Training;
         current_step = 0;
 
-        std::cout<< "====================================================================================================================================="<<std::endl;
-        std::cout<< "  Training:                                                                      Testing:                                            "<<std::endl;
-        std::cout<< "====================================================================================================================================="<<std::endl;
+        std::cout << "=====================================================================================================================================" << std::endl;
+        std::cout << "  Training:                                                                      Testing:                                            " << std::endl;
+        std::cout << "=====================================================================================================================================" << std::endl;
 
-        for (iter=iter_begin;iter<=max_iter;++iter){
+        for (iter = iter_begin; iter <= max_iter; ++iter) {
 
-            if (iter % test_interval==0 && test_iter > 0){
-                if (debug_mode){
+            if (iter % test_interval == 0 && test_iter > 0) {
+                if (debug_mode) {
                     std::cout << "Testing Iteration " << iter << std::endl;
-                }else{
-                    std::cout<< "                                                                                 ";
+                } else {
+                    std::cout << "                                                                                 ";
                     std::cout << "Iteration " << iter;
                 }
 
-                if (singleGPU){
+                if (singleGPU) {
                     nets[0]->phase = Testing;
                     nets[0]->stepTest(false);
                     nets[0]->phase = Training;
-                }else{
-                    for (int t=0; t<threads.size(); ++t){
+                } else {
+                    for (int t = 0; t < threads.size(); ++t) {
                         nets[t]->phase = Testing;
                         threads[t] = std::thread(&Net::stepTest, nets[t], true);    //nets[t]->stepTest();
                     }
-                    for (int t=0; t<threads.size(); ++t){
+                    for (int t = 0; t < threads.size(); ++t) {
                         threads[t].join();
                         nets[t]->phase = Training;
                     }
                 }
 
-                for (int l=0; l<nets[0]->loss_layers.size();++l){
-                    if (nets[0]->loss_layers[l]->phase == phase || nets[0]->loss_layers[l]->phase == TrainingTesting){
-                        for (int t=1;t<nets.size(); ++t){
+                for (int l = 0; l < nets[0]->loss_layers.size(); ++l) {
+                    if (nets[0]->loss_layers[l]->phase == phase || nets[0]->loss_layers[l]->phase == TrainingTesting) {
+                        for (int t = 1; t < nets.size(); ++t) {
                             nets[0]->loss_layers[l]->result += nets[t]->loss_layers[l]->result;
                             nets[0]->loss_layers[l]->loss += nets[t]->loss_layers[l]->loss;
                         }
@@ -8188,43 +8221,43 @@ public:
                 std::cout << std::endl;
             }
 
-            if (singleGPU){
+            if (singleGPU) {
                 nets[0]->stepTrain(false);
-            }else{
-                for (int t=0; t<threads.size(); ++t){
+            } else {
+                for (int t = 0; t < threads.size(); ++t) {
                     threads[t] = std::thread(&Net::stepTrain, nets[t], true);   //nets[t]->stepTrain();
                 }
-                for (int t=0; t<threads.size(); ++t){
+                for (int t = 0; t < threads.size(); ++t) {
                     threads[t].join();
                 }
             }
 
             ComputeT lrate = learning_rate();
             solve(lrate);
-            checkCUDA(__LINE__,cudaDeviceSynchronize());
+            checkCUDA(__LINE__, cudaDeviceSynchronize());
 
-            if (iter!=iter_begin && iter % snapshot_iter==0){
-                saveWeights(path+"_snapshot_"+std::to_string(iter)+".marvin",false);
+            if (iter != iter_begin && iter % snapshot_iter == 0) {
+                saveWeights(path + "_snapshot_" + std::to_string(iter) + ".marvin", false);
             }
-            if (iter % display_iter==0){
+            if (iter % display_iter == 0) {
                 std::cout << "Iteration " << iter << "  ";
-                std::cout << "learning_rate = "<< lrate;
+                std::cout << "learning_rate = " << lrate;
 
 
-                if (singleGPU){
+                if (singleGPU) {
                     nets[0]->eval(false);
-                }else{
-                    for (int t=0; t<threads.size(); ++t){
+                } else {
+                    for (int t = 0; t < threads.size(); ++t) {
                         threads[t] = std::thread(&Net::eval, nets[t], true); //nets[t]->eval();
                     }
-                    for (int t=0; t<threads.size(); ++t){
+                    for (int t = 0; t < threads.size(); ++t) {
                         threads[t].join();
                     }
                 }
 
-                for (int l=0; l<nets[0]->loss_layers.size();++l){
-                    if (nets[0]->loss_layers[l]->phase == phase || nets[0]->loss_layers[l]->phase == TrainingTesting){
-                        for (int t=1;t<threads.size(); ++t){
+                for (int l = 0; l < nets[0]->loss_layers.size(); ++l) {
+                    if (nets[0]->loss_layers[l]->phase == phase || nets[0]->loss_layers[l]->phase == TrainingTesting) {
+                        for (int t = 1; t < threads.size(); ++t) {
                             nets[0]->loss_layers[l]->result += nets[t]->loss_layers[l]->result;
                             nets[0]->loss_layers[l]->loss += nets[t]->loss_layers[l]->loss;
                         }
