@@ -169,7 +169,7 @@ void vol2bin() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void FatalError(const int lineNumber = 0) {
+void kFatalError(const int lineNumber = 0) {
   std::cerr << "FatalError";
   if (lineNumber != 0) std::cerr << " at LINE " << lineNumber;
   std::cerr << ". Program Terminated." << std::endl;
@@ -179,10 +179,10 @@ void FatalError(const int lineNumber = 0) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void checkCUDA(const int lineNumber, cudaError_t status) {
+void kCheckCUDA(const int lineNumber, cudaError_t status) {
   if (status != cudaSuccess) {
     std::cerr << "CUDA failure at LINE " << lineNumber << ": " << status << std::endl;
-    FatalError();
+    kFatalError();
   }
 }
 
@@ -216,14 +216,25 @@ float * d_neg_crop_2D;
 float * d_pos_crop_3D;
 float * d_neg_crop_3D;
 
-// Initialize existing TSDF volume in GPU memory
+// Initialize existing cropped TSDF volume in GPU memory
 __global__
-void reset_vox_GPU(float* tmp_view_bounds, int* tmp_vox_size, float* tmp_vox_tsdf, float* tmp_vox_weight) {
+void reset_vox_crop_GPU(float* tmp_view_bounds, int* tmp_vox_size, float* tmp_vox_tsdf, float* tmp_vox_weight) {
   // int z = blockIdx.x;
   // int y = threadIdx.x;
   int z = (int)tmp_view_bounds[2 * 2 + 0] + blockIdx.x;
   int y = (int)tmp_view_bounds[1 * 2 + 0] + threadIdx.x;
   for (int x = tmp_view_bounds[0 * 2 + 0]; x < tmp_view_bounds[0 * 2 + 1]; x++) {
+    tmp_vox_tsdf[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 1.0f;
+    tmp_vox_weight[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 0;
+  }
+}
+
+// Initialize existing TSDF volume in GPU memory
+__global__
+void reset_vox_whole_GPU(int* tmp_vox_size, float* tmp_vox_tsdf, float* tmp_vox_weight) {
+  int z = blockIdx.x;
+  int y = threadIdx.x;
+  for (int x = 0; x < tmp_vox_size[0]; x++) {
     tmp_vox_tsdf[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 1.0f;
     tmp_vox_weight[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 0;
   }
@@ -258,17 +269,17 @@ void init_fusion_GPU() {
   cudaMalloc(&d_vox_size, 3 * sizeof(float));
   cudaMalloc(&d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float));
   cudaMalloc(&d_vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float));
-  checkCUDA(__LINE__, cudaGetLastError());
+  kCheckCUDA(__LINE__, cudaGetLastError());
   cudaMemcpy(d_vox_size, vox_size, 3 * sizeof(float), cudaMemcpyHostToDevice);
   cudaMemcpy(d_vox_tsdf, vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyHostToDevice);
   cudaMemcpy(d_vox_weight, vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyHostToDevice);
-  checkCUDA(__LINE__, cudaGetLastError());
+  kCheckCUDA(__LINE__, cudaGetLastError());
 
   // // Init volume in GPU
   // int CUDA_NUM_BLOCKS = vox_size[2];
   // int CUDA_NUM_THREADS = vox_size[1];
   // reset_vox_GPU <<< CUDA_NUM_BLOCKS, CUDA_NUM_THREADS >>>(d_vox_size, d_vox_tsdf, d_vox_weight);
-  // checkCUDA(__LINE__, cudaGetLastError());
+  // kCheckCUDA(__LINE__, cudaGetLastError());
 
   // Allocate GPU memory to hold fusion params
   cudaMalloc(&d_K, 9 * sizeof(float));
@@ -276,7 +287,7 @@ void init_fusion_GPU() {
   cudaMalloc(&d_view_bounds, 6 * sizeof(float));
   cudaMalloc(&d_camera_relative_pose, 16 * sizeof(float));
   cudaMalloc(&d_vox_range_cam, 6 * sizeof(float));
-  checkCUDA(__LINE__, cudaGetLastError());
+  kCheckCUDA(__LINE__, cudaGetLastError());
 
   // Allocate GPU memory to hold training data
 
@@ -296,14 +307,14 @@ void init_fusion_GPU() {
 //     cudaFree(d_camera_relative_pose);
 //   if (d_vox_range_cam != NULL)
 //     cudaFree(d_vox_range_cam);
-//   checkCUDA(__LINE__, cudaGetLastError());
+//   kCheckCUDA(__LINE__, cudaGetLastError());
 
 //   cudaMalloc(&d_K, 9 * sizeof(float));
 //   cudaMalloc(&d_depth_data, 480 * 640 * sizeof(unsigned short));
 //   cudaMalloc(&d_view_bounds, 6 * sizeof(float));
 //   cudaMalloc(&d_camera_relative_pose, 16 * sizeof(float));
 //   cudaMalloc(&d_vox_range_cam, 6 * sizeof(float));
-//   checkCUDA(__LINE__, cudaGetLastError());
+//   kCheckCUDA(__LINE__, cudaGetLastError());
 // }
 
 ////////////////////////////////////////////////////////////////////////////////

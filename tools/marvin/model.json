@@ -4,7 +4,7 @@
     "regularizer": "L2",
     "momentum": 0.9,
     "weight_decay": 0.0005,
-    "base_lr": 0.01,
+    "base_lr": 0.001,
     "lr_policy": "LR_step",
     "lr_gamma": 0.9,
     "lr_stepsize": 10000,
@@ -15,10 +15,10 @@
     "display_iter": 1,
     "test_iter": 5,
     "test_interval": 100,
-    "GPU": 0
+    "GPU": 1
   },
   "test": {
-    "GPU": 0
+    "GPU": 1
   },
   "layers": [
     {
@@ -33,14 +33,16 @@
         "data3D",
         "label_class",
         "label_axis",
-        "label_angle"
+        "label_angle",
+        "label_axis_weights",
+        "label_angle_weights"
       ]
     },
     {
       "type":"PeriodTrainData",
       "name":"dataTest",
       "phase":"Testing",
-      "file_data":["../../data/train"],
+      "file_data":["../../data/test"],
       "batch_size":32,
       "size_crop":[30,30,30],
       "out":[
@@ -48,7 +50,9 @@
         "data3D",
         "label_class",
         "label_axis",
-        "label_angle"
+        "label_angle",
+        "label_axis_weights",
+        "label_angle_weights"
       ]
     },
     {
@@ -809,7 +813,8 @@
     {
       "in": [
         "axis_score",
-        "label_axis"
+        "label_axis",
+        "label_axis_weights"
       ],
       "type": "Loss",
       "name": "loss_axis",
@@ -842,7 +847,8 @@
     {
       "in": [
         "angle_score",
-        "label_angle"
+        "label_angle",
+        "label_angle_weights"
       ],
       "type": "Loss",
       "name": "loss_angle",

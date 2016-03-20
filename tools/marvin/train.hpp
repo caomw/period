@@ -387,7 +387,7 @@ std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D,
     kCheckCUDA(__LINE__, cudaGetLastError());
 
     // Reset voxel volume
-    reset_vox_GPU<<<30,30>>>(d_view_bounds, d_vox_size, d_vox_tsdf, d_vox_weight);
+    reset_vox_crop_GPU<<<30,30>>>(d_view_bounds, d_vox_size, d_vox_tsdf, d_vox_weight);
     kCheckCUDA(__LINE__, cudaGetLastError());
 
     // // Save curr volume to file
@@ -424,7 +424,7 @@ std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D,
     kCheckCUDA(__LINE__, cudaGetLastError());
     
     // Reset voxel volume
-    reset_vox_GPU<<<30,30>>>(d_view_bounds, d_vox_size, d_vox_tsdf, d_vox_weight);
+    reset_vox_crop_GPU<<<30,30>>>(d_view_bounds, d_vox_size, d_vox_tsdf, d_vox_weight);
     kCheckCUDA(__LINE__, cudaGetLastError());
 
     // // Save curr volume to file

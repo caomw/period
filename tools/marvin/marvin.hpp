@@ -83,7 +83,9 @@
 #include <cudnn.h>
 #include <sys/time.h>
 #include <opencv2/opencv.hpp>
-#include "train.hpp"
+// #include "train.hpp"
+std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D, const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label) {std::vector<cv::Mat> patches_2D; return patches_2D;}
+void patch2tensor(cv::Mat curr_patch, float* patch_data) {}
 
 namespace marvin {
 
@@ -3592,11 +3594,13 @@ public:
         // std::vector<int> label_dim = labelCPUall->dim;
         // label_dim[0] = batch_size;
         // labelCPU = new Tensor<StorageT>(label_dim);
-        labelCPU.resize(3);
-        labelGPU.resize(3);
+        labelCPU.resize(5);
+        labelGPU.resize(5);
         labelCPU[0] = new T[batch_size];
         labelCPU[1] = new T[batch_size];
         labelCPU[2] = new T[batch_size];
+        labelCPU[3] = new T[batch_size];
+        labelCPU[4] = new T[batch_size];
 
         init_fusion_GPU();
 
@@ -3701,11 +3705,13 @@ public:
             int axis_angle_label[2] = {0};
             std::vector<cv::Mat> patches_2D = gen_train_hypothesis_pair(i, dataGPU[1], object_directory, positive_hypothesis_crop_info, negative_hypothesis_crop_info, axis_angle_label);
 
-            // // Show image patches
+            // Show image patches
             // cv::namedWindow("Positive Patch", CV_WINDOW_AUTOSIZE);
             // cv::imshow("Positive Patch", patches_2D[0]);
             // cv::namedWindow("Negative Patch", CV_WINDOW_AUTOSIZE);
             // cv::imshow("Negative Patch", patches_2D[1]);
+            // cv::imwrite( "pos_patch.png", patches_2D[0] );
+            // cv::imwrite( "neg_patch.png", patches_2D[1] );
             // cv::waitKey(0);
 
             // Write 2D image patches to data tensors (bgr and subtract mean)
@@ -3729,6 +3735,23 @@ public:
             kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][i * 2]), &angle_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
             kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][i * 2 + 1]), &angle_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
 
+            // Copy label weights
+            float label_axis_weight_valid[42] = {0};
+            for (int j = 0; j < 42; j++)
+                label_axis_weight_valid[j] = 1;
+            float label_axis_weight_invalid[42] = {0};
+            float label_angle_weight_valid[18] = {0};
+            for (int j = 0; j < 18; j++)
+                label_angle_weight_valid[j] = 1;
+            float label_angle_weight_invalid[18] = {0};
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[3][(i * 2) * 42]), label_axis_weight_valid, 42 * sizeof(float), cudaMemcpyHostToDevice));
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[3][(i * 2 + 1) * 42]), label_axis_weight_invalid, 42 * sizeof(float), cudaMemcpyHostToDevice));
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[4][(i * 2) * 18]), label_angle_weight_valid, 18 * sizeof(float), cudaMemcpyHostToDevice));
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[4][(i * 2 + 1) * 18]), label_angle_weight_invalid, 18 * sizeof(float), cudaMemcpyHostToDevice));
+
+            // Clear memory
+            delete [] pos_patch_data;
+            delete [] neg_patch_data;
         }
 
         // Debug 3D
@@ -3752,7 +3775,7 @@ public:
         //   save_volume_to_ply(scene_ply_name, patch3D_size, &batch_3D[i * 30 * 30 * 30]);
         // }
 
-        // Debug labels
+        // // Debug labels
         // float * label_class = new float[32];
         // float * label_axis = new float[32];
         // float * label_angle = new float[32];
@@ -3762,8 +3785,13 @@ public:
         // kCheckCUDA(__LINE__, cudaMemcpy(label_class, labelGPU[0], 32 * sizeof(float), cudaMemcpyDeviceToHost));
         // kCheckCUDA(__LINE__, cudaMemcpy(label_axis, labelGPU[1], 32 * sizeof(float), cudaMemcpyDeviceToHost));
         // kCheckCUDA(__LINE__, cudaMemcpy(label_angle, labelGPU[2], 32 * sizeof(float), cudaMemcpyDeviceToHost));
+
+        // Debug label weights
+        // float * label_weights = new float[32];
+        // memset(label_weights, 0, sizeof(float) * 32);
+        // kCheckCUDA(__LINE__, cudaMemcpy(label_weights, labelGPU[3], 32 * sizeof(float), cudaMemcpyDeviceToHost));
         // for (int i = 0; i < 32; i++)
-        //   std::cout << label_class[i] << " " << label_axis[i] << " " << label_angle[i] << std::endl;
+        //   std::cout << label_class[i] << " " << label_axis[i] << " " << label_angle[i] << " " << label_weights[i] << std::endl;
 
 
 
@@ -3837,6 +3865,8 @@ public:
         std::swap(out[2]->dataGPU, labelGPU[0]);
         std::swap(out[3]->dataGPU, labelGPU[1]);
         std::swap(out[4]->dataGPU, labelGPU[2]);
+        std::swap(out[5]->dataGPU, labelGPU[3]);
+        std::swap(out[6]->dataGPU, labelGPU[4]);
         lock = std::async(std::launch::async, &PeriodTrainDataLayer<T>::prefetch, this);
     };
 
@@ -3845,8 +3875,8 @@ public:
 
         if (phase == Training && phase_ == Testing) return 0;
 
-        if (out.size() != 5) {
-            std::cout << "PeriodTrainDataLayer: incorrect # of out's; should be 5 (data2D, data3D, label_class, label_axis, label_angle)" << std::endl;
+        if (out.size() != 7) {
+            std::cout << "PeriodTrainDataLayer: incorrect # of out's; should be 7 (data2D, data3D, label_class, label_axis, label_angle, label_axis_weights, label_angle_weights)" << std::endl;
             FatalError(__LINE__);
         }
         // if (! (in.size() == 0 || in.size() < file_data.size())) {
@@ -3888,18 +3918,28 @@ public:
         out[2]->need_diff = false;
         out[3]->need_diff = false;
         out[4]->need_diff = false;
+        out[5]->need_diff = false;
+        out[6]->need_diff = false;
         std::vector<int> labels_dim; labels_dim.push_back(batch_size); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1);
         memoryBytes += out[2]->Malloc(labels_dim);
         memoryBytes += out[3]->Malloc(labels_dim);
         memoryBytes += out[4]->Malloc(labels_dim);
+        labels_dim.clear(); labels_dim.push_back(batch_size); labels_dim.push_back(42); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1);
+        memoryBytes += out[5]->Malloc(labels_dim);
+        labels_dim.clear(); labels_dim.push_back(batch_size); labels_dim.push_back(18); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1);
+        memoryBytes += out[6]->Malloc(labels_dim);
 
         // CUDA Malloc labels
         checkCUDA(__LINE__, cudaMalloc(&labelGPU[0], size_t(batch_size) * sizeof(T)) );
         checkCUDA(__LINE__, cudaMalloc(&labelGPU[1], size_t(batch_size) * sizeof(T)) );
         checkCUDA(__LINE__, cudaMalloc(&labelGPU[2], size_t(batch_size) * sizeof(T)) );
+        checkCUDA(__LINE__, cudaMalloc(&labelGPU[3], size_t(batch_size) * 42 * sizeof(T)) );
+        checkCUDA(__LINE__, cudaMalloc(&labelGPU[4], size_t(batch_size) * 18 * sizeof(T)) );
         memoryBytes += batch_size * sizeof(T);
         memoryBytes += batch_size * sizeof(T);
         memoryBytes += batch_size * sizeof(T);
+        memoryBytes += batch_size * 42 * sizeof(T);
+        memoryBytes += batch_size * 18 * sizeof(T);
 
         lock = std::async(std::launch::async, &PeriodTrainDataLayer<T>::prefetch, this);
 
@@ -3908,7 +3948,7 @@ public:
 };
 
 template <class T>
-class PeriodMemoryDataLayer : public DataLayer {
+class PeriodTestDataLayer : public DataLayer {
     std::future<void> lock;
 
     std::vector<size_t> ordering;
@@ -3954,7 +3994,7 @@ public:
     int batch_size;
 
     int numofitems() {
-        return labelCPUall->numofitems();
+        return 0;
     };
 
     void init() {
@@ -3967,7 +4007,7 @@ public:
         labelGPU = NULL;
         labelCPUall = NULL;
         train_me = false;
-        std::cout << "PeriodMemoryDataLayer " << name << " loading data: " << std::endl;
+        std::cout << "PeriodTestDataLayer " << name << " loading data: " << std::endl;
 
         dataCPU.resize(file_data.size());
         dataGPU.resize(file_data.size());
@@ -4060,14 +4100,14 @@ public:
         dataCPU[1]  = new T[numel(data_dim3D)];
         item_raw[1] = new T[numel(size_data3D)];
 
-        // for label
-        labelCPUall = new Tensor<StorageT>(file_label);
-        labelCPUall -> print(veci(0));
-        std::cout << "    "; labelCPUall->printRange();
-        while (labelCPUall->dim.size() < size_data2D.size() + 1) labelCPUall->dim.push_back(1);
-        std::vector<int> label_dim = labelCPUall->dim;
-        label_dim[0] = batch_size;
-        labelCPU = new Tensor<StorageT>(label_dim);
+        // // for label
+        // labelCPUall = new Tensor<StorageT>(file_label);
+        // labelCPUall -> print(veci(0));
+        // std::cout << "    "; labelCPUall->printRange();
+        // while (labelCPUall->dim.size() < size_data2D.size() + 1) labelCPUall->dim.push_back(1);
+        // std::vector<int> label_dim = labelCPUall->dim;
+        // label_dim[0] = batch_size;
+        // labelCPU = new Tensor<StorageT>(label_dim);
 
 
         // distribution_uniform2D.resize(size_crop2D.size());
@@ -4080,21 +4120,21 @@ public:
         //     distribution_uniform3D[d] = new std::uniform_int_distribution<int>(0,size_data3D[d+1] - size_crop3D[d]);
         // }
 
-        if (phase != Testing) {
-            shuffle();
-        } else {
-            ordering.resize(numofitems());
-            for (int i = 0; i < numofitems(); ++i) ordering[i] = i;
-        }
+        // if (phase != Testing) {
+        //     shuffle();
+        // } else {
+        ordering.resize(tensor3D.dim[0]);
+        for (int i = 0; i < tensor3D.dim[0]; ++i) ordering[i] = i;
+        // }
     };
 
-    PeriodMemoryDataLayer(std::string name_, Phase phase_, bool mirror_, std::vector<int> size_data_, std::vector<int> size_crop_, std::vector<std::string> file_data_, std::string file_label_, int batch_size_):
+    PeriodTestDataLayer(std::string name_, Phase phase_, bool mirror_, std::vector<int> size_data_, std::vector<int> size_crop_, std::vector<std::string> file_data_, std::string file_label_, int batch_size_):
         DataLayer(name_), mirror(mirror_), size_data3D(size_data_), size_crop3D(size_crop_), file_data(file_data_), file_label(file_label_), batch_size(batch_size_) {
         phase = phase_;
         init();
     };
 
-    PeriodMemoryDataLayer(JSON* json) {
+    PeriodTestDataLayer(JSON* json) {
         SetOrDie(json, name)
         SetValue(json, phase,       Training)
         SetValue(json, mirror,      false)
@@ -4106,7 +4146,7 @@ public:
         init();
     };
 
-    ~PeriodMemoryDataLayer() {
+    ~PeriodTestDataLayer() {
         if (lock.valid()) lock.wait();
         delete distribution_bernoulli;
         // for (int i=0;i<distribution_uniform.size();++i) delete distribution_uniform[i];
@@ -4156,8 +4196,8 @@ public:
             //std::cout<<"i"<<i<<"image_i"<<image_i<<"bytes_per_item"<<bytes_per_item<<std::endl;
 
             //label
-            size_t labelSizeOfItem = labelCPU->sizeofitem();
-            memcpy(labelCPU->CPUmem + i * labelSizeOfItem, labelCPUall->CPUmem + image_i * labelSizeOfItem, labelSizeOfItem * sizeofStorageT);
+            // size_t labelSizeOfItem = labelCPU->sizeofitem();
+            // memcpy(labelCPU->CPUmem + i * labelSizeOfItem, labelCPUall->CPUmem + image_i * labelSizeOfItem, labelSizeOfItem * sizeofStorageT);
 
             // // mirror
             // bool mirror_this = false;
@@ -4174,7 +4214,7 @@ public:
             fseek(dataFILE[0], headerBytes2D + bytes_per_item2D * image_i, SEEK_SET);
             size_t read_cnt2D = fread(item_raw[0], 1, bytes_per_item2D, dataFILE[0]);
             if (read_cnt2D != bytes_per_item2D) {
-                std::cerr << "Error reading file for PeriodMemoryDataLayer::prefetch : " << dataFILE[0] << std::endl;
+                std::cerr << "Error reading file for PeriodTestDataLayer::prefetch : " << dataFILE[0] << std::endl;
                 std::cerr << "data_i" << 0 << "read_cnt2D: " << read_cnt2D << " bytes_per_item2D: " << bytes_per_item2D << std::endl;
                 FatalError(__LINE__);
             }
@@ -4190,7 +4230,7 @@ public:
             fseek(dataFILE[1], headerBytes3D + bytes_per_item3D * image_i, SEEK_SET);
             size_t read_cnt3D = fread(item_raw[1], 1, bytes_per_item3D, dataFILE[1]);
             if (read_cnt3D != bytes_per_item3D) {
-                std::cerr << "Error reading file for PeriodMemoryDataLayer::prefetch : " << dataFILE[1] << std::endl;
+                std::cerr << "Error reading file for PeriodTestDataLayer::prefetch : " << dataFILE[1] << std::endl;
                 std::cerr << "data_i" << 1 << "read_cnt3D: " << read_cnt3D << " bytes_per_item3D: " << bytes_per_item3D << std::endl;
                 FatalError(__LINE__);
             }
@@ -4215,7 +4255,7 @@ public:
         checkCUDA(__LINE__, cudaMemcpy( dataGPU[0],  dataCPU[0],  numel_batch_all_channel_crop2D * sizeof(T), cudaMemcpyHostToDevice) );
         checkCUDA(__LINE__, cudaMemcpy( dataGPU[1],  dataCPU[1],  numel_batch_all_channel_crop3D * sizeof(T), cudaMemcpyHostToDevice) );
 
-        labelCPU->writeGPU(labelGPU);
+        // labelCPU->writeGPU(labelGPU);
 
     };
 
@@ -4228,8 +4268,8 @@ public:
         Kernel_convert_to_StorageT_subtract <<< CUDA_GET_BLOCKS(numel_batch_all_channel_crop2D), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(numel_batch_all_channel_crop2D), numel_batch_all_channel_crop2D, numel_all_channel_crop2D, dataGPU[0], mean_data2D, out[0]->dataGPU);
         StorageT* mean_data3D =  (1 < mean_data_GPU.size() ? mean_data_GPU[1] : NULL );
         Kernel_convert_to_StorageT_subtract <<< CUDA_GET_BLOCKS(numel_batch_all_channel_crop3D), CUDA_NUM_THREADS>>>(CUDA_GET_LOOPS(numel_batch_all_channel_crop3D), numel_batch_all_channel_crop3D, numel_all_channel_crop3D, dataGPU[1], mean_data3D, out[1]->dataGPU);
-        std::swap(out[file_data.size()]->dataGPU, labelGPU);
-        lock = std::async(std::launch::async, &PeriodMemoryDataLayer<T>::prefetch, this);
+        // std::swap(out[file_data.size()]->dataGPU, labelGPU);
+        lock = std::async(std::launch::async, &PeriodTestDataLayer<T>::prefetch, this);
     };
 
 
@@ -4239,9 +4279,9 @@ public:
 
 
 
-        if (out.size() != file_data.size() + 1) {    std::cout << "PeriodMemoryDataLayer: # of out's should match the # of in-1" << std::endl; FatalError(__LINE__); }
+        if (out.size() != file_data.size()) {    std::cout << "PeriodTestDataLayer: # of out's should match the # of in-1" << std::endl; FatalError(__LINE__); }
         if (! (in.size() == 0 || in.size() < file_data.size())) {
-            std::cerr << "PeriodMemoryDataLayer in.size()==0 || in.size<file_data.size()" << std::endl;
+            std::cerr << "PeriodTestDataLayer in.size()==0 || in.size<file_data.size()" << std::endl;
             FatalError(__LINE__);
         }
         size_t memoryBytes = 0;
@@ -4275,10 +4315,10 @@ public:
         memoryBytes += out[1]->Malloc(data_dim3D);
         // }
 
-        out[file_data.size()]->need_diff = false;
-        memoryBytes += out[file_data.size()]->Malloc(labelCPU->dim);
-        checkCUDA(__LINE__, cudaMalloc(&labelGPU, labelCPU->numBytes()) );
-        memoryBytes += labelCPU->numBytes();
+        // out[file_data.size()]->need_diff = false;
+        // memoryBytes += out[file_data.size()]->Malloc(labelCPU->dim);
+        // checkCUDA(__LINE__, cudaMalloc(&labelGPU, labelCPU->numBytes()) );
+        // memoryBytes += labelCPU->numBytes();
 
         // for (int data_i = 0; data_i<file_data.size();data_i++){
         checkCUDA(__LINE__, cudaMalloc(&dataGPU[0], numel_batch_all_channel_crop2D * sizeof(T)) );
@@ -4290,7 +4330,7 @@ public:
         memoryBytes += numel_batch_all_channel_crop3D * sizeof(T);
         // }
 
-        lock = std::async(std::launch::async, &PeriodMemoryDataLayer<T>::prefetch, this);
+        lock = std::async(std::launch::async, &PeriodTestDataLayer<T>::prefetch, this);
 
         return memoryBytes;
     };
@@ -7197,7 +7237,7 @@ public:
                 else if (fpTypeid == typeID(typeid(char)))        pLayer = new DiskDataLayer<char>(p);
                 else if (fpTypeid == typeID(typeid(bool)))        pLayer = new DiskDataLayer<bool>(p);
             }
-            else if (0 == type.compare("PeriodMemoryData"))       pLayer = new PeriodMemoryDataLayer<float>(p);
+            else if (0 == type.compare("PeriodTestData"))         pLayer = new PeriodTestDataLayer<float>(p);
             else if (0 == type.compare("PeriodTrainData"))        pLayer = new PeriodTrainDataLayer<float>(p);
             else if (0 == type.compare("ElementWise"))            pLayer = new ElementWiseLayer(p);
             else if (0 == type.compare("Concat"))                 pLayer = new ConcatLayer(p);

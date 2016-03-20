@@ -109,7 +109,7 @@ void gen_hypothesis_labels(int num_hypothesis, unsigned short* tmp_hypothesis_lo
                          (tmp_object_center_cam[2] - z_cam) * (tmp_object_center_cam[2] - z_cam));
 
   // Save label (positive case if dist to ground truth object center < some threshold)
-  if (obj_dist < 0.01f)
+  if (obj_dist < 0.02f)
     tmp_hypothesis_labels[hypothesis_idx] = (char)1;
   else
     tmp_hypothesis_labels[hypothesis_idx] = (char)2;
@@ -178,7 +178,7 @@ void generate_train_labels(const std::string &sequence_directory) {
 
     // Display ground truth object pose
     show_object_pose(K, object_pose, curr_frame_color);
-    // cv::waitKey(0);
+    cv::waitKey(10);
 
     // Compute center of ground truth object in 3D camera coordinates
     float object_center_cam[3] = {0};
@@ -260,23 +260,23 @@ void generate_train_labels(const std::string &sequence_directory) {
                        vox_unit, vox_size, vox_range_cam);
 
     // Copy fusion params to GPU
-    checkCUDA(__LINE__, cudaMemcpy(d_K, K, 9 * sizeof(float), cudaMemcpyHostToDevice));
-    checkCUDA(__LINE__, cudaMemcpy(d_depth_data, depth_data, 480 * 640 * sizeof(unsigned short), cudaMemcpyHostToDevice));
-    checkCUDA(__LINE__, cudaMemcpy(d_view_bounds, view_bounds, 6 * sizeof(float), cudaMemcpyHostToDevice));
-    checkCUDA(__LINE__, cudaMemcpy(d_camera_relative_pose, camera_relative_pose, 16 * sizeof(float), cudaMemcpyHostToDevice));
-    checkCUDA(__LINE__, cudaMemcpy(d_vox_range_cam, vox_range_cam, 6 * sizeof(float), cudaMemcpyHostToDevice));
+    kCheckCUDA(__LINE__, cudaMemcpy(d_K, K, 9 * sizeof(float), cudaMemcpyHostToDevice));
+    kCheckCUDA(__LINE__, cudaMemcpy(d_depth_data, depth_data, 480 * 640 * sizeof(unsigned short), cudaMemcpyHostToDevice));
+    kCheckCUDA(__LINE__, cudaMemcpy(d_view_bounds, view_bounds, 6 * sizeof(float), cudaMemcpyHostToDevice));
+    kCheckCUDA(__LINE__, cudaMemcpy(d_camera_relative_pose, camera_relative_pose, 16 * sizeof(float), cudaMemcpyHostToDevice));
+    kCheckCUDA(__LINE__, cudaMemcpy(d_vox_range_cam, vox_range_cam, 6 * sizeof(float), cudaMemcpyHostToDevice));
 
     // Integrate
     int CUDA_NUM_BLOCKS = vox_size[2];
     int CUDA_NUM_THREADS = vox_size[1];
     integrate <<< CUDA_NUM_BLOCKS, CUDA_NUM_THREADS >>>(d_K, d_depth_data, d_view_bounds, d_camera_relative_pose,
         vox_unit, vox_mu, d_vox_size, d_vox_range_cam, d_vox_tsdf, d_vox_weight);
-    checkCUDA(__LINE__, cudaGetLastError());
-    // checkCUDA(__LINE__, cudaDeviceSynchronize());
+    kCheckCUDA(__LINE__, cudaGetLastError());
+    // kCheckCUDA(__LINE__, cudaDeviceSynchronize());
 
     // Copy data back to memory
-    checkCUDA(__LINE__, cudaMemcpy(vox_tsdf, d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
-    checkCUDA(__LINE__, cudaMemcpy(vox_weight, d_vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
+    kCheckCUDA(__LINE__, cudaMemcpy(vox_tsdf, d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
+    kCheckCUDA(__LINE__, cudaMemcpy(vox_weight, d_vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
 
     // for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
     //   std::cout << vox_tsdf[i] << std::endl;
@@ -330,28 +330,28 @@ void generate_train_labels(const std::string &sequence_directory) {
     // Copy list of hypothesis cubes to GPU memory
     unsigned short * d_hypothesis_locations;
     char * d_hypothesis_labels;
-    checkCUDA(__LINE__, cudaMalloc(&d_hypothesis_locations, 3 * num_hypothesis * sizeof(unsigned short)));
-    checkCUDA(__LINE__, cudaMalloc(&d_hypothesis_labels, num_hypothesis * sizeof(char)));
-    checkCUDA(__LINE__, cudaMemcpy(d_hypothesis_locations, hypothesis_locations, 3 * num_hypothesis * sizeof(unsigned short), cudaMemcpyHostToDevice));
-    checkCUDA(__LINE__, cudaMemcpy(d_hypothesis_labels, hypothesis_labels, num_hypothesis * sizeof(char), cudaMemcpyHostToDevice));
+    kCheckCUDA(__LINE__, cudaMalloc(&d_hypothesis_locations, 3 * num_hypothesis * sizeof(unsigned short)));
+    kCheckCUDA(__LINE__, cudaMalloc(&d_hypothesis_labels, num_hypothesis * sizeof(char)));
+    kCheckCUDA(__LINE__, cudaMemcpy(d_hypothesis_locations, hypothesis_locations, 3 * num_hypothesis * sizeof(unsigned short), cudaMemcpyHostToDevice));
+    kCheckCUDA(__LINE__, cudaMemcpy(d_hypothesis_labels, hypothesis_labels, num_hypothesis * sizeof(char), cudaMemcpyHostToDevice));
 
     // Copy hypothesis crop information and object center to GPU memory
     unsigned short * d_hypothesis_crop_2D;
     float * d_object_center_cam;
-    checkCUDA(__LINE__, cudaMalloc(&d_hypothesis_crop_2D, 4 * num_hypothesis * sizeof(unsigned short)));
-    checkCUDA(__LINE__, cudaMalloc(&d_object_center_cam, 3 * sizeof(float)));
-    checkCUDA(__LINE__, cudaMemcpy(d_object_center_cam, object_center_cam, 3 * sizeof(float), cudaMemcpyHostToDevice));
+    kCheckCUDA(__LINE__, cudaMalloc(&d_hypothesis_crop_2D, 4 * num_hypothesis * sizeof(unsigned short)));
+    kCheckCUDA(__LINE__, cudaMalloc(&d_object_center_cam, 3 * sizeof(float)));
+    kCheckCUDA(__LINE__, cudaMemcpy(d_object_center_cam, object_center_cam, 3 * sizeof(float), cudaMemcpyHostToDevice));
 
     // Run kernel to get labels for hypotheses
     CUDA_NUM_THREADS = 512;
     CUDA_NUM_BLOCKS = (int)ceil(((float)num_hypothesis) / ((float)CUDA_NUM_THREADS));
     gen_hypothesis_labels<<<CUDA_NUM_BLOCKS,CUDA_NUM_THREADS>>>(num_hypothesis, d_hypothesis_locations, d_hypothesis_labels, d_hypothesis_crop_2D, d_object_center_cam, d_K, vox_unit, d_vox_size, d_vox_range_cam, d_vox_tsdf);
-    checkCUDA(__LINE__, cudaGetLastError());
+    kCheckCUDA(__LINE__, cudaGetLastError());
 
     // Copy 2D crop information back to CPU
     unsigned short * hypothesis_crop_2D = new unsigned short[4 * num_hypothesis];
-    checkCUDA(__LINE__, cudaMemcpy(hypothesis_labels, d_hypothesis_labels, num_hypothesis * sizeof(char), cudaMemcpyDeviceToHost));
-    checkCUDA(__LINE__, cudaMemcpy(hypothesis_crop_2D, d_hypothesis_crop_2D, 4 * num_hypothesis * sizeof(unsigned short), cudaMemcpyDeviceToHost));
+    kCheckCUDA(__LINE__, cudaMemcpy(hypothesis_labels, d_hypothesis_labels, num_hypothesis * sizeof(char), cudaMemcpyDeviceToHost));
+    kCheckCUDA(__LINE__, cudaMemcpy(hypothesis_crop_2D, d_hypothesis_crop_2D, 4 * num_hypothesis * sizeof(unsigned short), cudaMemcpyDeviceToHost));
 
     // Sort hypothesis lists
     std::vector<int> hypothesis_sort_idx_positive;
@@ -420,8 +420,8 @@ void generate_train_labels(const std::string &sequence_directory) {
     // Reset volume in GPU
     CUDA_NUM_BLOCKS = vox_size[2];
     CUDA_NUM_THREADS = vox_size[1];
-    reset_vox_GPU <<< CUDA_NUM_BLOCKS, CUDA_NUM_THREADS >>>(d_vox_size, d_vox_tsdf, d_vox_weight);
-    checkCUDA(__LINE__, cudaGetLastError());
+    reset_vox_whole_GPU <<< CUDA_NUM_BLOCKS, CUDA_NUM_THREADS >>>(d_vox_size, d_vox_tsdf, d_vox_weight);
+    kCheckCUDA(__LINE__, cudaGetLastError());
 
     // Free memory
     free(depth_data);
@@ -429,10 +429,10 @@ void generate_train_labels(const std::string &sequence_directory) {
     delete [] hypothesis_labels;
     delete [] hypothesis_crop_2D;
 
-    checkCUDA(__LINE__, cudaFree(d_hypothesis_locations));
-    checkCUDA(__LINE__, cudaFree(d_hypothesis_labels));
-    checkCUDA(__LINE__, cudaFree(d_hypothesis_crop_2D));
-    checkCUDA(__LINE__, cudaFree(d_object_center_cam));
+    kCheckCUDA(__LINE__, cudaFree(d_hypothesis_locations));
+    kCheckCUDA(__LINE__, cudaFree(d_hypothesis_labels));
+    kCheckCUDA(__LINE__, cudaFree(d_hypothesis_crop_2D));
+    kCheckCUDA(__LINE__, cudaFree(d_object_center_cam));
   }
 }
 
@@ -442,7 +442,8 @@ void generate_train_labels(const std::string &sequence_directory) {
 int main(int argc, char **argv) {
 
   init_fusion_GPU();
-  generate_train_labels("data/train/glue/seq01");
+  generate_train_labels("data/train/glue/seq03");
+  generate_train_labels("data/train/glue/seq04");
 
   return 0;
 }

@@ -216,14 +216,25 @@ float * d_neg_crop_2D;
 float * d_pos_crop_3D;
 float * d_neg_crop_3D;
 
-// Initialize existing TSDF volume in GPU memory
+// Initialize existing cropped TSDF volume in GPU memory
 __global__
-void reset_vox_GPU(float* tmp_view_bounds, int* tmp_vox_size, float* tmp_vox_tsdf, float* tmp_vox_weight) {
+void reset_vox_crop_GPU(float* tmp_view_bounds, int* tmp_vox_size, float* tmp_vox_tsdf, float* tmp_vox_weight) {
   // int z = blockIdx.x;
   // int y = threadIdx.x;
   int z = (int)tmp_view_bounds[2 * 2 + 0] + blockIdx.x;
   int y = (int)tmp_view_bounds[1 * 2 + 0] + threadIdx.x;
   for (int x = tmp_view_bounds[0 * 2 + 0]; x < tmp_view_bounds[0 * 2 + 1]; x++) {
+    tmp_vox_tsdf[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 1.0f;
+    tmp_vox_weight[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 0;
+  }
+}
+
+// Initialize existing TSDF volume in GPU memory
+__global__
+void reset_vox_whole_GPU(int* tmp_vox_size, float* tmp_vox_tsdf, float* tmp_vox_weight) {
+  int z = blockIdx.x;
+  int y = threadIdx.x;
+  for (int x = 0; x < tmp_vox_size[0]; x++) {
     tmp_vox_tsdf[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 1.0f;
     tmp_vox_weight[z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x] = 0;
   }
