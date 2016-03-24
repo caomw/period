@@ -3992,9 +3992,10 @@ public:
     std::vector<std::string> file_mean;
     std::string file_label;
     int batch_size;
+    int num_data_points;
 
     int numofitems() {
-        return 0;
+        return num_data_points;
     };
 
     void init() {
@@ -4009,38 +4010,16 @@ public:
         train_me = false;
         std::cout << "PeriodTestDataLayer " << name << " loading data: " << std::endl;
 
-        dataCPU.resize(file_data.size());
-        dataGPU.resize(file_data.size());
-        item_raw.resize(file_data.size());
-        dataFILE.resize(file_data.size());
+        dataCPU.resize(2);
+        dataGPU.resize(2);
+        item_raw.resize(2);
+        dataFILE.resize(2);
 
-        // open data file
-        for (int i = 0; i < file_data.size(); ++i) {
-            std::cout << file_data[i] << std::endl;
-            dataFILE[i] = fopen(file_data[i].c_str(), "rb");
-            if (dataFILE[i] == NULL) {
-                std::cerr << "Fail to open the data file" << std::endl;
-                FatalError(__LINE__);
-            }
-        }
+        mean_data_GPU.resize(0);
 
-        mean_data_GPU.resize(file_mean.size());
-        for (int i = 0; i < file_mean.size(); i++) {
-            Tensor<StorageT>* meanCPU = new Tensor<StorageT>(file_mean[i], batch_size);
-            meanCPU->print(veci(0));
-            checkCUDA(__LINE__, cudaMalloc(&mean_data_GPU[i], meanCPU->numBytes()) );
-            meanCPU->writeGPU(mean_data_GPU[i]);
-            delete meanCPU;
-        }
-
-        // Size crop
+        // Sizes of 2D data
         size_crop2D.clear(); size_crop2D.push_back(227); size_crop2D.push_back(227);
-        size_crop3D.clear(); size_crop3D.push_back(30); size_crop3D.push_back(30); size_crop3D.push_back(30);
-
-        // 2D data
-        Tensor<T> tensor2D;
-        headerBytes2D = tensor2D.readHeader(dataFILE[0]);
-        size_data2D.insert( size_data2D.end(), tensor2D.dim.begin() + 1, tensor2D.dim.end() );
+        size_data2D.clear(); size_data2D.push_back(3); size_data2D.push_back(227); size_data2D.push_back(227);
 
         numel_per_channel_crop2D = numel(size_crop2D);
         numel_all_channel_crop2D = size_data2D[0] * numel_per_channel_crop2D;
@@ -4053,15 +4032,12 @@ public:
         data_dim2D.push_back(size_data2D[0]);
         data_dim2D.insert( data_dim2D.end(), size_crop2D.begin(), size_crop2D.end() );
 
-        // for (int i = 0;i<file_data.size();++i){
-        // }
         dataCPU[0]  = new T[numel(data_dim2D)];
         item_raw[0] = new T[numel(size_data2D)];
 
-        // 3D data
-        Tensor<T> tensor3D;
-        headerBytes3D = tensor3D.readHeader(dataFILE[1]);
-        size_data3D.insert( size_data3D.end(), tensor3D.dim.begin() + 1, tensor3D.dim.end() );
+        // Sizes of 3D data
+        size_crop3D.clear(); size_crop3D.push_back(30); size_crop3D.push_back(30); size_crop3D.push_back(30);
+        size_data3D.clear(); size_data3D.push_back(1); size_data3D.push_back(30); size_data3D.push_back(30); size_data3D.push_back(30);
 
         numel_per_channel_crop3D = numel(size_crop3D);
         numel_all_channel_crop3D = size_data3D[0] * numel_per_channel_crop3D;
@@ -4074,7 +4050,7 @@ public:
         data_dim3D.push_back(size_data3D[0]);
         data_dim3D.insert( data_dim3D.end(), size_crop3D.begin(), size_crop3D.end() );
 
-
+        // Debug 2D sizes
         for (int i = 0; i < data_dim2D.size(); ++i)
             std::cout << data_dim2D[i] << " ";
         std::cout << std::endl;
@@ -4084,6 +4060,7 @@ public:
         std::cout << numel_batch_all_channel_crop2D << std::endl;
         std::cout << bytes_per_item2D << std::endl;
 
+        // Debug 3D sizes
         for (int i = 0; i < data_dim3D.size(); ++i)
             std::cout << data_dim3D[i] << " ";
         std::cout << std::endl;
@@ -4093,39 +4070,13 @@ public:
         std::cout << numel_batch_all_channel_crop3D << std::endl;
         std::cout << bytes_per_item3D << std::endl;
 
-        // for (int i = 0;i<file_data.size();++i){
-        //     dataCPU[i]  = new T[numel(data_dim3D)];
-        //     item_raw[i] = new T[numel(size_data3D)];
-        // }
         dataCPU[1]  = new T[numel(data_dim3D)];
         item_raw[1] = new T[numel(size_data3D)];
 
-        // // for label
-        // labelCPUall = new Tensor<StorageT>(file_label);
-        // labelCPUall -> print(veci(0));
-        // std::cout << "    "; labelCPUall->printRange();
-        // while (labelCPUall->dim.size() < size_data2D.size() + 1) labelCPUall->dim.push_back(1);
-        // std::vector<int> label_dim = labelCPUall->dim;
-        // label_dim[0] = batch_size;
-        // labelCPU = new Tensor<StorageT>(label_dim);
+        num_data_points = batch_size + 1;
+        // ordering.resize(tensor3D.dim[0]);
+        // for (int i = 0; i < tensor3D.dim[0]; ++i) ordering[i] = i;
 
-
-        // distribution_uniform2D.resize(size_crop2D.size());
-        // for (int d=0; d<size_crop2D.size(); d++){
-        //     distribution_uniform2D[d] = new std::uniform_int_distribution<int>(0,size_data2D[d+1] - size_crop2D[d]);
-        // }
-
-        // distribution_uniform3D.resize(size_crop3D.size());
-        // for (int d=0; d<size_crop3D.size(); d++){
-        //     distribution_uniform3D[d] = new std::uniform_int_distribution<int>(0,size_data3D[d+1] - size_crop3D[d]);
-        // }
-
-        // if (phase != Testing) {
-        //     shuffle();
-        // } else {
-        ordering.resize(tensor3D.dim[0]);
-        for (int i = 0; i < tensor3D.dim[0]; ++i) ordering[i] = i;
-        // }
     };
 
     PeriodTestDataLayer(std::string name_, Phase phase_, bool mirror_, std::vector<int> size_data_, std::vector<int> size_crop_, std::vector<std::string> file_data_, std::string file_label_, int batch_size_):
@@ -4187,75 +4138,62 @@ public:
 
         checkCUDA(__LINE__, cudaSetDevice(GPU));
 
+        // std::cout << buffer_data2D.size() << std::endl;
+        // std::cout << buffer_data3D.size() << std::endl;
 
-        // std::vector<size_t> begin_coor(size_crop.size());
+        // std::cout << "numdatapoints: " << num_data_points << std::endl;
 
-        for (size_t i = 0; i < batch_size; ++i) {
+        for (size_t batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
 
-            int image_i = ordering[counter];
-            //std::cout<<"i"<<i<<"image_i"<<image_i<<"bytes_per_item"<<bytes_per_item<<std::endl;
+            // int image_i = ordering[counter];
+            // std::cout << counter << std::endl;
 
-            //label
-            // size_t labelSizeOfItem = labelCPU->sizeofitem();
-            // memcpy(labelCPU->CPUmem + i * labelSizeOfItem, labelCPUall->CPUmem + image_i * labelSizeOfItem, labelSizeOfItem * sizeofStorageT);
-
-            // // mirror
-            // bool mirror_this = false;
-            // if (mirror) mirror_this = ((*distribution_bernoulli)(rng));
-            // if (numel_per_channel_orgi != numel_per_channel_crop || mirror_this){
-            //     for (int d=0;d<size_crop.size();++d){
-            //         begin_coor[d] = (numel_per_channel_orgi == numel_per_channel_crop) ? 0 : ((*(distribution_uniform[d]))(rng));
-            //     }
+            // // 2D
+            // // for (int data_i = 0; data_i<file_data.size();data_i++){
+            // // read file
+            // fseek(dataFILE[0], headerBytes2D + bytes_per_item2D * image_i, SEEK_SET);
+            // size_t read_cnt2D = fread(item_raw[0], 1, bytes_per_item2D, dataFILE[0]);
+            // if (read_cnt2D != bytes_per_item2D) {
+            //     std::cerr << "Error reading file for PeriodTestDataLayer::prefetch : " << dataFILE[0] << std::endl;
+            //     std::cerr << "data_i" << 0 << "read_cnt2D: " << read_cnt2D << " bytes_per_item2D: " << bytes_per_item2D << std::endl;
+            //     FatalError(__LINE__);
             // }
 
-            // 2D
-            // for (int data_i = 0; data_i<file_data.size();data_i++){
-            // read file
-            fseek(dataFILE[0], headerBytes2D + bytes_per_item2D * image_i, SEEK_SET);
-            size_t read_cnt2D = fread(item_raw[0], 1, bytes_per_item2D, dataFILE[0]);
-            if (read_cnt2D != bytes_per_item2D) {
-                std::cerr << "Error reading file for PeriodTestDataLayer::prefetch : " << dataFILE[0] << std::endl;
-                std::cerr << "data_i" << 0 << "read_cnt2D: " << read_cnt2D << " bytes_per_item2D: " << bytes_per_item2D << std::endl;
-                FatalError(__LINE__);
-            }
+            // T* memBegin2D = dataCPU[0] + i * numel_all_channel_crop2D;
+            // if (numel_per_channel_orgi2D == numel_per_channel_crop2D) {
+            //     memcpy(memBegin2D, item_raw[0], bytes_per_item2D);
+            // }
 
-            T* memBegin2D = dataCPU[0] + i * numel_all_channel_crop2D;
-            if (numel_per_channel_orgi2D == numel_per_channel_crop2D) {
-                memcpy(memBegin2D, item_raw[0], bytes_per_item2D);
-            }
+            // // 3D
+            // fseek(dataFILE[1], headerBytes3D + bytes_per_item3D * image_i, SEEK_SET);
+            // size_t read_cnt3D = fread(item_raw[1], 1, bytes_per_item3D, dataFILE[1]);
+            // if (read_cnt3D != bytes_per_item3D) {
+            //     std::cerr << "Error reading file for PeriodTestDataLayer::prefetch : " << dataFILE[1] << std::endl;
+            //     std::cerr << "data_i" << 1 << "read_cnt3D: " << read_cnt3D << " bytes_per_item3D: " << bytes_per_item3D << std::endl;
+            //     FatalError(__LINE__);
+            // }
 
-            // }//for (int data_i = 0; data_i<file_data.size();data_i++)
+            // T* memBegin3D = dataCPU[1] + i * numel_all_channel_crop3D;
+            // if (numel_per_channel_orgi3D == numel_per_channel_crop3D) {
+            //     memcpy(memBegin3D, item_raw[1], bytes_per_item3D);
+            // }
 
-            // 3D
-            fseek(dataFILE[1], headerBytes3D + bytes_per_item3D * image_i, SEEK_SET);
-            size_t read_cnt3D = fread(item_raw[1], 1, bytes_per_item3D, dataFILE[1]);
-            if (read_cnt3D != bytes_per_item3D) {
-                std::cerr << "Error reading file for PeriodTestDataLayer::prefetch : " << dataFILE[1] << std::endl;
-                std::cerr << "data_i" << 1 << "read_cnt3D: " << read_cnt3D << " bytes_per_item3D: " << bytes_per_item3D << std::endl;
-                FatalError(__LINE__);
-            }
+            for (int i = 0; i < numel_all_channel_crop2D; i++)
+                dataCPU[0][batch_idx * numel_all_channel_crop2D + i] = buffer_data2D[counter][i];
 
-            T* memBegin3D = dataCPU[1] + i * numel_all_channel_crop3D;
-            if (numel_per_channel_orgi3D == numel_per_channel_crop3D) {
-                memcpy(memBegin3D, item_raw[1], bytes_per_item3D);
-            }
+            for (int i = 0; i < numel_all_channel_crop3D; i++)
+                dataCPU[1][batch_idx * numel_all_channel_crop3D + i] = buffer_data3D[counter][i];
 
             counter++;
-            if (counter >= ordering.size()) {
+            if (counter >= num_data_points) {
                 if (phase != Testing) shuffle();
                 counter = 0;
                 ++epoch_prefetch;
             }
-        }//end for (size_t i=0;i<batch_size;++i)
-        //std::cout<<"numel_batch_all_channel_crop:  "<<numel_batch_all_channel_crop<<std::endl;
+        }
 
-
-        // for (int data_i = 0; data_i<file_data.size();data_i++){
-        // }
         checkCUDA(__LINE__, cudaMemcpy( dataGPU[0],  dataCPU[0],  numel_batch_all_channel_crop2D * sizeof(T), cudaMemcpyHostToDevice) );
         checkCUDA(__LINE__, cudaMemcpy( dataGPU[1],  dataCPU[1],  numel_batch_all_channel_crop3D * sizeof(T), cudaMemcpyHostToDevice) );
-
-        // labelCPU->writeGPU(labelGPU);
 
     };
 
@@ -4272,27 +4210,26 @@ public:
         lock = std::async(std::launch::async, &PeriodTestDataLayer<T>::prefetch, this);
     };
 
-
     size_t Malloc(Phase phase_) {
 
         if (phase == Training && phase_ == Testing) return 0;
-
-
 
         if (out.size() != file_data.size()) {    std::cout << "PeriodTestDataLayer: # of out's should match the # of in-1" << std::endl; FatalError(__LINE__); }
         if (! (in.size() == 0 || in.size() < file_data.size())) {
             std::cerr << "PeriodTestDataLayer in.size()==0 || in.size<file_data.size()" << std::endl;
             FatalError(__LINE__);
         }
+
         size_t memoryBytes = 0;
 
         std::cout << (train_me ? "* " : "  ");
         std::cout << name << std::endl;
 
         std::vector<int> data_dim2D;
-        data_dim2D.push_back(batch_size);
-        data_dim2D.push_back(size_data2D[0]);
-        data_dim2D.insert( data_dim2D.end(), size_crop2D.begin(), size_crop2D.end() );
+        data_dim2D.push_back(batch_size); data_dim2D.push_back(3); data_dim2D.push_back(227); data_dim2D.push_back(227);
+        // data_dim2D.push_back(batch_size);
+        // data_dim2D.push_back(size_data2D[0]);
+        // data_dim2D.insert( data_dim2D.end(), size_crop2D.begin(), size_crop2D.end() );
 
         // for (int data_i = 0; data_i<file_data.size();data_i++){
         out[0]->need_diff = false;
@@ -4303,9 +4240,10 @@ public:
         // }
 
         std::vector<int> data_dim3D;
-        data_dim3D.push_back(batch_size);
-        data_dim3D.push_back(size_data3D[0]);
-        data_dim3D.insert( data_dim3D.end(), size_crop3D.begin(), size_crop3D.end() );
+        data_dim3D.push_back(batch_size); data_dim3D.push_back(1); data_dim3D.push_back(30); data_dim3D.push_back(30); data_dim3D.push_back(30);
+        // data_dim3D.push_back(batch_size);
+        // data_dim3D.push_back(size_data3D[0]);
+        // data_dim3D.insert( data_dim3D.end(), size_crop3D.begin(), size_crop3D.end() );
 
         // for (int data_i = 0; data_i<file_data.size();data_i++){
         out[1]->need_diff = false;
@@ -7735,16 +7673,21 @@ public:
 
         std::vector<FILE*> files(responseNames.size(), NULL);
 
-        DataLayer* pDataLayer = NULL;
+        PeriodTestDataLayer<float>* pDataLayer = NULL;
         for (int l = 0; l < layers.size(); ++l) {
             if (layers[l]->phase == phase || layers[l]->phase == TrainingTesting) {
                 if (layers[l]->isDataLayer()) {
-                    pDataLayer = (DataLayer*) layers[l];
+                    pDataLayer = (PeriodTestDataLayer<float>*) layers[l];
                     break;
                 }
             }
         }
         if (pDataLayer == NULL) { std::cerr << "No data layer for Testing." << std::endl; FatalError(__LINE__);};
+
+        // pDataLayer = (PeriodTestDataLayer*) pDataLayer;
+        // pDataLayer->init_test();
+        // pDataLayer->Malloc_test(Testing);
+        pDataLayer->num_data_points = buffer_data2D.size();
 
         std::vector<size_t> total_size(responseNames.size());
         for (int i = 0; i < responseNames.size(); ++i) {
@@ -7779,56 +7722,98 @@ public:
             if (responseNames.size() > 0) {
                 for (int i = 0; i < responseNames.size(); ++i) {
                     Response* r = getResponse(responseNames[i]);
+                    // std::cout << responseNames[i] << std::endl;
+
                     if ((itersPerSave == 0 && iter == 0) || (itersPerSave != 0 && iter % itersPerSave == 0)) {
 
-                        std::string Fname = saveFilenames[i];
+                        // std::string Fname = saveFilenames[i];
 
-                        if (itersPerSave != 0) {
-                            Fname = Fname + '_' + std::to_string(file_counter[i]) + ".tensor";
-                        }
+                        // if (itersPerSave != 0) {
+                        //     Fname = Fname + '_' + std::to_string(file_counter[i]) + ".tensor";
+                        // }
 
-                        while (is_file_exist(Fname)) {
-                            std::cerr << "File " << Fname << " exists. Please delete it first. Will retry after 5 seconds." << std::endl;
-                            std::this_thread::sleep_for (std::chrono::seconds(5));
-                        }
+                        // while (is_file_exist(Fname)) {
+                        //     std::cerr << "File " << Fname << " exists. Please delete it first. Will retry after 5 seconds." << std::endl;
+                        //     std::this_thread::sleep_for (std::chrono::seconds(5));
+                        // }
 
                         Response* r = getResponse(responseNames[i]);
                         if (features[i] == NULL)
                             features[i] = new Tensor<StorageT>(r->dim);
-                        files[i] = fopen(Fname.c_str(), "wb");
 
-                        while (files[i] == NULL) {
-                            std::cerr << "Open file " << Fname << " fails. Please check availablility of free disk space. Will retry after 5 seconds." << std::endl;
-                            std::this_thread::sleep_for(std::chrono::seconds(5));
-                            files[i] = fopen(Fname.c_str(), "wb");
+                        std::cout << total_size[i] << std::endl;
+
+                        if (responseNames[i] == "class_score") {
+                            buffer_scores_class.clear();
+                            buffer_scores_class.resize(total_size[i]);
                         }
 
-                        std::vector<int> dim = r->dim;
-                        if (itersPerSave == 0) {
-                            dim[0] = pDataLayer->numofitems();
-                        } else {
-                            int samplesPerFile = r->dim[0] * itersPerSave;
-                            int samplesSaved = samplesPerFile * file_counter[i];
-
-                            if (samplesSaved + samplesPerFile <= pDataLayer->numofitems()) {
-                                dim[0] = r->dim[0] * itersPerSave;
-                            } else {
-                                dim[0] = pDataLayer->numofitems() - samplesSaved;
-                            }
+                        if (responseNames[i] == "axis_score") {
+                            buffer_scores_axis.clear();
+                            buffer_scores_axis.resize(total_size[i]);
                         }
-                        features[i]->writeHeader(files[i], dim);
+
+                        if (responseNames[i] == "angle_score") {
+                            buffer_scores_angle.clear();
+                            buffer_scores_angle.resize(total_size[i]);
+                        }
+
+                        // files[i] = fopen(Fname.c_str(), "wb");
+
+                        // while (files[i] == NULL) {
+                        //     std::cerr << "Open file " << Fname << " fails. Please check availablility of free disk space. Will retry after 5 seconds." << std::endl;
+                        //     std::this_thread::sleep_for(std::chrono::seconds(5));
+                        //     files[i] = fopen(Fname.c_str(), "wb");
+                        // }
+
+                        // std::vector<int> dim = r->dim;
+                        // if (itersPerSave == 0) {
+                        //     dim[0] = pDataLayer->numofitems();
+                        // } 
+                        // else {
+                        //     int samplesPerFile = r->dim[0] * itersPerSave;
+                        //     int samplesSaved = samplesPerFile * file_counter[i];
+
+                        //     if (samplesSaved + samplesPerFile <= pDataLayer->numofitems()) {
+                        //         dim[0] = r->dim[0] * itersPerSave;
+                        //     } else {
+                        //         dim[0] = pDataLayer->numofitems() - samplesSaved;
+                        //     }
+                        // }
+                        // features[i]->writeHeader(files[i], dim);
 
                         file_counter[i]++;
                     }
 
                     features[i]->readGPU(r-> dataGPU);
-                    features[i]->writeData(files[i], total_size[i]);
+
+
+                    int features_batch_size = min(features[i]->numel(),total_size[i]);
+                    if (responseNames[i] == "class_score")
+                        for (int j = 0; j < features_batch_size; j++)
+                            buffer_scores_class[iter * (features[i]->numel()) + j] = features[i]->CPUmem[j];
+
+                    if (responseNames[i] == "axis_score")
+                        for (int j = 0; j < features_batch_size; j++)
+                            buffer_scores_axis[iter * (features[i]->numel()) + j] = features[i]->CPUmem[j];
+
+                    if (responseNames[i] == "angle_score")
+                        for (int j = 0; j < features_batch_size; j++)
+                            buffer_scores_angle[iter * (features[i]->numel()) + j] = features[i]->CPUmem[j];
+
+                    // void readGPU(T* GPUmem) {
+                    //     cudaMemcpy(CPUmem, GPUmem, numel()*sizeof(T), cudaMemcpyDeviceToHost);
+                    // };
+                    // std::cout << features[i]->numel() << std::endl;
+                    // features[i]->CPUmem[]
+                    // features[i]->writeData(files[i], total_size[i]);
+                    // std::cout << total_size[i] << std::endl;
                     total_size[i] -= features[i]->numel();
 
-                    if (itersPerSave != 0 && iter % itersPerSave == itersPerSave - 1) {
-                        fclose(files[i]);
-                        files[i] = NULL;
-                    }
+                    // if (itersPerSave != 0 && iter % itersPerSave == itersPerSave - 1) {
+                    //     fclose(files[i]);
+                    //     files[i] = NULL;
+                    // }
                 }
             }
             ++iter;

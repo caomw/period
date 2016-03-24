@@ -43,6 +43,9 @@ void show_object_pose(float* K, float* object_pose, cv::Mat& display_frame) {
   cv::line(display_frame, cv::Point(object_pose_display_2D[2], object_pose_display_2D[8]), cv::Point(object_pose_display_2D[3], object_pose_display_2D[9]), cv::Scalar(0, 255, 0), 3);
   cv::line(display_frame, cv::Point(object_pose_display_2D[4], object_pose_display_2D[10]), cv::Point(object_pose_display_2D[5], object_pose_display_2D[11]), cv::Scalar(255, 0, 0), 3);
   cv::circle(display_frame, cv::Point(object_center_display_2D[0], object_center_display_2D[1]), 6, cv::Scalar(0, 255, 255), -1);
+  cv::circle(display_frame, cv::Point(object_pose_display_2D[0], object_pose_display_2D[6]), 6, cv::Scalar(0, 0, 255), -1);
+  cv::circle(display_frame, cv::Point(object_pose_display_2D[2], object_pose_display_2D[8]), 6, cv::Scalar(0, 255, 0), -1);
+  cv::circle(display_frame, cv::Point(object_pose_display_2D[4], object_pose_display_2D[10]), 6, cv::Scalar(255, 0, 0), -1);
   cv::namedWindow("Object Pose", CV_WINDOW_AUTOSIZE);
   cv::imshow("Object Pose", display_frame);
 }

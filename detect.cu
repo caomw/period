@@ -1,8 +1,37 @@
 #include "util/util.hpp"
 #include "kinfu.hpp"
 #include <opencv2/opencv.hpp>
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Global data structures to hold data and labels passed to and from Marvin
+std::vector<std::vector<float>> buffer_data2D;
+std::vector<std::vector<float>> buffer_data3D;
+std::vector<float> buffer_scores_class;
+std::vector<float> buffer_scores_axis;
+std::vector<float> buffer_scores_angle;
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Import Marvin
+
 #define DATATYPE 1 // Marvin datatype
 #include "marvin.hpp"
+
+////////////////////////////////////////////////////////////////////////////////
+// Global variables for Marvin
+std::string model_idx = "4";
+// marvin::Net main_net("tools/marvin/model" + model_idx + ".test.json");
+
+// Init marvin net
+// void init_marvin() {
+//     // marvin::Net net("tools/marvin/model" + model_idx + ".test.json");
+//     main_net.Malloc(marvin::Testing);
+//     std::vector<std::string> models = marvin::getStringVector("tools/marvin/PeriodNet.1." + model_idx + ".60000.marvin");
+//     for (int m=0;m<models.size();++m)   
+//       main_net.loadWeights(models[m]);
+// }
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -45,8 +74,11 @@ void show_object_pose(float* K, float* object_pose, cv::Mat& display_frame) {
   cv::line(display_frame, cv::Point(object_pose_display_2D[2], object_pose_display_2D[8]), cv::Point(object_pose_display_2D[3], object_pose_display_2D[9]), cv::Scalar(0, 255, 0), 3);
   cv::line(display_frame, cv::Point(object_pose_display_2D[4], object_pose_display_2D[10]), cv::Point(object_pose_display_2D[5], object_pose_display_2D[11]), cv::Scalar(255, 0, 0), 3);
   cv::circle(display_frame, cv::Point(object_center_display_2D[0], object_center_display_2D[1]), 6, cv::Scalar(0, 255, 255), -1);
-  cv::namedWindow("Object Pose", CV_WINDOW_AUTOSIZE);
-  cv::imshow("Object Pose", display_frame);
+  cv::circle(display_frame, cv::Point(object_pose_display_2D[0], object_pose_display_2D[6]), 6, cv::Scalar(0, 0, 255), -1);
+  cv::circle(display_frame, cv::Point(object_pose_display_2D[2], object_pose_display_2D[8]), 6, cv::Scalar(0, 255, 0), -1);
+  cv::circle(display_frame, cv::Point(object_pose_display_2D[4], object_pose_display_2D[10]), 6, cv::Scalar(255, 0, 0), -1);
+  // cv::namedWindow("Object Pose", CV_WINDOW_AUTOSIZE);
+  // cv::imshow("Object Pose", display_frame);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -116,337 +148,21 @@ void gen_hypothesis_labels(int num_hypothesis, unsigned short* tmp_hypothesis_lo
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void generate_train_labels(const std::string &sequence_directory) {
+void detect(const std::string &sequence_directory, const std::string &frame_prefix) {
 
-  std::vector<std::string> frame_names;
-  get_files_in_directory(sequence_directory, frame_names, ".color.png");
-  std::sort(frame_names.begin(), frame_names.end());
-
-  // Process all RGB-D frames in directory
-  for (int i = 0; i < frame_names.size(); i++) {
-    std::string curr_frame_name = frame_names[i];
-    curr_frame_name = curr_frame_name.substr(0, curr_frame_name.length() - 10);
-    std::cout << "Preparing Training Frame: " << sequence_directory << "/" << curr_frame_name << std::endl;
-
-    // Load intrinsics (3x3 matrix)
-    std::string intrinsic_filename = sequence_directory + "/intrinsics.K.txt";
-    std::vector<float> K_vec = load_matrix_from_file(intrinsic_filename, 3, 3);
-    // float K[9];
-    // for (int i = 0; i < 9; i++)
-    //   K[i] = K_vec[i];
-    float * K = &K_vec[0];
-    // for (int i = 0; i < 9; i++)
-    //   std::cout << K[i] << std::endl;
-
-    // Load RGB-D frame
-    std::string curr_frame_color_filename = sequence_directory + "/" + curr_frame_name + ".color.png";
-    cv::Mat curr_frame_color = cv::imread(curr_frame_color_filename.c_str(), 1);
-    std::string curr_frame_depth_filename = sequence_directory + "/" + curr_frame_name + ".depth.png";
-    cv::Mat curr_frame_depth = cv::imread(curr_frame_depth_filename.c_str(), CV_LOAD_IMAGE_UNCHANGED);
-
-    // Read ground truth object pose from file
-    std::string object_pose_filename = sequence_directory + "/object.pose.txt";
-    std::vector<float> object_pose_raw = load_matrix_from_file(object_pose_filename, 4, 4);
-    float * object_pose_arr = &object_pose_raw[0];
-    // for (int i = 0; i < 12; i++)
-    //   std::cout << object_pose[i] << std::endl;
-
-    // Compute ground truth object pose w.r.t. current camera pose
-    std::string curr_cam_pose_filename = sequence_directory + "/" + curr_frame_name + ".pose.txt";
-    std::vector<float> curr_cam_pose_raw = load_matrix_from_file(curr_cam_pose_filename, 4, 4);
-    float * curr_cam_pose_arr = &curr_cam_pose_raw[0];
-    // for (int i = 0; i < 16; i++)
-    //   std::cout << curr_cam_pose_arr[i] << std::endl;
-    float curr_cam_pose_inv[16] = {0};
-    invert_matrix(curr_cam_pose_arr, curr_cam_pose_inv);
-    // for (int i = 0; i < 16; i++)
-    //   std::cout << curr_cam_pose_inv[i] << std::endl;
-    float object_pose[16] = {0};
-    multiply_matrix(curr_cam_pose_inv, object_pose_arr, object_pose);
-    // for (int i = 0; i < 4; i++) {
-    //   for (int j = 0; j < 4; j++)
-    //     std::cout << object_pose[i * 4 + j] << " ";
-    //   std::cout << std::endl;
-    // }
-
-    // Display ground truth object pose
-    show_object_pose(K, object_pose, curr_frame_color);
-    cv::waitKey(10);
-
-    // Compute center of ground truth object in 3D camera coordinates
-    float object_center_cam[3] = {0};
-    for (int i = 0; i < 3; i++)
-      object_center_cam[i] = object_pose[i * 4 + 3];
-
-    // Convert pose from rotation matrix to axis/angle (radians) representation (x, y, z, theta)
-    float object_pose_axis[3] = {0};
-    float object_pose_angle = std::acos(0.5f * (object_pose[0] + object_pose[5] + object_pose[10] - 1));
-    object_pose_axis[0] = (object_pose[9] - object_pose[6]) / (2 * std::sin(object_pose_angle));
-    object_pose_axis[1] = (object_pose[2] - object_pose[8]) / (2 * std::sin(object_pose_angle));
-    object_pose_axis[2] = (object_pose[4] - object_pose[1]) / (2 * std::sin(object_pose_angle));
-    // for (int i = 0; i < 3; i++)
-    //   std::cout << object_pose_axis[i] << std::endl;
-
-    // Convert axis/angle to pose
-    float object_pose_rotation[9] = {0};
-    object_pose_rotation[0 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[0] + std::cos(object_pose_angle);
-    object_pose_rotation[0 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[1] - object_pose_axis[2] * std::sin(object_pose_angle);
-    object_pose_rotation[0 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[2] + object_pose_axis[1] * std::sin(object_pose_angle);
-    object_pose_rotation[1 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[0] + object_pose_axis[2] * std::sin(object_pose_angle);
-    object_pose_rotation[1 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[1] + std::cos(object_pose_angle);
-    object_pose_rotation[1 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[2] - object_pose_axis[0] * std::sin(object_pose_angle);
-    object_pose_rotation[2 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[0] - object_pose_axis[1] *  std::sin(object_pose_angle);
-    object_pose_rotation[2 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[1] + object_pose_axis[0] * std::sin(object_pose_angle);
-    object_pose_rotation[2 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[2] + std::cos(object_pose_angle);
-    // for (int i = 0; i < 3; i++) {
-    //   for (int j = 0; j < 3; j++)
-    //     std::cout << object_pose_rotation[i * 3 + j] << " ";
-    //   std::cout << std::endl;
-    // }
-
-    // Bin axis into one of 42 bins
-    float axis_sphere_bin[42 * 3] = { -0.85065, -1, -0.85065, -0.80902, -0.80902, -0.80902, -0.80902, -0.52573, -0.52573, -0.5, -0.5, -0.5, -0.5, -0.30902, -0.30902, -0.30902, -0.30902, 0, 0, 0, 0, 0, 0, 0, 0, 0.30902, 0.30902, 0.30902, 0.30902, 0.5, 0.5, 0.5, 0.5, 0.52573, 0.52573, 0.80902, 0.80902, 0.80902, 0.80902, 0.85065, 1, 0.85065,
-                                      0, 0, 0, -0.5, -0.5, 0.5, 0.5, -0.85065, 0.85065, -0.30902, -0.30902, 0.30902, 0.30902, -0.80902, -0.80902, 0.80902, 0.80902, -1, -0.52573, -0.52573, 0, 0, 0.52573, 0.52573, 1, -0.80902, -0.80902, 0.80902, 0.80902, -0.30902, -0.30902, 0.30902, 0.30902, -0.85065, 0.85065, -0.5, -0.5, 0.5, 0.5, 0, 0, 0,
-                                      -0.52573, 0, 0.52573, -0.30902, 0.30902, -0.30902, 0.30902, 0, 0, -0.80902, 0.80902, -0.80902, 0.80902, -0.5, 0.5, -0.5, 0.5, 0, -0.85065, 0.85065, -1, 1, -0.85065, 0.85065, 0, -0.5, 0.5, -0.5, 0.5, -0.80902, 0.80902, -0.80902, 0.80902, 0, 0, -0.30902, 0.30902, -0.30902, 0.30902, -0.52573, 0, 0.52573
-                                    };
-    int closest_axis_bin = 0;
-    float closest_axis_dist = 100;
-    for (int i = 0; i < 42; i++) {
-      float curr_axis_dist = std::sqrt((axis_sphere_bin[0 * 42 + i] - object_pose_axis[0]) * (axis_sphere_bin[0 * 42 + i] - object_pose_axis[0]) +
-                                       (axis_sphere_bin[1 * 42 + i] - object_pose_axis[1]) * (axis_sphere_bin[1 * 42 + i] - object_pose_axis[1]) +
-                                       (axis_sphere_bin[2 * 42 + i] - object_pose_axis[2]) * (axis_sphere_bin[2 * 42 + i] - object_pose_axis[2]));
-      if (curr_axis_dist < closest_axis_dist) {
-        closest_axis_dist = curr_axis_dist;
-        closest_axis_bin = i;
-      }
-    }
-    // std::cout << closest_axis_bin << std::endl;
-    // std::cout << closest_axis_dist << std::endl;
-
-    // Bin angle into one of 18 bins (10 degrees)
-    float closest_angle_bin = floor(object_pose_angle / (3.14159265 / 18));
-    if (closest_angle_bin > 17 || closest_axis_bin > 41) {
-      std::cout << "AXIS/ANGLE BINS INCORRECTLY SET UP" << std::endl;
-      exit(1);
-    }
-
-    // Load image/depth/extrinsic data for current frame
-    unsigned short * depth_data = (unsigned short *) malloc(480 * 640 * sizeof(unsigned short));
-    for (int i = 0; i < 480 * 640; i++)
-      depth_data[i] = (((unsigned short) curr_frame_depth.data[i * 2 + 1]) << 8) + ((unsigned short) curr_frame_depth.data[i * 2 + 0]);
-
-    // Compute relative camera pose transform between current frame and base frame
-    // Compute camera view frustum bounds within the voxel volume
-    float camera_relative_pose[16] = {0};
-    float view_bounds[6] = {0};
-    std::vector<float> curr_extrinsic;
-    for (int i = 0; i < 3; i++) {
-      curr_extrinsic.push_back(1.0f);
-      for (int i = 0; i < 4; i++) {
-        curr_extrinsic.push_back(0.0f);
-      }
-    }
-    curr_extrinsic.push_back(1.0f);
-    std::vector<std::vector<float>> extrinsics;
-    extrinsics.push_back(curr_extrinsic);
-    get_frustum_bounds(K, extrinsics, 0, 0, camera_relative_pose, view_bounds,
-                       vox_unit, vox_size, vox_range_cam);
-
-    // Copy fusion params to GPU
-    kCheckCUDA(__LINE__, cudaMemcpy(d_K, K, 9 * sizeof(float), cudaMemcpyHostToDevice));
-    kCheckCUDA(__LINE__, cudaMemcpy(d_depth_data, depth_data, 480 * 640 * sizeof(unsigned short), cudaMemcpyHostToDevice));
-    kCheckCUDA(__LINE__, cudaMemcpy(d_view_bounds, view_bounds, 6 * sizeof(float), cudaMemcpyHostToDevice));
-    kCheckCUDA(__LINE__, cudaMemcpy(d_camera_relative_pose, camera_relative_pose, 16 * sizeof(float), cudaMemcpyHostToDevice));
-    kCheckCUDA(__LINE__, cudaMemcpy(d_vox_range_cam, vox_range_cam, 6 * sizeof(float), cudaMemcpyHostToDevice));
-
-    // Integrate
-    int num_blocks = vox_size[2];
-    int num_threads = vox_size[1];
-    integrate <<< num_blocks, num_threads >>>(d_K, d_depth_data, d_view_bounds, d_camera_relative_pose,
-        vox_unit, vox_mu, d_vox_size, d_vox_range_cam, d_vox_tsdf, d_vox_weight);
-    kCheckCUDA(__LINE__, cudaGetLastError());
-    // kCheckCUDA(__LINE__, cudaDeviceSynchronize());
-
-    // Copy data back to memory
-    kCheckCUDA(__LINE__, cudaMemcpy(vox_tsdf, d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
-    kCheckCUDA(__LINE__, cudaMemcpy(vox_weight, d_vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
-
-    // for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
-    //   std::cout << vox_tsdf[i] << std::endl;
-
-    // // Save curr volume to file
-    // std::string scene_ply_name = "volume.pointcloud.ply";
-    // save_volume_to_ply(scene_ply_name, vox_size, vox_tsdf, vox_weight);
-
-    // Compute bounding box of surface in TSDF volume
-    float tsdf_surface_threshold = 0.2f;
-    float grid_bounds[6] = {0};
-    grid_bounds[0] = vox_size[0]; grid_bounds[2] = vox_size[1]; grid_bounds[4] = vox_size[2];
-    for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++) {
-      if (std::abs(vox_tsdf[i]) < tsdf_surface_threshold) {
-        float z = (float) (floor(i / (vox_size[0] * vox_size[1])));
-        float y = (float) (floor((i - (z * vox_size[0] * vox_size[1])) / vox_size[0]));
-        float x = (float) (i - (z * vox_size[0] * vox_size[1]) - (y * vox_size[0]));
-        grid_bounds[0] = std::min(x, grid_bounds[0]); grid_bounds[1] = std::max(x, grid_bounds[1]);
-        grid_bounds[2] = std::min(y, grid_bounds[2]); grid_bounds[3] = std::max(y, grid_bounds[3]);
-        grid_bounds[4] = std::min(z, grid_bounds[4]); grid_bounds[5] = std::max(z, grid_bounds[5]);
-      }
-    }
-
-    // Double check bounding box is not near edge of TSDF volume
-    grid_bounds[0] = std::max(grid_bounds[0], 15.0f); grid_bounds[1] = std::min(grid_bounds[1], (float)vox_size[0] - 15.0f - 1.0f);
-    grid_bounds[2] = std::max(grid_bounds[2], 15.0f); grid_bounds[3] = std::min(grid_bounds[3], (float)vox_size[1] - 15.0f - 1.0f);
-    grid_bounds[4] = std::max(grid_bounds[4], 15.0f); grid_bounds[5] = std::min(grid_bounds[5], (float)vox_size[2] - 15.0f - 1.0f);
-    // std::cout << grid_bounds[0] << " " << grid_bounds[1] << std::endl;
-    // std::cout << grid_bounds[2] << " " << grid_bounds[3] << std::endl;
-    // std::cout << grid_bounds[4] << " " << grid_bounds[5] << std::endl;
-    int grid_size[3] = {0};
-    grid_size[0] = grid_bounds[1] - grid_bounds[0] + 1;
-    grid_size[1] = grid_bounds[3] - grid_bounds[2] + 1;
-    grid_size[2] = grid_bounds[5] - grid_bounds[4] + 1;
-
-    // Create list of hypothesis cubes (store grid locations, and is valid or not (0 for invalid, 1 for positive, 2 for negative))
-    int num_hypothesis = grid_size[0] * grid_size[1] * grid_size[2];
-    // std::cout << num_hypothesis << std::endl;
-    unsigned short * hypothesis_locations = new unsigned short[3 * num_hypothesis];
-    char * hypothesis_labels = new char[num_hypothesis];
-    memset(hypothesis_labels, 0, sizeof(char) * num_hypothesis);
-    for (int z = grid_bounds[4]; z <= grid_bounds[5]; z++)
-      for (int y = grid_bounds[2]; y <= grid_bounds[3]; y++)
-        for (int x = grid_bounds[0]; x <= grid_bounds[1]; x++) {
-          int hypothesis_idx = (z - grid_bounds[4]) * grid_size[0] * grid_size[1] + (y - grid_bounds[2]) * grid_size[0] + (x - grid_bounds[0]);
-          hypothesis_locations[0 * num_hypothesis + hypothesis_idx] = (unsigned short)x;
-          hypothesis_locations[1 * num_hypothesis + hypothesis_idx] = (unsigned short)y;
-          hypothesis_locations[2 * num_hypothesis + hypothesis_idx] = (unsigned short)z;
-        }
-
-    // Copy list of hypothesis cubes to GPU memory
-    unsigned short * d_hypothesis_locations;
-    char * d_hypothesis_labels;
-    kCheckCUDA(__LINE__, cudaMalloc(&d_hypothesis_locations, 3 * num_hypothesis * sizeof(unsigned short)));
-    kCheckCUDA(__LINE__, cudaMalloc(&d_hypothesis_labels, num_hypothesis * sizeof(char)));
-    kCheckCUDA(__LINE__, cudaMemcpy(d_hypothesis_locations, hypothesis_locations, 3 * num_hypothesis * sizeof(unsigned short), cudaMemcpyHostToDevice));
-    kCheckCUDA(__LINE__, cudaMemcpy(d_hypothesis_labels, hypothesis_labels, num_hypothesis * sizeof(char), cudaMemcpyHostToDevice));
-
-    // Copy hypothesis crop information and object center to GPU memory
-    unsigned short * d_hypothesis_crop_2D;
-    float * d_object_center_cam;
-    kCheckCUDA(__LINE__, cudaMalloc(&d_hypothesis_crop_2D, 4 * num_hypothesis * sizeof(unsigned short)));
-    kCheckCUDA(__LINE__, cudaMalloc(&d_object_center_cam, 3 * sizeof(float)));
-    kCheckCUDA(__LINE__, cudaMemcpy(d_object_center_cam, object_center_cam, 3 * sizeof(float), cudaMemcpyHostToDevice));
-
-    // Run kernel to get labels for hypotheses
-    num_threads = 512;
-    num_blocks = (int)ceil(((float)num_hypothesis) / ((float)num_threads));
-    // gen_hypothesis_labels<<<num_blocks,num_threads>>>(num_hypothesis, d_hypothesis_locations, d_hypothesis_labels, d_hypothesis_crop_2D, d_object_center_cam, d_K, vox_unit, d_vox_size, d_vox_range_cam, d_vox_tsdf);
-    kCheckCUDA(__LINE__, cudaGetLastError());
-
-    // Copy 2D crop information back to CPU
-    unsigned short * hypothesis_crop_2D = new unsigned short[4 * num_hypothesis];
-    kCheckCUDA(__LINE__, cudaMemcpy(hypothesis_labels, d_hypothesis_labels, num_hypothesis * sizeof(char), cudaMemcpyDeviceToHost));
-    kCheckCUDA(__LINE__, cudaMemcpy(hypothesis_crop_2D, d_hypothesis_crop_2D, 4 * num_hypothesis * sizeof(unsigned short), cudaMemcpyDeviceToHost));
-
-    // Sort hypothesis lists
-    std::vector<int> hypothesis_sort_idx_positive;
-    std::vector<int> hypothesis_sort_idx_negative;
-    int num_invalid_hypotheses = 0;
-    int num_positive_hypotheses = 0;
-    int num_negative_hypotheses = 0;
-    for (int i = 0; i < num_hypothesis; i++) {
-      if (((int)hypothesis_labels[i]) == 0)
-        num_invalid_hypotheses++;
-      if (((int)hypothesis_labels[i]) == 1) {
-        num_positive_hypotheses++;
-        hypothesis_sort_idx_positive.push_back(i);
-        // std::cout << (int)hypothesis_locations[0 * num_hypothesis + i] << " " << (int)hypothesis_locations[1 * num_hypothesis + i] << " " << (int)hypothesis_locations[2 * num_hypothesis + i] << std::endl;
-        // std::cout << (int)hypothesis_crop_2D[0 * num_hypothesis + i] << " " << (int)hypothesis_crop_2D[1 * num_hypothesis + i] << " " << (int)hypothesis_crop_2D[2 * num_hypothesis + i] << " " << (int)hypothesis_crop_2D[3 * num_hypothesis + i] << std::endl;
-        // std::cout << std::endl;
-        // cv::Rect curr_patch_ROI((int)hypothesis_crop_2D[0 * num_hypothesis + i], (int)hypothesis_crop_2D[1 * num_hypothesis + i], (int)hypothesis_crop_2D[2 * num_hypothesis + i], (int)hypothesis_crop_2D[3 * num_hypothesis + i]);
-        // cv::Mat curr_patch = curr_frame_color(curr_patch_ROI);
-        // cv::resize(curr_patch, curr_patch, cv::Size(227, 227));
-        // cv::imshow("Patch", curr_patch);
-        // cv::waitKey(0);
-      }
-      if (((int)hypothesis_labels[i]) == 2) {
-        num_negative_hypotheses++;
-        hypothesis_sort_idx_negative.push_back(i);
-      }
-    }
-    int num_valid_hypotheses = num_positive_hypotheses + num_negative_hypotheses;
-    std::cout << "    Number of positive hypotheses found: " << hypothesis_sort_idx_positive.size() << std::endl;
-    std::cout << "    Number of negative hypotheses found: " << hypothesis_sort_idx_negative.size() << std::endl;
-
-    // Save to binary file: 8 x num_valid_hypotheses (int) (label, grid location (x,y,z), hypothesis 2D patch (x,y,width,height)), positive first then negative
-    std::string labels_filename = sequence_directory + "/" + curr_frame_name + ".labels.bin";
-    std::ofstream tmp_out(labels_filename, std::ios::binary | std::ios::out);
-    tmp_out.write((char*)&num_valid_hypotheses, sizeof(int));
-    tmp_out.write((char*)&num_positive_hypotheses, sizeof(int));
-    tmp_out.write((char*)&num_negative_hypotheses, sizeof(int));
-    for (int i = 0; i < num_positive_hypotheses; i++) {
-      unsigned short tmp_var[8];
-      tmp_var[0] = (unsigned short)hypothesis_labels[hypothesis_sort_idx_positive[i]];
-      tmp_var[1] = (unsigned short)hypothesis_locations[0 * num_hypothesis + hypothesis_sort_idx_positive[i]];
-      tmp_var[2] = (unsigned short)hypothesis_locations[1 * num_hypothesis + hypothesis_sort_idx_positive[i]];
-      tmp_var[3] = (unsigned short)hypothesis_locations[2 * num_hypothesis + hypothesis_sort_idx_positive[i]];
-      tmp_var[4] = (unsigned short)hypothesis_crop_2D[0 * num_hypothesis + hypothesis_sort_idx_positive[i]];
-      tmp_var[5] = (unsigned short)hypothesis_crop_2D[1 * num_hypothesis + hypothesis_sort_idx_positive[i]];
-      tmp_var[6] = (unsigned short)hypothesis_crop_2D[2 * num_hypothesis + hypothesis_sort_idx_positive[i]];
-      tmp_var[7] = (unsigned short)hypothesis_crop_2D[3 * num_hypothesis + hypothesis_sort_idx_positive[i]];
-      for (int j = 0; j < 8; j++)
-        tmp_out.write((char*)&tmp_var[j], sizeof(unsigned short));
-    }
-    for (int i = 0; i < num_negative_hypotheses; i++) {
-      unsigned short tmp_var[8];
-      tmp_var[0] = (unsigned short)hypothesis_labels[hypothesis_sort_idx_negative[i]];
-      tmp_var[1] = (unsigned short)hypothesis_locations[0 * num_hypothesis + hypothesis_sort_idx_negative[i]];
-      tmp_var[2] = (unsigned short)hypothesis_locations[1 * num_hypothesis + hypothesis_sort_idx_negative[i]];
-      tmp_var[3] = (unsigned short)hypothesis_locations[2 * num_hypothesis + hypothesis_sort_idx_negative[i]];
-      tmp_var[4] = (unsigned short)hypothesis_crop_2D[0 * num_hypothesis + hypothesis_sort_idx_negative[i]];
-      tmp_var[5] = (unsigned short)hypothesis_crop_2D[1 * num_hypothesis + hypothesis_sort_idx_negative[i]];
-      tmp_var[6] = (unsigned short)hypothesis_crop_2D[2 * num_hypothesis + hypothesis_sort_idx_negative[i]];
-      tmp_var[7] = (unsigned short)hypothesis_crop_2D[3 * num_hypothesis + hypothesis_sort_idx_negative[i]];
-      for (int j = 0; j < 8; j++)
-        tmp_out.write((char*)&tmp_var[j], sizeof(unsigned short));
-    }
-    tmp_out.close();
-
-    // Reset volume in GPU
-    num_blocks = vox_size[2];
-    num_threads = vox_size[1];
-    reset_vox_whole_GPU <<< num_blocks, num_threads >>>(d_vox_size, d_vox_tsdf, d_vox_weight);
-    kCheckCUDA(__LINE__, cudaGetLastError());
-
-    // Free memory
-    free(depth_data);
-    delete [] hypothesis_locations;
-    delete [] hypothesis_labels;
-    delete [] hypothesis_crop_2D;
-
-    kCheckCUDA(__LINE__, cudaFree(d_hypothesis_locations));
-    kCheckCUDA(__LINE__, cudaFree(d_hypothesis_labels));
-    kCheckCUDA(__LINE__, cudaFree(d_hypothesis_crop_2D));
-    kCheckCUDA(__LINE__, cudaFree(d_object_center_cam));
-  }
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-
-int main(int argc, char **argv) {
-
-  init_fusion_GPU();
+  std::cout << "CPU: Loading RGB-D frame and camera info." << std::endl;
 
   // Load intrinsics (3x3 matrix)
-  std::string intrinsic_filename = "TMP.intrinsics.K.txt";
+  std::string intrinsic_filename = sequence_directory + "/intrinsics.K.txt";
   std::vector<float> K_vec = load_matrix_from_file(intrinsic_filename, 3, 3);
   float * K = &K_vec[0];
-  for (int i = 0; i < 9; i++)
-    std::cout << K[i] << std::endl;
+  // for (int i = 0; i < 9; i++)
+  //   std::cout << K[i] << std::endl;
 
   // Load RGB-D frame
-  std::string curr_frame_color_filename = "TMP.frame.color.png";
+  std::string curr_frame_color_filename = sequence_directory + "/" + frame_prefix + ".color.png";
   cv::Mat curr_frame_color = cv::imread(curr_frame_color_filename.c_str(), 1);
-  std::string curr_frame_depth_filename = "TMP.frame.depth.png";
+  std::string curr_frame_depth_filename = sequence_directory + "/" + frame_prefix + ".depth.png";
   cv::Mat curr_frame_depth = cv::imread(curr_frame_depth_filename.c_str(), CV_LOAD_IMAGE_UNCHANGED);
 
   // Load image/depth/extrinsic data for current frame
@@ -454,6 +170,7 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 480 * 640; i++)
     depth_data[i] = (((unsigned short) curr_frame_depth.data[i * 2 + 1]) << 8) + ((unsigned short) curr_frame_depth.data[i * 2 + 0]);
 
+  std::cout << "GPU: Fusing depth into TSDF volume." << std::endl;
   // Compute relative camera pose transform between current frame and base frame
   // Compute camera view frustum bounds within the voxel volume
   float camera_relative_pose[16] = {0};
@@ -493,9 +210,11 @@ int main(int argc, char **argv) {
   // for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
   //   std::cout << vox_tsdf[i] << std::endl;
 
-  // Save curr volume to file
-  std::string scene_ply_name = "volume.pointcloud.ply";
-  save_volume_to_ply(scene_ply_name, vox_size, vox_tsdf);
+  // // Save curr volume to file
+  // std::string scene_ply_name = "volume.pointcloud.ply";
+  // save_volume_to_ply(scene_ply_name, vox_size, vox_tsdf);
+
+  std::cout << "GPU: Exhaustively generating sliding windows for object detection." << std::endl;
 
   // Compute bounding box of surface in TSDF volume
   float tsdf_surface_threshold = 0.2f;
@@ -529,7 +248,6 @@ int main(int argc, char **argv) {
 
   // Create list of hypothesis cubes (store grid locations, and is valid or not (0 for invalid, 1 for positive, 2 for negative))
   int num_hypothesis = grid_size[0] * grid_size[1] * grid_size[2];
-  std::cout << num_hypothesis << std::endl;
   unsigned short * hypothesis_locations = new unsigned short[3 * num_hypothesis];
   char * hypothesis_labels = new char[num_hypothesis];
   memset(hypothesis_labels, 0, sizeof(char) * num_hypothesis);
@@ -540,7 +258,7 @@ int main(int argc, char **argv) {
                              (y - grid_bounds[2])/hop_size * grid_size[0] + 
                              (x - grid_bounds[0])/hop_size;
         // std::cout << x << " " << y << " " << z << std::endl;
-        std::cout << hypothesis_idx << std::endl;
+        // std::cout << hypothesis_idx << std::endl;
         hypothesis_locations[0 * num_hypothesis + hypothesis_idx] = (unsigned short)x;
         hypothesis_locations[1 * num_hypothesis + hypothesis_idx] = (unsigned short)y;
         hypothesis_locations[2 * num_hypothesis + hypothesis_idx] = (unsigned short)z;
@@ -578,11 +296,10 @@ int main(int argc, char **argv) {
     if ((int)(hypothesis_labels[i]) == 1)
       num_valid_hypotheses++;
 
-
-  std::cout << num_valid_hypotheses << std::endl;
-  std::cout << num_hypothesis << std::endl;
   // ROS_INFO("Found %d hypothesis bounding boxes.", num_valid_hypotheses);
   // ROS_INFO("Saving hypotheses to tensors on disk for Marvin.");
+  std::cout << "GPU: Found " << num_valid_hypotheses << " hypothesis bounding boxes." << std::endl;
+  std::cout << "CPU: Saving hypotheses to tensors on disk for Marvin." << std::endl;
 
   // Init tensor files for marvin
   std::string data2D_tensor_filename = "TMP.data.2D.tensor";
@@ -627,6 +344,9 @@ int main(int argc, char **argv) {
   fwrite((void*)&volume_dim, sizeof(uint32_t), 1, data3D_tensor_fp);
   fwrite((void*)&volume_dim, sizeof(uint32_t), 1, data3D_tensor_fp);
 
+  buffer_data2D.clear();
+  buffer_data3D.clear();
+
   // Write hypothesis cubes and patches to tensor file
   for (int hypothesis_idx = 0; hypothesis_idx < num_hypothesis; hypothesis_idx++) {
     if ((int)(hypothesis_labels[hypothesis_idx]) == 1) {
@@ -658,9 +378,17 @@ int main(int argc, char **argv) {
           patch_data[2 * 227 * 227 + tmp_row * 227 + tmp_col] = ((float) curr_patch.at<cv::Vec3b>(tmp_row, tmp_col)[2]) - 122.7717f; // R
         }
       fwrite(patch_data, sizeof(float), 3 * 227 * 227, data2D_tensor_fp);
+      std::vector<float> item_buffer_data2D;
+      for (int i = 0; i < 3 * 227 * 227; i++)
+        item_buffer_data2D.push_back(patch_data[i]);
+      buffer_data2D.push_back(item_buffer_data2D);
 
       // Write 3D tsdf volume to data tensor file
       fwrite(curr_cube, sizeof(float), 30 * 30 * 30, data3D_tensor_fp);
+      std::vector<float> item_buffer_data3D;
+      for (int i = 0; i < 30 * 30 * 30; i++)
+        item_buffer_data3D.push_back(curr_cube[i]);
+      buffer_data3D.push_back(item_buffer_data3D);
 
       // Clear memory
       delete [] patch_data;
@@ -675,57 +403,113 @@ int main(int argc, char **argv) {
   cudaFree(d_hypothesis_locations);
   cudaFree(d_hypothesis_labels);
   cudaFree(d_hypothesis_crop_2D);
-  cudaFree(d_vox_tsdf);
-  cudaFree(d_vox_weight);
+
+  // Temporarily clear TSDF volume on GPU
+  // cudaFree(d_vox_tsdf);
+  // cudaFree(d_vox_weight);
 
   // Run marvin
-  std::cout << "Running Marvin for 2D/3D deep learning." << std::endl;
+  std::cerr << "GPU: Running Marvin for 2D/3D deep learning." << std::endl;
   std::string class_score_tensor_filename = "TMP.class_score_response.tensor";
   std::string axis_score_tensor_filename = "TMP.axis_score_response.tensor";
   std::string angle_score_tensor_filename = "TMP.angle_score_response.tensor";
   sys_command("rm " + class_score_tensor_filename);
   sys_command("rm " + axis_score_tensor_filename);
   sys_command("rm " + angle_score_tensor_filename);
-  marvin::Net net("tools/marvin/modelTest.json");
-  net.Malloc(marvin::Testing);
-  std::vector<std::string> models = marvin::getStringVector("tools/marvin/PeriodNet.1.3.60000.marvin");
-  for (int m=0;m<models.size();++m)   net.loadWeights(models[m]);
-  int itersPerSave = 0;
-  net.test(marvin::getStringVector("class_score"), marvin::getStringVector("TMP.class_score_response.tensor"), itersPerSave);
-  // sys_command("cd src/apc_vision/tools/marvin; export LD_LIBRARY_PATH=LD_LIBRARY_PATH:/usr/local/cuda/lib64:/usr/local/cudnn/v4rc/lib64; ./marvin test model.json PeriodNet.marvin class_score ../../../../" + class_score_tensor_filename);
-  // sys_command("rm " + data2D_tensor_filename);
-  // sys_command("rm " + data3D_tensor_filename);
+  if (true) {
+    // init_marvin();
+    marvin::Net main_net("tools/marvin/model" + model_idx + ".test.json");
+    main_net.Malloc(marvin::Testing);
+    std::vector<std::string> models = marvin::getStringVector("tools/marvin/PeriodNet.1." + model_idx + ".60000.marvin");
+    for (int m=0;m<models.size();++m)   
+      main_net.loadWeights(models[m]);
+    int itersPerSave = 0;
+    main_net.test(marvin::getStringVector("class_score,axis_score,angle_score"), marvin::getStringVector(class_score_tensor_filename + "," + axis_score_tensor_filename + "," + angle_score_tensor_filename), itersPerSave);
+    // sys_command("cd src/apc_vision/tools/marvin; export LD_LIBRARY_PATH=LD_LIBRARY_PATH:/usr/local/cuda/lib64:/usr/local/cudnn/v4rc/lib64; ./marvin test model.json PeriodNet.marvin class_score ../../../../" + class_score_tensor_filename);
+  }
+  sys_command("rm " + data2D_tensor_filename);
+  sys_command("rm " + data3D_tensor_filename);
+  std::cout << "CPU: Extracting object pose information from Marvin results." << std::endl;
 
   // Parse class scores
-  std::ifstream inFile(class_score_tensor_filename, std::ios::binary | std::ios::in);
-  int header_bytes = (1 + 4 + 4) + (4) + (4 + 4 + 4 + 4 + 4);
-  inFile.seekg(size_t(header_bytes));
-  float * class_score_raw = new float[num_hypothesis * 2];
-  inFile.read((char*)class_score_raw, num_hypothesis * 2 * sizeof(float));
-  inFile.close();
-  sys_command("rm " + class_score_tensor_filename);
+  // std::ifstream inFileClass(class_score_tensor_filename, std::ios::binary | std::ios::in);
+  // int header_bytes = (1 + 4 + 4) + (4) + (4 + 4 + 4 + 4 + 4);
+  // inFileClass.seekg(size_t(header_bytes));
+  // float * class_score_raw = new float[num_hypothesis * 2];
+  // inFileClass.read((char*)class_score_raw, num_hypothesis * 2 * sizeof(float));
+  // inFileClass.close();
+  // sys_command("rm " + class_score_tensor_filename);
+  float * class_score_raw = &buffer_scores_class[0];
+
+  // Parse axis scores
+  // std::ifstream inFileAxis(axis_score_tensor_filename, std::ios::binary | std::ios::in);
+  // header_bytes = (1 + 4 + 4) + (4) + (4 + 4 + 4 + 4 + 4);
+  // inFileAxis.seekg(size_t(header_bytes));
+  // float * axis_score_raw = new float[num_hypothesis * 42];
+  // inFileAxis.read((char*)axis_score_raw, num_hypothesis * 42 * sizeof(float));
+  // inFileAxis.close();
+  // sys_command("rm " + axis_score_tensor_filename);
+  float * axis_score_raw = &buffer_scores_axis[0];
+
+  // Parse angle scores
+  // std::ifstream inFileAngle(angle_score_tensor_filename, std::ios::binary | std::ios::in);
+  // header_bytes = (1 + 4 + 4) + (4) + (4 + 4 + 4 + 4 + 4);
+  // inFileAngle.seekg(size_t(header_bytes));
+  // float * angle_score_raw = new float[num_hypothesis * 18];
+  // inFileAngle.read((char*)angle_score_raw, num_hypothesis * 18 * sizeof(float));
+  // inFileAngle.close();
+  // sys_command("rm " + angle_score_tensor_filename);
+  float * angle_score_raw = &buffer_scores_angle[0];
+
+  std::cout << buffer_scores_class.size() << std::endl;
+  std::cout << buffer_scores_axis.size() << std::endl;
+  std::cout << buffer_scores_angle.size() << std::endl;
 
   float highest_class_score = 0;
+  float best_axis_score = 0;
+  float best_angle_score = 0;
   int best_guess_IDX = 0;
+  int best_guess_axis = 0;
+  int best_guess_angle = 0;
   int valid_hypothesis_idx = 0;
   for (int hypothesis_idx = 0; hypothesis_idx < num_hypothesis; hypothesis_idx++) {
     if ((int)(hypothesis_labels[hypothesis_idx]) == 1) {
       if (class_score_raw[valid_hypothesis_idx * 2 + 1] > 0.5f) {
-        int crop_x1 = hypothesis_crop_2D[0 * num_hypothesis + hypothesis_idx];
-        int crop_y1 = hypothesis_crop_2D[1 * num_hypothesis + hypothesis_idx];
-        int crop_x2 = hypothesis_crop_2D[0 * num_hypothesis + hypothesis_idx] + hypothesis_crop_2D[2 * num_hypothesis + hypothesis_idx];
-        int crop_y2 = hypothesis_crop_2D[1 * num_hypothesis + hypothesis_idx] + hypothesis_crop_2D[3 * num_hypothesis + hypothesis_idx];
-        cv::rectangle(curr_frame_color, cv::Point(crop_x1, crop_y1), cv::Point(crop_x2, crop_y2), cv::Scalar(255, 0, 0));
+        // int crop_x1 = hypothesis_crop_2D[0 * num_hypothesis + hypothesis_idx];
+        // int crop_y1 = hypothesis_crop_2D[1 * num_hypothesis + hypothesis_idx];
+        // int crop_x2 = hypothesis_crop_2D[0 * num_hypothesis + hypothesis_idx] + hypothesis_crop_2D[2 * num_hypothesis + hypothesis_idx];
+        // int crop_y2 = hypothesis_crop_2D[1 * num_hypothesis + hypothesis_idx] + hypothesis_crop_2D[3 * num_hypothesis + hypothesis_idx];
+        // cv::rectangle(curr_frame_color, cv::Point(crop_x1, crop_y1), cv::Point(crop_x2, crop_y2), cv::Scalar(255, 0, 0));
         if (class_score_raw[valid_hypothesis_idx * 2 + 1] > highest_class_score) {
           highest_class_score = class_score_raw[valid_hypothesis_idx * 2 + 1];
           best_guess_IDX = hypothesis_idx;
+
+          // Get best guess axis
+          float highest_axis_score = 0;
+          for (int i = 0; i < 42; i++) {
+            if (axis_score_raw[valid_hypothesis_idx * 42 + i] > highest_axis_score) {
+              highest_axis_score = axis_score_raw[valid_hypothesis_idx * 42 + i];
+              best_axis_score = highest_axis_score;
+              best_guess_axis = i;
+            }
+          }
+
+          // Get best guess angle
+          float highest_angle_score = 0;
+          for (int i = 0; i < 18; i++) {
+            if (angle_score_raw[valid_hypothesis_idx * 18 + i] > highest_angle_score) {
+              highest_angle_score = angle_score_raw[valid_hypothesis_idx * 18 + i];
+              best_angle_score = highest_angle_score;
+              best_guess_angle = i;
+            }
+          }
+
         }
       }
       valid_hypothesis_idx++;
     }
   }
-
-  std::cout << "Finished running Marvin." << std::endl;
+  // std::cout << best_guess_axis << " " << best_guess_angle << std::endl;
 
   // If no objects are detected
   if (highest_class_score == 0) {
@@ -737,18 +521,197 @@ int main(int argc, char **argv) {
   int crop_y1 = hypothesis_crop_2D[1 * num_hypothesis + best_guess_IDX];
   int crop_x2 = hypothesis_crop_2D[0 * num_hypothesis + best_guess_IDX] + hypothesis_crop_2D[2 * num_hypothesis + best_guess_IDX];
   int crop_y2 = hypothesis_crop_2D[1 * num_hypothesis + best_guess_IDX] + hypothesis_crop_2D[3 * num_hypothesis + best_guess_IDX];
-  cv::rectangle(curr_frame_color, cv::Point(crop_x1, crop_y1), cv::Point(crop_x2, crop_y2), cv::Scalar(0, 255, 0));
-  cv::circle(curr_frame_color, cv::Point((crop_x1 + crop_x2) / 2, (crop_y1 + crop_y2) / 2), 5, cv::Scalar(0, 255, 0), -1);
-  cv::imwrite( "result.png", curr_frame_color);
+  cv::rectangle(curr_frame_color, cv::Point(crop_x1, crop_y1), cv::Point(crop_x2, crop_y2), cv::Scalar(0, 255, 0), 2);
+  // cv::circle(curr_frame_color, cv::Point((crop_x1 + crop_x2) / 2, (crop_y1 + crop_y2) / 2), 5, cv::Scalar(0, 255, 0), -1);
+
+  // Convert from label (bin format) to axis/angle
+  float axis_sphere_bin[42 * 3] = { -0.85065, -1, -0.85065, -0.80902, -0.80902, -0.80902, -0.80902, -0.52573, -0.52573, -0.5, -0.5, -0.5, -0.5, -0.30902, -0.30902, -0.30902, -0.30902, 0, 0, 0, 0, 0, 0, 0, 0, 0.30902, 0.30902, 0.30902, 0.30902, 0.5, 0.5, 0.5, 0.5, 0.52573, 0.52573, 0.80902, 0.80902, 0.80902, 0.80902, 0.85065, 1, 0.85065,
+                                    0, 0, 0, -0.5, -0.5, 0.5, 0.5, -0.85065, 0.85065, -0.30902, -0.30902, 0.30902, 0.30902, -0.80902, -0.80902, 0.80902, 0.80902, -1, -0.52573, -0.52573, 0, 0, 0.52573, 0.52573, 1, -0.80902, -0.80902, 0.80902, 0.80902, -0.30902, -0.30902, 0.30902, 0.30902, -0.85065, 0.85065, -0.5, -0.5, 0.5, 0.5, 0, 0, 0,
+                                    -0.52573, 0, 0.52573, -0.30902, 0.30902, -0.30902, 0.30902, 0, 0, -0.80902, 0.80902, -0.80902, 0.80902, -0.5, 0.5, -0.5, 0.5, 0, -0.85065, 0.85065, -1, 1, -0.85065, 0.85065, 0, -0.5, 0.5, -0.5, 0.5, -0.80902, 0.80902, -0.80902, 0.80902, 0, 0, -0.30902, 0.30902, -0.30902, 0.30902, -0.52573, 0, 0.52573
+                                  };
+  float object_pose_axis[3] = {0};
+  object_pose_axis[0] = axis_sphere_bin[0 * 42 + best_guess_axis];
+  object_pose_axis[1] = axis_sphere_bin[1 * 42 + best_guess_axis];
+  object_pose_axis[2] = axis_sphere_bin[2 * 42 + best_guess_axis];
+  float object_pose_angle = (((float)best_guess_angle) + 0.5f) * (3.14159265 / 18);
+  // for (int i = 0; i < 3; i++)
+  //   std::cout << object_pose_axis[i] << std::endl;
+  // std::cout << object_pose_angle << std::endl;
+
+  // Convert axis/angle to pose
+  float object_pose_rotation[9] = {0};
+  object_pose_rotation[0 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[0] + std::cos(object_pose_angle);
+  object_pose_rotation[0 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[1] - object_pose_axis[2] * std::sin(object_pose_angle);
+  object_pose_rotation[0 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[2] + object_pose_axis[1] * std::sin(object_pose_angle);
+  object_pose_rotation[1 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[0] + object_pose_axis[2] * std::sin(object_pose_angle);
+  object_pose_rotation[1 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[1] + std::cos(object_pose_angle);
+  object_pose_rotation[1 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[2] - object_pose_axis[0] * std::sin(object_pose_angle);
+  object_pose_rotation[2 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[0] - object_pose_axis[1] *  std::sin(object_pose_angle);
+  object_pose_rotation[2 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[1] + object_pose_axis[0] * std::sin(object_pose_angle);
+  object_pose_rotation[2 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[2] + std::cos(object_pose_angle);
+
+  // Retrieve object location
+  float object_location[3] = {0};
+  object_location[0] = (hypothesis_locations[0 * num_hypothesis + best_guess_IDX] + 1) * vox_unit + vox_range_cam[0 * 2 + 0];
+  object_location[1] = (hypothesis_locations[1 * num_hypothesis + best_guess_IDX] + 1) * vox_unit + vox_range_cam[1 * 2 + 0];
+  object_location[2] = (hypothesis_locations[2 * num_hypothesis + best_guess_IDX] + 1) * vox_unit + vox_range_cam[2 * 2 + 0];
+
+  // std::cout << object_location[0] << std::endl;
+  // std::cout << object_location[1] << std::endl;
+  // std::cout << object_location[2] << std::endl;
+
+  float object_pose[16] = {0};
+  for (int i = 0; i < 3; i++) {
+    object_pose[i * 4 + 0] = object_pose_rotation[i * 3 + 0];
+    object_pose[i * 4 + 1] = object_pose_rotation[i * 3 + 1];
+    object_pose[i * 4 + 2] = object_pose_rotation[i * 3 + 2];
+    object_pose[i * 4 + 3] = object_location[i];
+  }
+  object_pose[15] = 1;
+  // for (int i = 0; i < 4; i++) {
+  //   for (int j = 0; j < 4; j++)
+  //     std::cout << object_pose[i * 4 + j] << " ";
+  //   std::cout << std::endl;
+  // }
+
+  // Display object pose
+  show_object_pose(K, object_pose, curr_frame_color);
+
+  // Compare against ground truth
+  if (true) {
+    // Read ground truth object pose from file
+    std::string gt_object_pose_filename = sequence_directory + "/object.pose.txt";
+    std::vector<float> gt_object_pose_raw = load_matrix_from_file(gt_object_pose_filename, 4, 4);
+    float * gt_object_pose_arr = &gt_object_pose_raw[0];
+
+    // Compute ground truth object pose w.r.t. current camera pose
+    std::string gt_cam_pose_filename = sequence_directory + "/" + frame_prefix + ".pose.txt";
+    std::vector<float> gt_cam_pose_raw = load_matrix_from_file(gt_cam_pose_filename, 4, 4);
+    float * gt_cam_pose_arr = &gt_cam_pose_raw[0];
+    float gt_cam_pose_inv[16] = {0};
+    invert_matrix(gt_cam_pose_arr, gt_cam_pose_inv);
+    float gt_object_pose[16] = {0};
+    multiply_matrix(gt_cam_pose_inv, gt_object_pose_arr, gt_object_pose);
+
+    // Compute center of ground truth object in 3D camera coordinates
+    float gt_object_center_cam[3] = {0};
+    for (int i = 0; i < 3; i++)
+      gt_object_center_cam[i] = gt_object_pose[i * 4 + 3];
+
+    // Convert pose from rotation matrix to axis/angle (radians) representation (x, y, z, theta)
+    float gt_object_pose_axis[3] = {0};
+    float gt_object_pose_angle = std::acos(0.5f * (gt_object_pose[0] + gt_object_pose[5] + gt_object_pose[10] - 1));
+    gt_object_pose_axis[0] = (gt_object_pose[9] - gt_object_pose[6]) / (2 * std::sin(gt_object_pose_angle));
+    gt_object_pose_axis[1] = (gt_object_pose[2] - gt_object_pose[8]) / (2 * std::sin(gt_object_pose_angle));
+    gt_object_pose_axis[2] = (gt_object_pose[4] - gt_object_pose[1]) / (2 * std::sin(gt_object_pose_angle));
+
+    // Bin axis into one of 42 bins
+    int closest_axis_bin = 0;
+    float closest_axis_dist = 100;
+    for (int i = 0; i < 42; i++) {
+      float curr_axis_dist = std::sqrt((axis_sphere_bin[0 * 42 + i] - gt_object_pose_axis[0]) * (axis_sphere_bin[0 * 42 + i] - gt_object_pose_axis[0]) +
+                                       (axis_sphere_bin[1 * 42 + i] - gt_object_pose_axis[1]) * (axis_sphere_bin[1 * 42 + i] - gt_object_pose_axis[1]) +
+                                       (axis_sphere_bin[2 * 42 + i] - gt_object_pose_axis[2]) * (axis_sphere_bin[2 * 42 + i] - gt_object_pose_axis[2]));
+      if (curr_axis_dist < closest_axis_dist) {
+        closest_axis_dist = curr_axis_dist;
+        closest_axis_bin = i;
+      }
+    }
+
+    // Bin angle into one of 18 bins (10 degrees)
+    float closest_angle_bin = floor(gt_object_pose_angle / (3.14159265 / 18));
+    if (closest_angle_bin > 17 || closest_axis_bin > 41) {
+      std::cout << "AXIS/ANGLE BINS INCORRECTLY SET UP" << std::endl;
+      exit(1);
+    }
+
+    float obj_dist = sqrtf((gt_object_center_cam[0] - object_location[0]) * (gt_object_center_cam[0] - object_location[0]) +
+                           (gt_object_center_cam[1] - object_location[1]) * (gt_object_center_cam[1] - object_location[1]) +
+                           (gt_object_center_cam[2] - object_location[2]) * (gt_object_center_cam[2] - object_location[2]));
+
+    if (obj_dist < 0.02f)
+      cv::putText(curr_frame_color, "Detection: < 2cm conf: " + std::to_string(highest_class_score), cv::Point(crop_x1 + 5, crop_y2 - 50), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+    else
+      cv::putText(curr_frame_color, "Detection: > 2cm conf: " + std::to_string(highest_class_score), cv::Point(crop_x1 + 5, crop_y2 - 50), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.5);
 
 
+    if (closest_axis_bin == best_guess_axis)
+      cv::putText(curr_frame_color, "Axis: correct conf: " + std::to_string(best_axis_score), cv::Point(crop_x1 + 5, crop_y2 - 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+    else
+      cv::putText(curr_frame_color, "Axis: " + std::to_string(best_guess_axis) + " vs " + std::to_string(closest_axis_bin) + " (GT) conf: " + std::to_string(best_axis_score), cv::Point(crop_x1 + 5, crop_y2 - 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.5);
 
 
+    if (closest_angle_bin == best_guess_angle)
+      cv::putText(curr_frame_color, "Angle: correct conf: " + std::to_string(best_angle_score), cv::Point(crop_x1 + 5, crop_y2 - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+    else
+      cv::putText(curr_frame_color, "Angle: " + std::to_string(best_guess_angle) + " vs " + std::to_string((int)closest_angle_bin) + " (GT) conf: " + std::to_string(best_angle_score), cv::Point(crop_x1 + 5, crop_y2 - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.5);
 
+    // std::cout << "GT: " << closest_axis_bin << std::endl;
+    // std::cout << "GT: " << closest_angle_bin << std::endl;
 
+  }
 
+  // std::cout << "PRED: " << best_guess_axis << std::endl;
+  // std::cout << "PRED: " << best_guess_angle << std::endl;
 
+  // Save display result
+  std::string results_directory = sequence_directory + "/results." + model_idx;
+  sys_command("mkdir -p " + results_directory);
+  cv::imwrite(results_directory + "/" + frame_prefix + ".result.png", curr_frame_color);
 
+  // Re-alloc and re-init TSDF on GPU
+  num_blocks = vox_size[2];
+  num_threads = vox_size[1];
+  reset_vox_whole_GPU<<<num_blocks,num_threads>>>(d_vox_size, d_vox_tsdf, d_vox_weight);
+  // memset(vox_weight, 0, sizeof(float) * vox_size[0] * vox_size[1] * vox_size[2]);
+  // for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
+  //   vox_tsdf[i] = 1.0f;
+  // kCheckCUDA(__LINE__, cudaMalloc(&d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float)));
+  // kCheckCUDA(__LINE__, cudaMalloc(&d_vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float)));
+  // kCheckCUDA(__LINE__, cudaMemcpy(d_vox_tsdf, vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyHostToDevice));
+  // kCheckCUDA(__LINE__, cudaMemcpy(d_vox_weight, vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyHostToDevice));
+
+  // Clear other excess memory
+  // delete [] class_score_raw;
+  // delete [] axis_score_raw;
+  // delete [] angle_score_raw;
+  delete [] hypothesis_locations;
+  delete [] hypothesis_labels;
+  delete [] hypothesis_crop_2D;
+}
+
+int main(int argc, char **argv) {
+
+  std::string object_directory = "data/test/glue";
+
+  init_fusion_GPU();
+
+  
+
+  // tic();
+  // detect("data/test/glue/seq01","frame-000008");
+  // toc();
+
+  // List RGB-D sequences
+  std::vector<std::string> sequence_names;
+  get_files_in_directory(object_directory, sequence_names, "");
+  int rand_sequence_idx = (int)floor(gen_random_float(0, (float)sequence_names.size()));
+
+  for (int sequence_idx = 0; sequence_idx < sequence_names.size(); sequence_idx++) {
+    std::string curr_sequence_name = sequence_names[sequence_idx];
+    std::string curr_sequence_directory = object_directory + "/" + curr_sequence_name;
+
+    // List RGB-D frames
+    std::vector<std::string> frame_names;
+    get_files_in_directory(curr_sequence_directory, frame_names, ".color.png");
+    for (int frame_idx = 0; frame_idx < frame_names.size(); frame_idx++) {
+      std::string curr_frame_name = frame_names[frame_idx];
+      curr_frame_name = curr_frame_name.substr(0, curr_frame_name.length() - 10);
+      tic();
+      detect(curr_sequence_directory,curr_frame_name);
+      toc();
+    }
+  }
 
 
 
@@ -761,4 +724,6 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+
+
 
