@@ -22,16 +22,20 @@ std::vector<float> buffer_scores_angle;
 ////////////////////////////////////////////////////////////////////////////////
 // Global variables for Marvin
 std::string model_idx = "4";
-// marvin::Net main_net("tools/marvin/model" + model_idx + ".test.json");
+marvin::Net main_net("tools/marvin/model" + model_idx + ".test.json");
 
 // Init marvin net
-// void init_marvin() {
+void init_marvin() {
+  main_net.Malloc(marvin::Testing);
+  std::vector<std::string> models = marvin::getStringVector("tools/marvin/PeriodNet.1." + model_idx + ".60000.marvin");
+  for (int m=0;m<models.size();++m)   
+    main_net.loadWeights(models[m]);
 //     // marvin::Net net("tools/marvin/model" + model_idx + ".test.json");
 //     main_net.Malloc(marvin::Testing);
 //     std::vector<std::string> models = marvin::getStringVector("tools/marvin/PeriodNet.1." + model_idx + ".60000.marvin");
 //     for (int m=0;m<models.size();++m)   
 //       main_net.loadWeights(models[m]);
-// }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -299,55 +303,15 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
   // ROS_INFO("Found %d hypothesis bounding boxes.", num_valid_hypotheses);
   // ROS_INFO("Saving hypotheses to tensors on disk for Marvin.");
   std::cout << "GPU: Found " << num_valid_hypotheses << " hypothesis bounding boxes." << std::endl;
-  std::cout << "CPU: Saving hypotheses to tensors on disk for Marvin." << std::endl;
-
-  // Init tensor files for marvin
-  std::string data2D_tensor_filename = "TMP.data.2D.tensor";
-  std::string data3D_tensor_filename = "TMP.data.3D.tensor";
-  FILE *data2D_tensor_fp = fopen(data2D_tensor_filename.c_str(), "w");
-  FILE *data3D_tensor_fp = fopen(data3D_tensor_filename.c_str(), "w");
-
-  // Write data header for 2D
-  uint8_t type_id = (uint8_t)1;
-  fwrite((void*)&type_id, sizeof(uint8_t), 1, data2D_tensor_fp);
-  uint32_t size_of = (uint32_t)4;
-  fwrite((void*)&size_of, sizeof(uint32_t), 1, data2D_tensor_fp);
-  uint32_t str_len = (uint32_t)4;
-  fwrite((void*)&str_len, sizeof(uint32_t), 1, data2D_tensor_fp);
-  fprintf(data2D_tensor_fp, "data");
-  uint32_t data_dim = (uint32_t)4;
-  fwrite((void*)&data_dim, sizeof(uint32_t), 1, data2D_tensor_fp);
-  uint32_t data_size = (uint32_t)num_valid_hypotheses;
-  fwrite((void*)&data_size, sizeof(uint32_t), 1, data2D_tensor_fp);
-  uint32_t data_chan = (uint32_t)3;
-  fwrite((void*)&data_chan, sizeof(uint32_t), 1, data2D_tensor_fp);
-  uint32_t patch_dim = (uint32_t)227;
-  fwrite((void*)&patch_dim, sizeof(uint32_t), 1, data2D_tensor_fp);
-  fwrite((void*)&patch_dim, sizeof(uint32_t), 1, data2D_tensor_fp);
-
-  // Write data header for 3D
-  type_id = (uint8_t)1;
-  fwrite((void*)&type_id, sizeof(uint8_t), 1, data3D_tensor_fp);
-  size_of = (uint32_t)4;
-  fwrite((void*)&size_of, sizeof(uint32_t), 1, data3D_tensor_fp);
-  str_len = (uint32_t)4;
-  fwrite((void*)&str_len, sizeof(uint32_t), 1, data3D_tensor_fp);
-  fprintf(data3D_tensor_fp, "data");
-  data_dim = (uint32_t)5;
-  fwrite((void*)&data_dim, sizeof(uint32_t), 1, data3D_tensor_fp);
-  data_size = (uint32_t)num_valid_hypotheses;
-  fwrite((void*)&data_size, sizeof(uint32_t), 1, data3D_tensor_fp);
-  data_chan = (uint32_t)1;
-  fwrite((void*)&data_chan, sizeof(uint32_t), 1, data3D_tensor_fp);
-  uint32_t volume_dim = (uint32_t)30;
-  fwrite((void*)&volume_dim, sizeof(uint32_t), 1, data3D_tensor_fp);
-  fwrite((void*)&volume_dim, sizeof(uint32_t), 1, data3D_tensor_fp);
-  fwrite((void*)&volume_dim, sizeof(uint32_t), 1, data3D_tensor_fp);
+  std::cout << "CPU: Passing hypothesis bounding boxes to Marvin." << std::endl;
 
   buffer_data2D.clear();
   buffer_data3D.clear();
+  buffer_data2D.resize(num_valid_hypotheses);
+  buffer_data3D.resize(num_valid_hypotheses);
 
   // Write hypothesis cubes and patches to tensor file
+  int valid_hypothesis_counter = 0;
   for (int hypothesis_idx = 0; hypothesis_idx < num_hypothesis; hypothesis_idx++) {
     if ((int)(hypothesis_labels[hypothesis_idx]) == 1) {
       int x = hypothesis_locations[0 * num_hypothesis + hypothesis_idx];
@@ -377,26 +341,22 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
           patch_data[1 * 227 * 227 + tmp_row * 227 + tmp_col] = ((float) curr_patch.at<cv::Vec3b>(tmp_row, tmp_col)[1]) - 115.9465f; // G
           patch_data[2 * 227 * 227 + tmp_row * 227 + tmp_col] = ((float) curr_patch.at<cv::Vec3b>(tmp_row, tmp_col)[2]) - 122.7717f; // R
         }
-      fwrite(patch_data, sizeof(float), 3 * 227 * 227, data2D_tensor_fp);
-      std::vector<float> item_buffer_data2D;
+      buffer_data2D[valid_hypothesis_counter].resize(3 * 227 * 227);
       for (int i = 0; i < 3 * 227 * 227; i++)
-        item_buffer_data2D.push_back(patch_data[i]);
-      buffer_data2D.push_back(item_buffer_data2D);
+        buffer_data2D[valid_hypothesis_counter][i] = patch_data[i];
 
       // Write 3D tsdf volume to data tensor file
-      fwrite(curr_cube, sizeof(float), 30 * 30 * 30, data3D_tensor_fp);
-      std::vector<float> item_buffer_data3D;
+      buffer_data3D[valid_hypothesis_counter].resize(30 * 30 * 30);
       for (int i = 0; i < 30 * 30 * 30; i++)
-        item_buffer_data3D.push_back(curr_cube[i]);
-      buffer_data3D.push_back(item_buffer_data3D);
+        buffer_data3D[valid_hypothesis_counter][i] = curr_cube[i];
+
+      valid_hypothesis_counter++;
 
       // Clear memory
       delete [] patch_data;
       delete [] curr_cube;
     }
   }
-  fclose(data2D_tensor_fp);
-  fclose(data3D_tensor_fp);
 
   // Clear memory
   free(depth_data);
@@ -413,57 +373,17 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
   std::string class_score_tensor_filename = "TMP.class_score_response.tensor";
   std::string axis_score_tensor_filename = "TMP.axis_score_response.tensor";
   std::string angle_score_tensor_filename = "TMP.angle_score_response.tensor";
-  sys_command("rm " + class_score_tensor_filename);
-  sys_command("rm " + axis_score_tensor_filename);
-  sys_command("rm " + angle_score_tensor_filename);
   if (true) {
-    // init_marvin();
-    marvin::Net main_net("tools/marvin/model" + model_idx + ".test.json");
-    main_net.Malloc(marvin::Testing);
-    std::vector<std::string> models = marvin::getStringVector("tools/marvin/PeriodNet.1." + model_idx + ".60000.marvin");
-    for (int m=0;m<models.size();++m)   
-      main_net.loadWeights(models[m]);
     int itersPerSave = 0;
     main_net.test(marvin::getStringVector("class_score,axis_score,angle_score"), marvin::getStringVector(class_score_tensor_filename + "," + axis_score_tensor_filename + "," + angle_score_tensor_filename), itersPerSave);
     // sys_command("cd src/apc_vision/tools/marvin; export LD_LIBRARY_PATH=LD_LIBRARY_PATH:/usr/local/cuda/lib64:/usr/local/cudnn/v4rc/lib64; ./marvin test model.json PeriodNet.marvin class_score ../../../../" + class_score_tensor_filename);
   }
-  sys_command("rm " + data2D_tensor_filename);
-  sys_command("rm " + data3D_tensor_filename);
   std::cout << "CPU: Extracting object pose information from Marvin results." << std::endl;
 
-  // Parse class scores
-  // std::ifstream inFileClass(class_score_tensor_filename, std::ios::binary | std::ios::in);
-  // int header_bytes = (1 + 4 + 4) + (4) + (4 + 4 + 4 + 4 + 4);
-  // inFileClass.seekg(size_t(header_bytes));
-  // float * class_score_raw = new float[num_hypothesis * 2];
-  // inFileClass.read((char*)class_score_raw, num_hypothesis * 2 * sizeof(float));
-  // inFileClass.close();
-  // sys_command("rm " + class_score_tensor_filename);
+  // Parse Marvin scores
   float * class_score_raw = &buffer_scores_class[0];
-
-  // Parse axis scores
-  // std::ifstream inFileAxis(axis_score_tensor_filename, std::ios::binary | std::ios::in);
-  // header_bytes = (1 + 4 + 4) + (4) + (4 + 4 + 4 + 4 + 4);
-  // inFileAxis.seekg(size_t(header_bytes));
-  // float * axis_score_raw = new float[num_hypothesis * 42];
-  // inFileAxis.read((char*)axis_score_raw, num_hypothesis * 42 * sizeof(float));
-  // inFileAxis.close();
-  // sys_command("rm " + axis_score_tensor_filename);
   float * axis_score_raw = &buffer_scores_axis[0];
-
-  // Parse angle scores
-  // std::ifstream inFileAngle(angle_score_tensor_filename, std::ios::binary | std::ios::in);
-  // header_bytes = (1 + 4 + 4) + (4) + (4 + 4 + 4 + 4 + 4);
-  // inFileAngle.seekg(size_t(header_bytes));
-  // float * angle_score_raw = new float[num_hypothesis * 18];
-  // inFileAngle.read((char*)angle_score_raw, num_hypothesis * 18 * sizeof(float));
-  // inFileAngle.close();
-  // sys_command("rm " + angle_score_tensor_filename);
   float * angle_score_raw = &buffer_scores_angle[0];
-
-  std::cout << buffer_scores_class.size() << std::endl;
-  std::cout << buffer_scores_axis.size() << std::endl;
-  std::cout << buffer_scores_angle.size() << std::endl;
 
   float highest_class_score = 0;
   float best_axis_score = 0;
@@ -686,6 +606,7 @@ int main(int argc, char **argv) {
 
   init_fusion_GPU();
 
+  init_marvin();
   
 
   // tic();

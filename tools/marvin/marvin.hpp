@@ -3949,7 +3949,6 @@ public:
 
 template <class T>
 class PeriodTestDataLayer : public DataLayer {
-    std::future<void> lock;
 
     std::vector<size_t> ordering;
     std::bernoulli_distribution* distribution_bernoulli;
@@ -3976,7 +3975,6 @@ class PeriodTestDataLayer : public DataLayer {
     size_t numel_per_channel_orgi3D ;
     size_t numel_batch_all_channel_crop3D ;
 
-    int epoch_prefetch;
 
     size_t bytes_per_item2D;
     size_t bytes_per_item3D;
@@ -3985,6 +3983,8 @@ class PeriodTestDataLayer : public DataLayer {
     std::vector<int> size_data2D;
     std::vector<int> size_data3D;
 public:
+    int epoch_prefetch;
+    std::future<void> lock;
     bool mirror;
     std::vector<int> size_crop2D;
     std::vector<int> size_crop3D;
@@ -4074,8 +4074,6 @@ public:
         item_raw[1] = new T[numel(size_data3D)];
 
         num_data_points = batch_size + 1;
-        // ordering.resize(tensor3D.dim[0]);
-        // for (int i = 0; i < tensor3D.dim[0]; ++i) ordering[i] = i;
 
     };
 
@@ -4138,49 +4136,13 @@ public:
 
         checkCUDA(__LINE__, cudaSetDevice(GPU));
 
-        // std::cout << buffer_data2D.size() << std::endl;
-        // std::cout << buffer_data3D.size() << std::endl;
-
-        // std::cout << "numdatapoints: " << num_data_points << std::endl;
-
         for (size_t batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
 
-            // int image_i = ordering[counter];
-            // std::cout << counter << std::endl;
-
-            // // 2D
-            // // for (int data_i = 0; data_i<file_data.size();data_i++){
-            // // read file
-            // fseek(dataFILE[0], headerBytes2D + bytes_per_item2D * image_i, SEEK_SET);
-            // size_t read_cnt2D = fread(item_raw[0], 1, bytes_per_item2D, dataFILE[0]);
-            // if (read_cnt2D != bytes_per_item2D) {
-            //     std::cerr << "Error reading file for PeriodTestDataLayer::prefetch : " << dataFILE[0] << std::endl;
-            //     std::cerr << "data_i" << 0 << "read_cnt2D: " << read_cnt2D << " bytes_per_item2D: " << bytes_per_item2D << std::endl;
-            //     FatalError(__LINE__);
-            // }
-
-            // T* memBegin2D = dataCPU[0] + i * numel_all_channel_crop2D;
-            // if (numel_per_channel_orgi2D == numel_per_channel_crop2D) {
-            //     memcpy(memBegin2D, item_raw[0], bytes_per_item2D);
-            // }
-
-            // // 3D
-            // fseek(dataFILE[1], headerBytes3D + bytes_per_item3D * image_i, SEEK_SET);
-            // size_t read_cnt3D = fread(item_raw[1], 1, bytes_per_item3D, dataFILE[1]);
-            // if (read_cnt3D != bytes_per_item3D) {
-            //     std::cerr << "Error reading file for PeriodTestDataLayer::prefetch : " << dataFILE[1] << std::endl;
-            //     std::cerr << "data_i" << 1 << "read_cnt3D: " << read_cnt3D << " bytes_per_item3D: " << bytes_per_item3D << std::endl;
-            //     FatalError(__LINE__);
-            // }
-
-            // T* memBegin3D = dataCPU[1] + i * numel_all_channel_crop3D;
-            // if (numel_per_channel_orgi3D == numel_per_channel_crop3D) {
-            //     memcpy(memBegin3D, item_raw[1], bytes_per_item3D);
-            // }
-
+            // Pass 2D data
             for (int i = 0; i < numel_all_channel_crop2D; i++)
                 dataCPU[0][batch_idx * numel_all_channel_crop2D + i] = buffer_data2D[counter][i];
 
+            // Pass 3D data
             for (int i = 0; i < numel_all_channel_crop3D; i++)
                 dataCPU[1][batch_idx * numel_all_channel_crop3D + i] = buffer_data3D[counter][i];
 
@@ -4194,7 +4156,6 @@ public:
 
         checkCUDA(__LINE__, cudaMemcpy( dataGPU[0],  dataCPU[0],  numel_batch_all_channel_crop2D * sizeof(T), cudaMemcpyHostToDevice) );
         checkCUDA(__LINE__, cudaMemcpy( dataGPU[1],  dataCPU[1],  numel_batch_all_channel_crop3D * sizeof(T), cudaMemcpyHostToDevice) );
-
     };
 
     void forward(Phase phase_) {
@@ -4209,6 +4170,10 @@ public:
         // std::swap(out[file_data.size()]->dataGPU, labelGPU);
         lock = std::async(std::launch::async, &PeriodTestDataLayer<T>::prefetch, this);
     };
+
+    void call_prefetch() {
+        lock = std::async(std::launch::async, &PeriodTestDataLayer<T>::prefetch, this);
+    }
 
     size_t Malloc(Phase phase_) {
 
@@ -4227,48 +4192,27 @@ public:
 
         std::vector<int> data_dim2D;
         data_dim2D.push_back(batch_size); data_dim2D.push_back(3); data_dim2D.push_back(227); data_dim2D.push_back(227);
-        // data_dim2D.push_back(batch_size);
-        // data_dim2D.push_back(size_data2D[0]);
-        // data_dim2D.insert( data_dim2D.end(), size_crop2D.begin(), size_crop2D.end() );
 
-        // for (int data_i = 0; data_i<file_data.size();data_i++){
         out[0]->need_diff = false;
         out[0]->receptive_field.resize(data_dim2D.size() - 2); fill_n(out[0]->receptive_field.begin(), data_dim2D.size() - 2, 1);
         out[0]->receptive_gap.resize(data_dim2D.size() - 2);   fill_n(out[0]->receptive_gap.begin(), data_dim2D.size() - 2, 1);
         out[0]->receptive_offset.resize(data_dim2D.size() - 2); fill_n(out[0]->receptive_offset.begin(), data_dim2D.size() - 2, 0);
         memoryBytes += out[0]->Malloc(data_dim2D);
-        // }
 
         std::vector<int> data_dim3D;
         data_dim3D.push_back(batch_size); data_dim3D.push_back(1); data_dim3D.push_back(30); data_dim3D.push_back(30); data_dim3D.push_back(30);
-        // data_dim3D.push_back(batch_size);
-        // data_dim3D.push_back(size_data3D[0]);
-        // data_dim3D.insert( data_dim3D.end(), size_crop3D.begin(), size_crop3D.end() );
 
-        // for (int data_i = 0; data_i<file_data.size();data_i++){
         out[1]->need_diff = false;
         out[1]->receptive_field.resize(data_dim3D.size() - 2); fill_n(out[1]->receptive_field.begin(), data_dim3D.size() - 2, 1);
         out[1]->receptive_gap.resize(data_dim3D.size() - 2);   fill_n(out[1]->receptive_gap.begin(), data_dim3D.size() - 2, 1);
         out[1]->receptive_offset.resize(data_dim3D.size() - 2); fill_n(out[1]->receptive_offset.begin(), data_dim3D.size() - 2, 0);
         memoryBytes += out[1]->Malloc(data_dim3D);
-        // }
 
-        // out[file_data.size()]->need_diff = false;
-        // memoryBytes += out[file_data.size()]->Malloc(labelCPU->dim);
-        // checkCUDA(__LINE__, cudaMalloc(&labelGPU, labelCPU->numBytes()) );
-        // memoryBytes += labelCPU->numBytes();
-
-        // for (int data_i = 0; data_i<file_data.size();data_i++){
         checkCUDA(__LINE__, cudaMalloc(&dataGPU[0], numel_batch_all_channel_crop2D * sizeof(T)) );
         memoryBytes += numel_batch_all_channel_crop2D * sizeof(T);
-        // }
 
-        // for (int data_i = 0; data_i<file_data.size();data_i++){
         checkCUDA(__LINE__, cudaMalloc(&dataGPU[1], numel_batch_all_channel_crop3D * sizeof(T)) );
         memoryBytes += numel_batch_all_channel_crop3D * sizeof(T);
-        // }
-
-        lock = std::async(std::launch::async, &PeriodTestDataLayer<T>::prefetch, this);
 
         return memoryBytes;
     };
@@ -7684,10 +7628,12 @@ public:
         }
         if (pDataLayer == NULL) { std::cerr << "No data layer for Testing." << std::endl; FatalError(__LINE__);};
 
-        // pDataLayer = (PeriodTestDataLayer*) pDataLayer;
-        // pDataLayer->init_test();
-        // pDataLayer->Malloc_test(Testing);
+        // Reset data layer
         pDataLayer->num_data_points = buffer_data2D.size();
+        pDataLayer->epoch_prefetch = 0;
+        pDataLayer->epoch = 0;
+        pDataLayer->counter = 0;
+        pDataLayer->call_prefetch();
 
         std::vector<size_t> total_size(responseNames.size());
         for (int i = 0; i < responseNames.size(); ++i) {
@@ -7741,7 +7687,7 @@ public:
                         if (features[i] == NULL)
                             features[i] = new Tensor<StorageT>(r->dim);
 
-                        std::cout << total_size[i] << std::endl;
+                        // std::cout << total_size[i] << std::endl;
 
                         if (responseNames[i] == "class_score") {
                             buffer_scores_class.clear();
