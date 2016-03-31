@@ -3,13 +3,7 @@
 #include <opencv2/opencv.hpp>
 
 
-////////////////////////////////////////////////////////////////////////////////
-// Global data structures to hold data and labels passed to and from Marvin
-std::vector<std::vector<float>> buffer_data2D;
-std::vector<std::vector<float>> buffer_data3D;
-std::vector<float> buffer_scores_class;
-std::vector<float> buffer_scores_axis;
-std::vector<float> buffer_scores_angle;
+
 
 
 
@@ -21,13 +15,13 @@ std::vector<float> buffer_scores_angle;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global variables for Marvin
-std::string model_idx = "4";
-marvin::Net main_net("tools/marvin/model" + model_idx + ".test.json");
+std::string model_idx = "3";
+marvin::Net main_net("models/model" + model_idx + ".test.json");
 
 // Init marvin net
 void init_marvin() {
   main_net.Malloc(marvin::Testing);
-  std::vector<std::string> models = marvin::getStringVector("tools/marvin/PeriodNet.1." + model_idx + ".60000.marvin");
+  std::vector<std::string> models = marvin::getStringVector("models/PeriodNet.2." + model_idx + ".32000.marvin");
   for (int m=0;m<models.size();++m)   
     main_net.loadWeights(models[m]);
 //     // marvin::Net net("tools/marvin/model" + model_idx + ".test.json");
@@ -211,12 +205,19 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
   kCheckCUDA(__LINE__, cudaMemcpy(vox_tsdf, d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
   kCheckCUDA(__LINE__, cudaMemcpy(vox_weight, d_vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
 
-  // for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
-  //   std::cout << vox_tsdf[i] << std::endl;
+  for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
+    vox_tsdf[i] = 1-abs(vox_tsdf[i]);
 
-  // // Save curr volume to file
+  // // Save curr volume to pointcloud file
   // std::string scene_ply_name = "volume.pointcloud.ply";
   // save_volume_to_ply(scene_ply_name, vox_size, vox_tsdf);
+
+  // // Save curr volume to raw file
+  // std::string volume_name = "volume.tsdf.bin";
+  // std::ofstream outFile(volume_name, std::ios::binary | std::ios::out);
+  // for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
+  //   outFile.write((char*)&vox_tsdf[i], sizeof(float));
+  // outFile.close();
 
   std::cout << "GPU: Exhaustively generating sliding windows for object detection." << std::endl;
 
@@ -363,6 +364,7 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
   cudaFree(d_hypothesis_locations);
   cudaFree(d_hypothesis_labels);
   cudaFree(d_hypothesis_crop_2D);
+  toc();
 
   // Temporarily clear TSDF volume on GPU
   // cudaFree(d_vox_tsdf);
@@ -371,29 +373,34 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
   // Run marvin
   std::cerr << "GPU: Running Marvin for 2D/3D deep learning." << std::endl;
   std::string class_score_tensor_filename = "TMP.class_score_response.tensor";
-  std::string axis_score_tensor_filename = "TMP.axis_score_response.tensor";
-  std::string angle_score_tensor_filename = "TMP.angle_score_response.tensor";
+  std::string quaternion_score_tensor_filename = "TMP.quaternion_score_response.tensor";
+  // std::string axis_score_tensor_filename = "TMP.axis_score_response.tensor";
+  // std::string angle_score_tensor_filename = "TMP.angle_score_response.tensor";
   if (true) {
     int itersPerSave = 0;
-    main_net.test(marvin::getStringVector("class_score,axis_score,angle_score"), marvin::getStringVector(class_score_tensor_filename + "," + axis_score_tensor_filename + "," + angle_score_tensor_filename), itersPerSave);
+    main_net.test(marvin::getStringVector("class_score,quat_pred"), marvin::getStringVector(class_score_tensor_filename + "," + quaternion_score_tensor_filename), itersPerSave);
     // sys_command("cd src/apc_vision/tools/marvin; export LD_LIBRARY_PATH=LD_LIBRARY_PATH:/usr/local/cuda/lib64:/usr/local/cudnn/v4rc/lib64; ./marvin test model.json PeriodNet.marvin class_score ../../../../" + class_score_tensor_filename);
   }
   std::cout << "CPU: Extracting object pose information from Marvin results." << std::endl;
 
   // Parse Marvin scores
   float * class_score_raw = &buffer_scores_class[0];
-  float * axis_score_raw = &buffer_scores_axis[0];
-  float * angle_score_raw = &buffer_scores_angle[0];
+  float * quaternion_score_raw = &buffer_scores_quaternion[0];
+  // float * axis_score_raw = &buffer_scores_axis[0];
+  // float * angle_score_raw = &buffer_scores_angle[0];
 
   float highest_class_score = 0;
-  float best_axis_score = 0;
-  float best_angle_score = 0;
+  // float best_axis_score = 0;
+  // float best_angle_score = 0;
   int best_guess_IDX = 0;
-  int best_guess_axis = 0;
-  int best_guess_angle = 0;
+  float best_guess_quaternion[4] = {0};
+  // int best_guess_axis = 0;
+  // int best_guess_angle = 0;
   int valid_hypothesis_idx = 0;
   for (int hypothesis_idx = 0; hypothesis_idx < num_hypothesis; hypothesis_idx++) {
     if ((int)(hypothesis_labels[hypothesis_idx]) == 1) {
+      for (int i = 0; i < 4; i++)
+        std::cout << quaternion_score_raw[valid_hypothesis_idx * 4 + i] << std::endl;
       if (class_score_raw[valid_hypothesis_idx * 2 + 1] > 0.5f) {
         // int crop_x1 = hypothesis_crop_2D[0 * num_hypothesis + hypothesis_idx];
         // int crop_y1 = hypothesis_crop_2D[1 * num_hypothesis + hypothesis_idx];
@@ -404,25 +411,29 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
           highest_class_score = class_score_raw[valid_hypothesis_idx * 2 + 1];
           best_guess_IDX = hypothesis_idx;
 
-          // Get best guess axis
-          float highest_axis_score = 0;
-          for (int i = 0; i < 42; i++) {
-            if (axis_score_raw[valid_hypothesis_idx * 42 + i] > highest_axis_score) {
-              highest_axis_score = axis_score_raw[valid_hypothesis_idx * 42 + i];
-              best_axis_score = highest_axis_score;
-              best_guess_axis = i;
-            }
-          }
+          // Get best guess quaternion
+          for (int i = 0; i < 4; i++)
+            best_guess_quaternion[i] = quaternion_score_raw[valid_hypothesis_idx * 4 + i];
 
-          // Get best guess angle
-          float highest_angle_score = 0;
-          for (int i = 0; i < 18; i++) {
-            if (angle_score_raw[valid_hypothesis_idx * 18 + i] > highest_angle_score) {
-              highest_angle_score = angle_score_raw[valid_hypothesis_idx * 18 + i];
-              best_angle_score = highest_angle_score;
-              best_guess_angle = i;
-            }
-          }
+          // // Get best guess axis
+          // float highest_axis_score = 0;
+          // for (int i = 0; i < 42; i++) {
+          //   if (axis_score_raw[valid_hypothesis_idx * 42 + i] > highest_axis_score) {
+          //     highest_axis_score = axis_score_raw[valid_hypothesis_idx * 42 + i];
+          //     best_axis_score = highest_axis_score;
+          //     best_guess_axis = i;
+          //   }
+          // }
+
+          // // Get best guess angle
+          // float highest_angle_score = 0;
+          // for (int i = 0; i < 18; i++) {
+          //   if (angle_score_raw[valid_hypothesis_idx * 18 + i] > highest_angle_score) {
+          //     highest_angle_score = angle_score_raw[valid_hypothesis_idx * 18 + i];
+          //     best_angle_score = highest_angle_score;
+          //     best_guess_angle = i;
+          //   }
+          // }
 
         }
       }
@@ -444,31 +455,33 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
   cv::rectangle(curr_frame_color, cv::Point(crop_x1, crop_y1), cv::Point(crop_x2, crop_y2), cv::Scalar(0, 255, 0), 2);
   // cv::circle(curr_frame_color, cv::Point((crop_x1 + crop_x2) / 2, (crop_y1 + crop_y2) / 2), 5, cv::Scalar(0, 255, 0), -1);
 
-  // Convert from label (bin format) to axis/angle
-  float axis_sphere_bin[42 * 3] = { -0.85065, -1, -0.85065, -0.80902, -0.80902, -0.80902, -0.80902, -0.52573, -0.52573, -0.5, -0.5, -0.5, -0.5, -0.30902, -0.30902, -0.30902, -0.30902, 0, 0, 0, 0, 0, 0, 0, 0, 0.30902, 0.30902, 0.30902, 0.30902, 0.5, 0.5, 0.5, 0.5, 0.52573, 0.52573, 0.80902, 0.80902, 0.80902, 0.80902, 0.85065, 1, 0.85065,
-                                    0, 0, 0, -0.5, -0.5, 0.5, 0.5, -0.85065, 0.85065, -0.30902, -0.30902, 0.30902, 0.30902, -0.80902, -0.80902, 0.80902, 0.80902, -1, -0.52573, -0.52573, 0, 0, 0.52573, 0.52573, 1, -0.80902, -0.80902, 0.80902, 0.80902, -0.30902, -0.30902, 0.30902, 0.30902, -0.85065, 0.85065, -0.5, -0.5, 0.5, 0.5, 0, 0, 0,
-                                    -0.52573, 0, 0.52573, -0.30902, 0.30902, -0.30902, 0.30902, 0, 0, -0.80902, 0.80902, -0.80902, 0.80902, -0.5, 0.5, -0.5, 0.5, 0, -0.85065, 0.85065, -1, 1, -0.85065, 0.85065, 0, -0.5, 0.5, -0.5, 0.5, -0.80902, 0.80902, -0.80902, 0.80902, 0, 0, -0.30902, 0.30902, -0.30902, 0.30902, -0.52573, 0, 0.52573
-                                  };
-  float object_pose_axis[3] = {0};
-  object_pose_axis[0] = axis_sphere_bin[0 * 42 + best_guess_axis];
-  object_pose_axis[1] = axis_sphere_bin[1 * 42 + best_guess_axis];
-  object_pose_axis[2] = axis_sphere_bin[2 * 42 + best_guess_axis];
-  float object_pose_angle = (((float)best_guess_angle) + 0.5f) * (3.14159265 / 18);
-  // for (int i = 0; i < 3; i++)
-  //   std::cout << object_pose_axis[i] << std::endl;
-  // std::cout << object_pose_angle << std::endl;
+  std::cout << best_guess_quaternion[0] << " " << best_guess_quaternion[1] << " " << best_guess_quaternion[2] << " " << best_guess_quaternion[3] << std::endl;
 
-  // Convert axis/angle to pose
-  float object_pose_rotation[9] = {0};
-  object_pose_rotation[0 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[0] + std::cos(object_pose_angle);
-  object_pose_rotation[0 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[1] - object_pose_axis[2] * std::sin(object_pose_angle);
-  object_pose_rotation[0 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[2] + object_pose_axis[1] * std::sin(object_pose_angle);
-  object_pose_rotation[1 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[0] + object_pose_axis[2] * std::sin(object_pose_angle);
-  object_pose_rotation[1 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[1] + std::cos(object_pose_angle);
-  object_pose_rotation[1 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[2] - object_pose_axis[0] * std::sin(object_pose_angle);
-  object_pose_rotation[2 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[0] - object_pose_axis[1] *  std::sin(object_pose_angle);
-  object_pose_rotation[2 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[1] + object_pose_axis[0] * std::sin(object_pose_angle);
-  object_pose_rotation[2 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[2] + std::cos(object_pose_angle);
+  // // Convert from label (bin format) to axis/angle
+  // float axis_sphere_bin[42 * 3] = { -0.85065, -1, -0.85065, -0.80902, -0.80902, -0.80902, -0.80902, -0.52573, -0.52573, -0.5, -0.5, -0.5, -0.5, -0.30902, -0.30902, -0.30902, -0.30902, 0, 0, 0, 0, 0, 0, 0, 0, 0.30902, 0.30902, 0.30902, 0.30902, 0.5, 0.5, 0.5, 0.5, 0.52573, 0.52573, 0.80902, 0.80902, 0.80902, 0.80902, 0.85065, 1, 0.85065,
+  //                                   0, 0, 0, -0.5, -0.5, 0.5, 0.5, -0.85065, 0.85065, -0.30902, -0.30902, 0.30902, 0.30902, -0.80902, -0.80902, 0.80902, 0.80902, -1, -0.52573, -0.52573, 0, 0, 0.52573, 0.52573, 1, -0.80902, -0.80902, 0.80902, 0.80902, -0.30902, -0.30902, 0.30902, 0.30902, -0.85065, 0.85065, -0.5, -0.5, 0.5, 0.5, 0, 0, 0,
+  //                                   -0.52573, 0, 0.52573, -0.30902, 0.30902, -0.30902, 0.30902, 0, 0, -0.80902, 0.80902, -0.80902, 0.80902, -0.5, 0.5, -0.5, 0.5, 0, -0.85065, 0.85065, -1, 1, -0.85065, 0.85065, 0, -0.5, 0.5, -0.5, 0.5, -0.80902, 0.80902, -0.80902, 0.80902, 0, 0, -0.30902, 0.30902, -0.30902, 0.30902, -0.52573, 0, 0.52573
+  //                                 };
+  // float object_pose_axis[3] = {0};
+  // object_pose_axis[0] = axis_sphere_bin[0 * 42 + best_guess_axis];
+  // object_pose_axis[1] = axis_sphere_bin[1 * 42 + best_guess_axis];
+  // object_pose_axis[2] = axis_sphere_bin[2 * 42 + best_guess_axis];
+  // float object_pose_angle = (((float)best_guess_angle) + 0.5f) * (3.14159265 / 18);
+  // // for (int i = 0; i < 3; i++)
+  // //   std::cout << object_pose_axis[i] << std::endl;
+  // // std::cout << object_pose_angle << std::endl;
+
+  // // Convert axis/angle to pose
+  // float object_pose_rotation[9] = {0};
+  // object_pose_rotation[0 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[0] + std::cos(object_pose_angle);
+  // object_pose_rotation[0 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[1] - object_pose_axis[2] * std::sin(object_pose_angle);
+  // object_pose_rotation[0 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[0] * object_pose_axis[2] + object_pose_axis[1] * std::sin(object_pose_angle);
+  // object_pose_rotation[1 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[0] + object_pose_axis[2] * std::sin(object_pose_angle);
+  // object_pose_rotation[1 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[1] + std::cos(object_pose_angle);
+  // object_pose_rotation[1 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[1] * object_pose_axis[2] - object_pose_axis[0] * std::sin(object_pose_angle);
+  // object_pose_rotation[2 * 3 + 0] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[0] - object_pose_axis[1] *  std::sin(object_pose_angle);
+  // object_pose_rotation[2 * 3 + 1] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[1] + object_pose_axis[0] * std::sin(object_pose_angle);
+  // object_pose_rotation[2 * 3 + 2] = (1 - std::cos(object_pose_angle)) * object_pose_axis[2] * object_pose_axis[2] + std::cos(object_pose_angle);
 
   // Retrieve object location
   float object_location[3] = {0};
@@ -476,18 +489,46 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
   object_location[1] = (hypothesis_locations[1 * num_hypothesis + best_guess_IDX] + 1) * vox_unit + vox_range_cam[1 * 2 + 0];
   object_location[2] = (hypothesis_locations[2 * num_hypothesis + best_guess_IDX] + 1) * vox_unit + vox_range_cam[2 * 2 + 0];
 
+  // Normalize quaternion 
+  const float best_guess_quaternion_norm = 1.0f / sqrt(best_guess_quaternion[0] * best_guess_quaternion[0] + best_guess_quaternion[1] * best_guess_quaternion[1] + best_guess_quaternion[2] * best_guess_quaternion[2] + best_guess_quaternion[3] * best_guess_quaternion[3]);
+  best_guess_quaternion[0] *= best_guess_quaternion_norm;
+  best_guess_quaternion[1] *= best_guess_quaternion_norm;
+  best_guess_quaternion[2] *= best_guess_quaternion_norm;
+  best_guess_quaternion[3] *= best_guess_quaternion_norm;
+  std::cout << "    " << best_guess_quaternion[0] << " " << best_guess_quaternion[1] << " " << best_guess_quaternion[2] << " " << best_guess_quaternion[3] << std::endl;
+
+
+  // Convert quaternion to pose
+  float object_pose[16];
+  object_pose[0 * 4 + 0] = 1.0f - 2.0f * best_guess_quaternion[2] * best_guess_quaternion[2] - 2.0f * best_guess_quaternion[3] * best_guess_quaternion[3];
+  object_pose[0 * 4 + 1] = 2.0f * best_guess_quaternion[1] * best_guess_quaternion[2] - 2.0f * best_guess_quaternion[3] * best_guess_quaternion[0];
+  object_pose[0 * 4 + 2] = 2.0f * best_guess_quaternion[1] * best_guess_quaternion[3] + 2.0f * best_guess_quaternion[2] * best_guess_quaternion[0];
+  object_pose[0 * 4 + 3] = object_location[0];
+  object_pose[1 * 4 + 0] = 2.0f * best_guess_quaternion[1] * best_guess_quaternion[2] + 2.0f * best_guess_quaternion[3] * best_guess_quaternion[0];
+  object_pose[1 * 4 + 1] = 1.0f - 2.0f * best_guess_quaternion[1] * best_guess_quaternion[1] - 2.0f * best_guess_quaternion[3] * best_guess_quaternion[3];
+  object_pose[1 * 4 + 2] = 2.0f * best_guess_quaternion[2] * best_guess_quaternion[3] - 2.0f * best_guess_quaternion[1] * best_guess_quaternion[0];
+  object_pose[1 * 4 + 3] = object_location[1];
+  object_pose[2 * 4 + 0] = 2.0f * best_guess_quaternion[1] * best_guess_quaternion[3] - 2.0f * best_guess_quaternion[2] * best_guess_quaternion[0];
+  object_pose[2 * 4 + 1] = 2.0f * best_guess_quaternion[2] * best_guess_quaternion[3] + 2.0f * best_guess_quaternion[1] * best_guess_quaternion[0];
+  object_pose[2 * 4 + 2] = 1.0f - 2.0f * best_guess_quaternion[1] * best_guess_quaternion[1] - 2.0f * best_guess_quaternion[2] * best_guess_quaternion[2];
+  object_pose[2 * 4 + 3] = object_location[2];
+  object_pose[3 * 4 + 0] = 0.0f;
+  object_pose[3 * 4 + 1] = 0.0f;
+  object_pose[3 * 4 + 2] = 0.0f;
+  object_pose[3 * 4 + 3] = 1.0f;
+
   // std::cout << object_location[0] << std::endl;
   // std::cout << object_location[1] << std::endl;
   // std::cout << object_location[2] << std::endl;
 
-  float object_pose[16] = {0};
-  for (int i = 0; i < 3; i++) {
-    object_pose[i * 4 + 0] = object_pose_rotation[i * 3 + 0];
-    object_pose[i * 4 + 1] = object_pose_rotation[i * 3 + 1];
-    object_pose[i * 4 + 2] = object_pose_rotation[i * 3 + 2];
-    object_pose[i * 4 + 3] = object_location[i];
-  }
-  object_pose[15] = 1;
+  // float object_pose[16] = {0};
+  // for (int i = 0; i < 3; i++) {
+  //   object_pose[i * 4 + 0] = object_pose_rotation[i * 3 + 0];
+  //   object_pose[i * 4 + 1] = object_pose_rotation[i * 3 + 1];
+  //   object_pose[i * 4 + 2] = object_pose_rotation[i * 3 + 2];
+  //   object_pose[i * 4 + 3] = object_location[i];
+  // }
+  // object_pose[15] = 1;
   // for (int i = 0; i < 4; i++) {
   //   for (int j = 0; j < 4; j++)
   //     std::cout << object_pose[i * 4 + j] << " ";
@@ -518,32 +559,63 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
     for (int i = 0; i < 3; i++)
       gt_object_center_cam[i] = gt_object_pose[i * 4 + 3];
 
-    // Convert pose from rotation matrix to axis/angle (radians) representation (x, y, z, theta)
-    float gt_object_pose_axis[3] = {0};
-    float gt_object_pose_angle = std::acos(0.5f * (gt_object_pose[0] + gt_object_pose[5] + gt_object_pose[10] - 1));
-    gt_object_pose_axis[0] = (gt_object_pose[9] - gt_object_pose[6]) / (2 * std::sin(gt_object_pose_angle));
-    gt_object_pose_axis[1] = (gt_object_pose[2] - gt_object_pose[8]) / (2 * std::sin(gt_object_pose_angle));
-    gt_object_pose_axis[2] = (gt_object_pose[4] - gt_object_pose[1]) / (2 * std::sin(gt_object_pose_angle));
-
-    // Bin axis into one of 42 bins
-    int closest_axis_bin = 0;
-    float closest_axis_dist = 100;
-    for (int i = 0; i < 42; i++) {
-      float curr_axis_dist = std::sqrt((axis_sphere_bin[0 * 42 + i] - gt_object_pose_axis[0]) * (axis_sphere_bin[0 * 42 + i] - gt_object_pose_axis[0]) +
-                                       (axis_sphere_bin[1 * 42 + i] - gt_object_pose_axis[1]) * (axis_sphere_bin[1 * 42 + i] - gt_object_pose_axis[1]) +
-                                       (axis_sphere_bin[2 * 42 + i] - gt_object_pose_axis[2]) * (axis_sphere_bin[2 * 42 + i] - gt_object_pose_axis[2]));
-      if (curr_axis_dist < closest_axis_dist) {
-        closest_axis_dist = curr_axis_dist;
-        closest_axis_bin = i;
+    // Convert ground truth pose from rotation matrix to quaternion
+    float trace = gt_object_pose[0 * 4 + 0] + gt_object_pose[1 * 4 + 1] + gt_object_pose[2 * 4 + 2]; // I removed + 1.0f; see discussion with Ethan
+    float gt_object_pose_quaternion[4];
+    if ( trace > 0 ) { // I changed M_EPSILON to 0
+      float s = 0.5f / sqrtf(trace + 1.0f);
+      gt_object_pose_quaternion[0] = 0.25f / s;
+      gt_object_pose_quaternion[1] = ( gt_object_pose[2 * 4 + 1] - gt_object_pose[1 * 4 + 2] ) * s;
+      gt_object_pose_quaternion[2] = ( gt_object_pose[0 * 4 + 2] - gt_object_pose[2 * 4 + 0] ) * s;
+      gt_object_pose_quaternion[3] = ( gt_object_pose[1 * 4 + 0] - gt_object_pose[0 * 4 + 1] ) * s;
+    } else {
+      if ( gt_object_pose[0 * 4 + 0] > gt_object_pose[1 * 4 + 1] && gt_object_pose[0 * 4 + 0] > gt_object_pose[2 * 4 + 2] ) {
+        float s = 2.0f * sqrtf( 1.0f + gt_object_pose[0 * 4 + 0] - gt_object_pose[1 * 4 + 1] - gt_object_pose[2 * 4 + 2]);
+        gt_object_pose_quaternion[0] = (gt_object_pose[2 * 4 + 1] - gt_object_pose[1 * 4 + 2] ) / s;
+        gt_object_pose_quaternion[1] = 0.25f * s;
+        gt_object_pose_quaternion[2] = (gt_object_pose[0 * 4 + 1] + gt_object_pose[1 * 4 + 0] ) / s;
+        gt_object_pose_quaternion[3] = (gt_object_pose[0 * 4 + 2] + gt_object_pose[2 * 4 + 0] ) / s;
+      } else if (gt_object_pose[1 * 4 + 1] > gt_object_pose[2 * 4 + 2]) {
+        float s = 2.0f * sqrtf( 1.0f + gt_object_pose[1 * 4 + 1] - gt_object_pose[0 * 4 + 0] - gt_object_pose[2 * 4 + 2]);
+        gt_object_pose_quaternion[0] = (gt_object_pose[0 * 4 + 2] - gt_object_pose[2 * 4 + 0] ) / s;
+        gt_object_pose_quaternion[1] = (gt_object_pose[0 * 4 + 1] + gt_object_pose[1 * 4 + 0] ) / s;
+        gt_object_pose_quaternion[2] = 0.25f * s;
+        gt_object_pose_quaternion[3] = (gt_object_pose[1 * 4 + 2] + gt_object_pose[2 * 4 + 1] ) / s;
+      } else {
+        float s = 2.0f * sqrtf( 1.0f + gt_object_pose[2 * 4 + 2] - gt_object_pose[0 * 4 + 0] - gt_object_pose[1 * 4 + 1] );
+        gt_object_pose_quaternion[0] = (gt_object_pose[1 * 4 + 0] - gt_object_pose[0 * 4 + 1] ) / s;
+        gt_object_pose_quaternion[1] = (gt_object_pose[0 * 4 + 2] + gt_object_pose[2 * 4 + 0] ) / s;
+        gt_object_pose_quaternion[2] = (gt_object_pose[1 * 4 + 2] + gt_object_pose[2 * 4 + 1] ) / s;
+        gt_object_pose_quaternion[3] = 0.25f * s;
       }
     }
 
-    // Bin angle into one of 18 bins (10 degrees)
-    float closest_angle_bin = floor(gt_object_pose_angle / (3.14159265 / 18));
-    if (closest_angle_bin > 17 || closest_axis_bin > 41) {
-      std::cout << "AXIS/ANGLE BINS INCORRECTLY SET UP" << std::endl;
-      exit(1);
-    }
+    // // Convert pose from rotation matrix to axis/angle (radians) representation (x, y, z, theta)
+    // float gt_object_pose_axis[3] = {0};
+    // float gt_object_pose_angle = std::acos(0.5f * (gt_object_pose[0] + gt_object_pose[5] + gt_object_pose[10] - 1));
+    // gt_object_pose_axis[0] = (gt_object_pose[9] - gt_object_pose[6]) / (2 * std::sin(gt_object_pose_angle));
+    // gt_object_pose_axis[1] = (gt_object_pose[2] - gt_object_pose[8]) / (2 * std::sin(gt_object_pose_angle));
+    // gt_object_pose_axis[2] = (gt_object_pose[4] - gt_object_pose[1]) / (2 * std::sin(gt_object_pose_angle));
+
+    // // Bin axis into one of 42 bins
+    // int closest_axis_bin = 0;
+    // float closest_axis_dist = 100;
+    // for (int i = 0; i < 42; i++) {
+    //   float curr_axis_dist = std::sqrt((axis_sphere_bin[0 * 42 + i] - gt_object_pose_axis[0]) * (axis_sphere_bin[0 * 42 + i] - gt_object_pose_axis[0]) +
+    //                                    (axis_sphere_bin[1 * 42 + i] - gt_object_pose_axis[1]) * (axis_sphere_bin[1 * 42 + i] - gt_object_pose_axis[1]) +
+    //                                    (axis_sphere_bin[2 * 42 + i] - gt_object_pose_axis[2]) * (axis_sphere_bin[2 * 42 + i] - gt_object_pose_axis[2]));
+    //   if (curr_axis_dist < closest_axis_dist) {
+    //     closest_axis_dist = curr_axis_dist;
+    //     closest_axis_bin = i;
+    //   }
+    // }
+
+    // // Bin angle into one of 18 bins (10 degrees)
+    // float closest_angle_bin = floor(gt_object_pose_angle / (3.14159265 / 18));
+    // if (closest_angle_bin > 17 || closest_axis_bin > 41) {
+    //   std::cout << "AXIS/ANGLE BINS INCORRECTLY SET UP" << std::endl;
+    //   exit(1);
+    // }
 
     float obj_dist = sqrtf((gt_object_center_cam[0] - object_location[0]) * (gt_object_center_cam[0] - object_location[0]) +
                            (gt_object_center_cam[1] - object_location[1]) * (gt_object_center_cam[1] - object_location[1]) +
@@ -554,25 +626,30 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
     else
       cv::putText(curr_frame_color, "Detection: > 2cm conf: " + std::to_string(highest_class_score), cv::Point(crop_x1 + 5, crop_y2 - 50), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.5);
 
+    cv::putText(curr_frame_color, "PR: " + std::to_string(best_guess_quaternion[0]) + " " + std::to_string(best_guess_quaternion[1]) + " " + std::to_string(best_guess_quaternion[2]) + " " + std::to_string(best_guess_quaternion[3]), cv::Point(crop_x1 + 5, crop_y2 - 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+    cv::putText(curr_frame_color, "GT: " + std::to_string(gt_object_pose_quaternion[0]) + " " + std::to_string(gt_object_pose_quaternion[1]) + " " + std::to_string(gt_object_pose_quaternion[2]) + " " + std::to_string(gt_object_pose_quaternion[3]), cv::Point(crop_x1 + 5, crop_y2 - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
 
-    if (closest_axis_bin == best_guess_axis)
-      cv::putText(curr_frame_color, "Axis: correct conf: " + std::to_string(best_axis_score), cv::Point(crop_x1 + 5, crop_y2 - 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
-    else
-      cv::putText(curr_frame_color, "Axis: " + std::to_string(best_guess_axis) + " vs " + std::to_string(closest_axis_bin) + " (GT) conf: " + std::to_string(best_axis_score), cv::Point(crop_x1 + 5, crop_y2 - 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.5);
+    // if (closest_axis_bin == best_guess_axis)
+    //   cv::putText(curr_frame_color, "Axis: correct conf: " + std::to_string(best_axis_score), cv::Point(crop_x1 + 5, crop_y2 - 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+    // else
+    //   cv::putText(curr_frame_color, "Axis: " + std::to_string(best_guess_axis) + " vs " + std::to_string(closest_axis_bin) + " (GT) conf: " + std::to_string(best_axis_score), cv::Point(crop_x1 + 5, crop_y2 - 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.5);
 
-
-    if (closest_angle_bin == best_guess_angle)
-      cv::putText(curr_frame_color, "Angle: correct conf: " + std::to_string(best_angle_score), cv::Point(crop_x1 + 5, crop_y2 - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
-    else
-      cv::putText(curr_frame_color, "Angle: " + std::to_string(best_guess_angle) + " vs " + std::to_string((int)closest_angle_bin) + " (GT) conf: " + std::to_string(best_angle_score), cv::Point(crop_x1 + 5, crop_y2 - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.5);
+    // if (closest_angle_bin == best_guess_angle)
+    //   cv::putText(curr_frame_color, "Angle: correct conf: " + std::to_string(best_angle_score), cv::Point(crop_x1 + 5, crop_y2 - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+    // else
+    //   cv::putText(curr_frame_color, "Angle: " + std::to_string(best_guess_angle) + " vs " + std::to_string((int)closest_angle_bin) + " (GT) conf: " + std::to_string(best_angle_score), cv::Point(crop_x1 + 5, crop_y2 - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.5);
 
     // std::cout << "GT: " << closest_axis_bin << std::endl;
     // std::cout << "GT: " << closest_angle_bin << std::endl;
 
   }
 
-  // std::cout << "PRED: " << best_guess_axis << std::endl;
-  // std::cout << "PRED: " << best_guess_angle << std::endl;
+  // // std::cout << "PRED: " << best_guess_axis << std::endl;
+  // // std::cout << "PRED: " << best_guess_angle << std::endl;
+  
+  cv::namedWindow("Object Pose", CV_WINDOW_AUTOSIZE);
+  cv::imshow("Object Pose", curr_frame_color);
+  cv::waitKey(10);
 
   // Save display result
   std::string results_directory = sequence_directory + "/results." + model_idx;
@@ -610,7 +687,7 @@ int main(int argc, char **argv) {
   
 
   // tic();
-  // detect("data/test/glue/seq01","frame-000008");
+  // detect("data/test/glue/seq04","frame-000174");
   // toc();
 
   // List RGB-D sequences

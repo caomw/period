@@ -84,8 +84,15 @@
 #include <sys/time.h>
 #include <opencv2/opencv.hpp>
 // #include "train.hpp"
-std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D, const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label) {std::vector<cv::Mat> patches_2D; return patches_2D;}
+std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D, const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label, float* object_pose_quaternion) {std::vector<cv::Mat> patches_2D; return patches_2D;}
 void patch2tensor(cv::Mat curr_patch, float* patch_data) {}
+
+////////////////////////////////////////////////////////////////////////////////
+// Global data structures to hold test data and labels passed to and from Marvin
+std::vector<std::vector<float>> buffer_data2D;
+std::vector<std::vector<float>> buffer_data3D;
+std::vector<float> buffer_scores_class;
+std::vector<float> buffer_scores_quaternion;
 
 namespace marvin {
 
@@ -3594,13 +3601,11 @@ public:
         // std::vector<int> label_dim = labelCPUall->dim;
         // label_dim[0] = batch_size;
         // labelCPU = new Tensor<StorageT>(label_dim);
-        labelCPU.resize(5);
-        labelGPU.resize(5);
-        labelCPU[0] = new T[batch_size];
-        labelCPU[1] = new T[batch_size];
-        labelCPU[2] = new T[batch_size];
-        labelCPU[3] = new T[batch_size];
-        labelCPU[4] = new T[batch_size];
+        labelCPU.resize(3);
+        labelGPU.resize(3);
+        labelCPU[0] = new T[batch_size]; // class
+        labelCPU[1] = new T[batch_size*4*2]; // quaternion
+        labelCPU[2] = new T[batch_size*4*2]; // quaternion weights
 
         init_fusion_GPU();
 
@@ -3696,14 +3701,19 @@ public:
         // kCheckCUDA(__LINE__, cudaMalloc(&d_batch_2D, 32 * 3 * 227 * 227 * sizeof(float)));
         // kCheckCUDA(__LINE__, cudaMalloc(&d_batch_3D, 32 * 30 * 30 * 30 * sizeof(float)));
 
+        std::vector<std::string> object_list;
+        object_list.push_back("glue");
+        object_list.push_back("duck");
+
         for (int i = 0; i < 16; i++) {
 
             // Create positive and negative hypothesis
             std::string data_directory = file_data[0];
-            std::string object_name = "glue";
+            std::string object_name = object_list[i % (object_list.size())];
             std::string object_directory = data_directory + "/" + object_name;
             int axis_angle_label[2] = {0};
-            std::vector<cv::Mat> patches_2D = gen_train_hypothesis_pair(i, dataGPU[1], object_directory, positive_hypothesis_crop_info, negative_hypothesis_crop_info, axis_angle_label);
+            float object_pose_quaternion[4] = {0};
+            std::vector<cv::Mat> patches_2D = gen_train_hypothesis_pair(i, dataGPU[1], object_directory, positive_hypothesis_crop_info, negative_hypothesis_crop_info, axis_angle_label, object_pose_quaternion);
 
             // Show image patches
             // cv::namedWindow("Positive Patch", CV_WINDOW_AUTOSIZE);
@@ -3722,32 +3732,73 @@ public:
             kCheckCUDA(__LINE__, cudaMemcpy(&(dataGPU[0][(i * 2) * 3 * 227 * 227]), pos_patch_data, 3 * 227 * 227 * sizeof(float), cudaMemcpyHostToDevice));
             kCheckCUDA(__LINE__, cudaMemcpy(&(dataGPU[0][(i * 2 + 1) * 3 * 227 * 227]), neg_patch_data, 3 * 227 * 227 * sizeof(float), cudaMemcpyHostToDevice));
 
-            // Copy axis/angle label
-            float pos_class_label = 1;
+            // Copy classification label
+            float pos_class_label = (i % (object_list.size())) + 1;
             float neg_class_label = 0;
-            float axis_label = (float)axis_angle_label[0];
-            float angle_label = (float)axis_angle_label[1];
-            // std::cout << axis_angle_label[0] << " " << axis_angle_label[1] << std::endl;
             kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[0][i * 2]), &pos_class_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
             kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[0][i * 2 + 1]), &neg_class_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
-            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[1][i * 2]), &axis_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
-            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[1][i * 2 + 1]), &axis_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
-            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][i * 2]), &angle_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
-            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][i * 2 + 1]), &angle_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
+
+            // std::cout << pos_class_label << " " << neg_class_label << " " << std::endl;
+            // std::cout << object_pose_quaternion[0] << " " << object_pose_quaternion[1] << " " << object_pose_quaternion[2] << " " << object_pose_quaternion[3] << std::endl;
+
+            // Copy quaternion label
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[1][(i * 2) * 4 * 2]), object_pose_quaternion, 4 * 2 * sizeof(float), cudaMemcpyHostToDevice));
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[1][(i * 2 + 1) * 4 * 2]), object_pose_quaternion, 4 * 2 * sizeof(float), cudaMemcpyHostToDevice));
 
             // Copy label weights
-            float label_axis_weight_valid[42] = {0};
-            for (int j = 0; j < 42; j++)
-                label_axis_weight_valid[j] = 1;
-            float label_axis_weight_invalid[42] = {0};
-            float label_angle_weight_valid[18] = {0};
-            for (int j = 0; j < 18; j++)
-                label_angle_weight_valid[j] = 1;
-            float label_angle_weight_invalid[18] = {0};
-            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[3][(i * 2) * 42]), label_axis_weight_valid, 42 * sizeof(float), cudaMemcpyHostToDevice));
-            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[3][(i * 2 + 1) * 42]), label_axis_weight_invalid, 42 * sizeof(float), cudaMemcpyHostToDevice));
-            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[4][(i * 2) * 18]), label_angle_weight_valid, 18 * sizeof(float), cudaMemcpyHostToDevice));
-            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[4][(i * 2 + 1) * 18]), label_angle_weight_invalid, 18 * sizeof(float), cudaMemcpyHostToDevice));
+            float label_quaternion_weights[4 * 2] = {0};
+            // std::cout << label_quaternion_weights[0] << " " << label_quaternion_weights[1] << " " << label_quaternion_weights[2] << " " << label_quaternion_weights[3] << std::endl;
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][(i * 2 + 1) * 4 * 2]), label_quaternion_weights, 4 * 2 * sizeof(float), cudaMemcpyHostToDevice));
+            int quaternion_label_idx = i % (object_list.size());
+            for (int j = quaternion_label_idx * 4; j < (quaternion_label_idx + 1) * 4; j++)
+                label_quaternion_weights[j] = 1;
+            // std::cout << label_quaternion_weights[0] << " " << label_quaternion_weights[1] << " " << label_quaternion_weights[2] << " " << label_quaternion_weights[3] << " " << label_quaternion_weights[4] << " " << label_quaternion_weights[5] << " " << label_quaternion_weights[6] << " " << label_quaternion_weights[7] << std::endl;
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][(i * 2) * 4 * 2]), label_quaternion_weights, 4 * 2 * sizeof(float), cudaMemcpyHostToDevice));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            // // Copy axis/angle label
+            // float axis_label = (float)axis_angle_label[0];
+            // float angle_label = (float)axis_angle_label[1];
+            // // std::cout << axis_angle_label[0] << " " << axis_angle_label[1] << std::endl;
+            // kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[1][i * 2]), &axis_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
+            // kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[1][i * 2 + 1]), &axis_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
+            // kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][i * 2]), &angle_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
+            // kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][i * 2 + 1]), &angle_label, 1 * sizeof(float), cudaMemcpyHostToDevice));
+
+            // // Copy label weights
+            // float label_axis_weight_valid[42] = {0};
+            // for (int j = 0; j < 42; j++)
+            //     label_axis_weight_valid[j] = 1;
+            // float label_axis_weight_invalid[42] = {0};
+            // float label_angle_weight_valid[18] = {0};
+            // for (int j = 0; j < 18; j++)
+            //     label_angle_weight_valid[j] = 1;
+            // float label_angle_weight_invalid[18] = {0};
+            // kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[3][(i * 2) * 42]), label_axis_weight_valid, 42 * sizeof(float), cudaMemcpyHostToDevice));
+            // kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[3][(i * 2 + 1) * 42]), label_axis_weight_invalid, 42 * sizeof(float), cudaMemcpyHostToDevice));
+            // kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[4][(i * 2) * 18]), label_angle_weight_valid, 18 * sizeof(float), cudaMemcpyHostToDevice));
+            // kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[4][(i * 2 + 1) * 18]), label_angle_weight_invalid, 18 * sizeof(float), cudaMemcpyHostToDevice));
 
             // Clear memory
             delete [] pos_patch_data;
@@ -3865,8 +3916,6 @@ public:
         std::swap(out[2]->dataGPU, labelGPU[0]);
         std::swap(out[3]->dataGPU, labelGPU[1]);
         std::swap(out[4]->dataGPU, labelGPU[2]);
-        std::swap(out[5]->dataGPU, labelGPU[3]);
-        std::swap(out[6]->dataGPU, labelGPU[4]);
         lock = std::async(std::launch::async, &PeriodTrainDataLayer<T>::prefetch, this);
     };
 
@@ -3875,8 +3924,8 @@ public:
 
         if (phase == Training && phase_ == Testing) return 0;
 
-        if (out.size() != 7) {
-            std::cout << "PeriodTrainDataLayer: incorrect # of out's; should be 7 (data2D, data3D, label_class, label_axis, label_angle, label_axis_weights, label_angle_weights)" << std::endl;
+        if (out.size() != 5) {
+            std::cout << "PeriodTrainDataLayer: incorrect # of out's" << std::endl;
             FatalError(__LINE__);
         }
         // if (! (in.size() == 0 || in.size() < file_data.size())) {
@@ -3918,28 +3967,19 @@ public:
         out[2]->need_diff = false;
         out[3]->need_diff = false;
         out[4]->need_diff = false;
-        out[5]->need_diff = false;
-        out[6]->need_diff = false;
         std::vector<int> labels_dim; labels_dim.push_back(batch_size); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1);
         memoryBytes += out[2]->Malloc(labels_dim);
+        labels_dim.clear(); labels_dim.push_back(batch_size); labels_dim.push_back(4 * 2); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1);
         memoryBytes += out[3]->Malloc(labels_dim);
         memoryBytes += out[4]->Malloc(labels_dim);
-        labels_dim.clear(); labels_dim.push_back(batch_size); labels_dim.push_back(42); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1);
-        memoryBytes += out[5]->Malloc(labels_dim);
-        labels_dim.clear(); labels_dim.push_back(batch_size); labels_dim.push_back(18); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1);
-        memoryBytes += out[6]->Malloc(labels_dim);
 
         // CUDA Malloc labels
         checkCUDA(__LINE__, cudaMalloc(&labelGPU[0], size_t(batch_size) * sizeof(T)) );
-        checkCUDA(__LINE__, cudaMalloc(&labelGPU[1], size_t(batch_size) * sizeof(T)) );
-        checkCUDA(__LINE__, cudaMalloc(&labelGPU[2], size_t(batch_size) * sizeof(T)) );
-        checkCUDA(__LINE__, cudaMalloc(&labelGPU[3], size_t(batch_size) * 42 * sizeof(T)) );
-        checkCUDA(__LINE__, cudaMalloc(&labelGPU[4], size_t(batch_size) * 18 * sizeof(T)) );
+        checkCUDA(__LINE__, cudaMalloc(&labelGPU[1], size_t(batch_size) * 4 * 2 * sizeof(T)) );
+        checkCUDA(__LINE__, cudaMalloc(&labelGPU[2], size_t(batch_size) * 4 * 2 * sizeof(T)) );
         memoryBytes += batch_size * sizeof(T);
-        memoryBytes += batch_size * sizeof(T);
-        memoryBytes += batch_size * sizeof(T);
-        memoryBytes += batch_size * 42 * sizeof(T);
-        memoryBytes += batch_size * 18 * sizeof(T);
+        memoryBytes += batch_size * 4 * 2 * sizeof(T);
+        memoryBytes += batch_size * 4 * 2 * sizeof(T);
 
         lock = std::async(std::launch::async, &PeriodTrainDataLayer<T>::prefetch, this);
 
@@ -7694,14 +7734,9 @@ public:
                             buffer_scores_class.resize(total_size[i]);
                         }
 
-                        if (responseNames[i] == "axis_score") {
-                            buffer_scores_axis.clear();
-                            buffer_scores_axis.resize(total_size[i]);
-                        }
-
-                        if (responseNames[i] == "angle_score") {
-                            buffer_scores_angle.clear();
-                            buffer_scores_angle.resize(total_size[i]);
+                        if (responseNames[i] == "quat_pred") {
+                            buffer_scores_quaternion.clear();
+                            buffer_scores_quaternion.resize(total_size[i]);
                         }
 
                         // files[i] = fopen(Fname.c_str(), "wb");
@@ -7739,13 +7774,9 @@ public:
                         for (int j = 0; j < features_batch_size; j++)
                             buffer_scores_class[iter * (features[i]->numel()) + j] = features[i]->CPUmem[j];
 
-                    if (responseNames[i] == "axis_score")
+                    if (responseNames[i] == "quat_pred")
                         for (int j = 0; j < features_batch_size; j++)
-                            buffer_scores_axis[iter * (features[i]->numel()) + j] = features[i]->CPUmem[j];
-
-                    if (responseNames[i] == "angle_score")
-                        for (int j = 0; j < features_batch_size; j++)
-                            buffer_scores_angle[iter * (features[i]->numel()) + j] = features[i]->CPUmem[j];
+                            buffer_scores_quaternion[iter * (features[i]->numel()) + j] = features[i]->CPUmem[j];
 
                     // void readGPU(T* GPUmem) {
                     //     cudaMemcpy(CPUmem, GPUmem, numel()*sizeof(T), cudaMemcpyDeviceToHost);

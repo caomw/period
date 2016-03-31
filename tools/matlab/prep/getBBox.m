@@ -2,7 +2,7 @@
 objCoords = [];
 objColors = [];
 
-seqDir = 'data/glue.train.5';
+seqDir = '../../../data/train/expo/seq01';
 
 % List RGB-D frames
 colorFiles = dir(fullfile(seqDir,'*.color.png'));
@@ -50,8 +50,10 @@ for frameIDX=1:length(depthFiles)
     colors = colors(:,validIDX);
     
     % Save XYZ coords and colors
-    objCoords = [objCoords,camXYZ];
-    objColors = [objColors,colors];
+    if mod(frameIDX,10) == 0
+        objCoords = [objCoords,camXYZ];
+        objColors = [objColors,colors];
+    end
 end
 
 % Save point cloud to file

@@ -112,7 +112,7 @@ void gen_hypothesis_labels(int num_hypothesis, unsigned short* tmp_hypothesis_lo
                          (tmp_object_center_cam[2] - z_cam) * (tmp_object_center_cam[2] - z_cam));
 
   // Save label (positive case if dist to ground truth object center < some threshold)
-  if (obj_dist < 0.02f)
+  if (obj_dist < 0.01f)
     tmp_hypothesis_labels[hypothesis_idx] = (char)1;
   else
     tmp_hypothesis_labels[hypothesis_idx] = (char)2;
@@ -445,8 +445,18 @@ void generate_train_labels(const std::string &sequence_directory) {
 int main(int argc, char **argv) {
 
   init_fusion_GPU();
-  generate_train_labels("data/train/glue/seq03");
-  generate_train_labels("data/train/glue/seq04");
+  generate_train_labels("data/test/glue/seq01");
+  generate_train_labels("data/test/glue/seq02");
+  generate_train_labels("data/test/glue/seq03");
+  generate_train_labels("data/test/glue/seq04");
+  // generate_train_labels("data/train/duck/seq01");
+  // generate_train_labels("data/train/duck/seq02");
+  // generate_train_labels("data/train/duck/seq03");
+  // generate_train_labels("data/train/duck/seq04");
+  // generate_train_labels("data/train/duck/seq01");
+  // generate_train_labels("data/train/duck/seq02");
+  // generate_train_labels("data/train/duck/seq03");
+  // generate_train_labels("data/train/duck/seq04");
 
   return 0;
 }
