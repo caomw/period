@@ -55,8 +55,19 @@ int main(int argc, char * argv[]) try {
 
     // Frame increment
     int frame_idx = 0;
-
+    int key_press_state = 0;
     while (!glfwWindowShouldClose(win)) {
+
+        if (glfwGetKey(win, GLFW_KEY_SPACE) == GLFW_PRESS && key_press_state == 0) {
+            key_press_state++;
+        }
+
+        if (glfwGetKey(win, GLFW_KEY_SPACE) == GLFW_RELEASE && key_press_state == 1) {
+          key_press_state = 0;
+          break;
+        }
+
+
         // Wait for new images
         glfwPollEvents();
         dev.wait_for_frames();

@@ -83,9 +83,9 @@
 #include <cudnn.h>
 #include <sys/time.h>
 #include <opencv2/opencv.hpp>
-// #include "train.hpp"
-std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D, const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label, float* object_pose_quaternion) {std::vector<cv::Mat> patches_2D; return patches_2D;}
-void patch2tensor(cv::Mat curr_patch, float* patch_data) {}
+#include "train.hpp"
+// std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D, const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label, float* object_pose_quaternion) {std::vector<cv::Mat> patches_2D; return patches_2D;}
+// void patch2tensor(cv::Mat curr_patch, float* patch_data) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global data structures to hold test data and labels passed to and from Marvin
@@ -3751,7 +3751,7 @@ public:
             kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][(i * 2 + 1) * 4 * 2]), label_quaternion_weights, 4 * 2 * sizeof(float), cudaMemcpyHostToDevice));
             int quaternion_label_idx = i % (object_list.size());
             for (int j = quaternion_label_idx * 4; j < (quaternion_label_idx + 1) * 4; j++)
-                label_quaternion_weights[j] = 1;
+                label_quaternion_weights[j] = 10;
             // std::cout << label_quaternion_weights[0] << " " << label_quaternion_weights[1] << " " << label_quaternion_weights[2] << " " << label_quaternion_weights[3] << " " << label_quaternion_weights[4] << " " << label_quaternion_weights[5] << " " << label_quaternion_weights[6] << " " << label_quaternion_weights[7] << std::endl;
             kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][(i * 2) * 4 * 2]), label_quaternion_weights, 4 * 2 * sizeof(float), cudaMemcpyHostToDevice));
 
