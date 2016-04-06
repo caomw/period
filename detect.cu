@@ -21,7 +21,7 @@ marvin::Net main_net("models/model" + model_idx + ".test.json");
 // Init marvin net
 void init_marvin() {
   main_net.Malloc(marvin::Testing);
-  std::vector<std::string> models = marvin::getStringVector("models/PeriodNet.3." + model_idx + ".10000.marvin");
+  std::vector<std::string> models = marvin::getStringVector("models/PeriodNet.4." + model_idx + ".25000.marvin");
   for (int m=0;m<models.size();++m)   
     main_net.loadWeights(models[m]);
 //     // marvin::Net net("tools/marvin/model" + model_idx + ".test.json");
@@ -43,12 +43,12 @@ void show_object_pose(float* K, float* object_pose, cv::Mat& display_frame) {
   // Compute axis endpoints of ground truth object pose in 3D camera coordinates
   float object_pose_display_3D[18] = {0};
   for (int i = 0; i < 3; i++) {
-    object_pose_display_3D[0 * 6 + i * 2 + 0] = object_pose[0 * 4 + 3] - object_pose[0 * 4 + i] * 0.1f;
-    object_pose_display_3D[0 * 6 + i * 2 + 1] = object_pose[0 * 4 + 3] + object_pose[0 * 4 + i] * 0.1f;
-    object_pose_display_3D[1 * 6 + i * 2 + 0] = object_pose[1 * 4 + 3] - object_pose[1 * 4 + i] * 0.1f;
-    object_pose_display_3D[1 * 6 + i * 2 + 1] = object_pose[1 * 4 + 3] + object_pose[1 * 4 + i] * 0.1f;
-    object_pose_display_3D[2 * 6 + i * 2 + 0] = object_pose[2 * 4 + 3] - object_pose[2 * 4 + i] * 0.1f;
-    object_pose_display_3D[2 * 6 + i * 2 + 1] = object_pose[2 * 4 + 3] + object_pose[2 * 4 + i] * 0.1f;
+    object_pose_display_3D[0 * 6 + i * 2 + 0] = object_pose[0 * 4 + 3] - object_pose[0 * 4 + i] * 0.07f;
+    object_pose_display_3D[0 * 6 + i * 2 + 1] = object_pose[0 * 4 + 3] + object_pose[0 * 4 + i] * 0.07f;
+    object_pose_display_3D[1 * 6 + i * 2 + 0] = object_pose[1 * 4 + 3] - object_pose[1 * 4 + i] * 0.07f;
+    object_pose_display_3D[1 * 6 + i * 2 + 1] = object_pose[1 * 4 + 3] + object_pose[1 * 4 + i] * 0.07f;
+    object_pose_display_3D[2 * 6 + i * 2 + 0] = object_pose[2 * 4 + 3] - object_pose[2 * 4 + i] * 0.07f;
+    object_pose_display_3D[2 * 6 + i * 2 + 1] = object_pose[2 * 4 + 3] + object_pose[2 * 4 + i] * 0.07f;
   }
 
   // Project endpoints of ground truth object pose axis from 3D to 2D
@@ -68,13 +68,13 @@ void show_object_pose(float* K, float* object_pose, cv::Mat& display_frame) {
   //   std::cout << object_pose_display_2D[i] << std::endl;
 
   // Display ground truth object pose
-  cv::line(display_frame, cv::Point(object_pose_display_2D[0], object_pose_display_2D[6]), cv::Point(object_pose_display_2D[1], object_pose_display_2D[7]), cv::Scalar(0, 0, 255), 3);
-  cv::line(display_frame, cv::Point(object_pose_display_2D[2], object_pose_display_2D[8]), cv::Point(object_pose_display_2D[3], object_pose_display_2D[9]), cv::Scalar(0, 255, 0), 3);
-  cv::line(display_frame, cv::Point(object_pose_display_2D[4], object_pose_display_2D[10]), cv::Point(object_pose_display_2D[5], object_pose_display_2D[11]), cv::Scalar(255, 0, 0), 3);
-  cv::circle(display_frame, cv::Point(object_center_display_2D[0], object_center_display_2D[1]), 6, cv::Scalar(0, 255, 255), -1);
-  cv::circle(display_frame, cv::Point(object_pose_display_2D[0], object_pose_display_2D[6]), 6, cv::Scalar(0, 0, 255), -1);
-  cv::circle(display_frame, cv::Point(object_pose_display_2D[2], object_pose_display_2D[8]), 6, cv::Scalar(0, 255, 0), -1);
-  cv::circle(display_frame, cv::Point(object_pose_display_2D[4], object_pose_display_2D[10]), 6, cv::Scalar(255, 0, 0), -1);
+  cv::line(display_frame, cv::Point(object_pose_display_2D[0], object_pose_display_2D[6]), cv::Point(object_pose_display_2D[1], object_pose_display_2D[7]), cv::Scalar(0, 0, 255), 2);
+  cv::line(display_frame, cv::Point(object_pose_display_2D[2], object_pose_display_2D[8]), cv::Point(object_pose_display_2D[3], object_pose_display_2D[9]), cv::Scalar(0, 255, 0), 2);
+  cv::line(display_frame, cv::Point(object_pose_display_2D[4], object_pose_display_2D[10]), cv::Point(object_pose_display_2D[5], object_pose_display_2D[11]), cv::Scalar(255, 0, 0), 2);
+  cv::circle(display_frame, cv::Point(object_center_display_2D[0], object_center_display_2D[1]), 4, cv::Scalar(0, 255, 255), -1);
+  cv::circle(display_frame, cv::Point(object_pose_display_2D[0], object_pose_display_2D[6]), 4, cv::Scalar(0, 0, 255), -1);
+  cv::circle(display_frame, cv::Point(object_pose_display_2D[2], object_pose_display_2D[8]), 4, cv::Scalar(0, 255, 0), -1);
+  cv::circle(display_frame, cv::Point(object_pose_display_2D[4], object_pose_display_2D[10]), 4, cv::Scalar(255, 0, 0), -1);
   // cv::namedWindow("Object Pose", CV_WINDOW_AUTOSIZE);
   // cv::imshow("Object Pose", display_frame);
 }
@@ -372,13 +372,14 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
 
   // Run marvin
   std::cerr << "GPU: Running Marvin for 2D/3D deep learning." << std::endl;
-  std::string class_score_tensor_filename = "TMP.class_score_response.tensor";
-  std::string quaternion_score_tensor_filename = "TMP.quaternion_score_response.tensor";
+  // std::string class_score_tensor_filename = "TMP.class.response.tensor";
+  // std::string quaternion_score_tensor_filename = "TMP.quaternion.response.tensor";
+  // std::string translation_score_tensor_filename = "TMP.quaternion.response.tensor";
   // std::string axis_score_tensor_filename = "TMP.axis_score_response.tensor";
   // std::string angle_score_tensor_filename = "TMP.angle_score_response.tensor";
   if (true) {
     int itersPerSave = 0;
-    main_net.test(marvin::getStringVector("class_score,quat_pred"), marvin::getStringVector(class_score_tensor_filename + "," + quaternion_score_tensor_filename), itersPerSave);
+    main_net.test(marvin::getStringVector("class_score,quat_pred,trans_pred"), marvin::getStringVector(""), itersPerSave);
     // sys_command("cd src/apc_vision/tools/marvin; export LD_LIBRARY_PATH=LD_LIBRARY_PATH:/usr/local/cuda/lib64:/usr/local/cudnn/v4rc/lib64; ./marvin test model.json PeriodNet.marvin class_score ../../../../" + class_score_tensor_filename);
   }
   std::cout << "CPU: Extracting object pose information from Marvin results." << std::endl;
@@ -386,33 +387,104 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
   // Parse Marvin scores
   float * class_score_raw = &buffer_scores_class[0];
   float * quaternion_score_raw = &buffer_scores_quaternion[0];
+  float * translation_score_raw = &buffer_scores_translation[0];
 
   // List objects
   std::vector<std::string> object_names;
-  object_names.push_back("glue");
+  object_names.push_back("book");
   object_names.push_back("duck");
+  object_names.push_back("expo");
+  object_names.push_back("frog");
+  object_names.push_back("glue");
+  object_names.push_back("plugs");
+  object_names.push_back("spark");
 
   float * highest_class_scores = new float[object_names.size()];
+  for (int i = 0; i < object_names.size(); i++)
+    highest_class_scores[i] = 0;
   int * best_guess_IDX = new int[object_names.size()];
   float * best_guess_quaternion = new float[object_names.size() * 4];
+  float * best_guess_translation = new float[object_names.size() * 3];
   int valid_hypothesis_idx = 0;
   for (int hypothesis_idx = 0; hypothesis_idx < num_hypothesis; hypothesis_idx++) {
     if ((int)(hypothesis_labels[hypothesis_idx]) == 1) {
+      // std::cout << hypothesis_idx << " " << num_hypothesis << " " << valid_hypothesis_idx << std::endl;
 
       // Loop through each object type
       for (int i = 0; i < object_names.size(); i++) {
 
-        for (int j = 0; j < 4; j++)
-          std::cout << std::to_string(i) << ": " << quaternion_score_raw[valid_hypothesis_idx * object_names.size() * 4 + i * 4 + j] << " ";
+        // for (int j = 0; j < 4; j++)
+        //   std::cout << std::to_string(i) << ": " << quaternion_score_raw[valid_hypothesis_idx * object_names.size() * 4 + i * 4 + j] << " ";
+        // std::cout << std::endl;
+
+        for (int j = 0; j < 3; j++)
+          std::cout << std::to_string(i) << ": " << translation_score_raw[valid_hypothesis_idx * object_names.size() * 3 + i * 3 + j] << " ";
         std::cout << std::endl;
 
         float curr_class_score_raw = class_score_raw[valid_hypothesis_idx * (object_names.size() + 1) + i + 1];
-        if (curr_class_score_raw > 0.5f) {
-          // int crop_x1 = hypothesis_crop_2D[0 * num_hypothesis + hypothesis_idx];
-          // int crop_y1 = hypothesis_crop_2D[1 * num_hypothesis + hypothesis_idx];
-          // int crop_x2 = hypothesis_crop_2D[0 * num_hypothesis + hypothesis_idx] + hypothesis_crop_2D[2 * num_hypothesis + hypothesis_idx];
-          // int crop_y2 = hypothesis_crop_2D[1 * num_hypothesis + hypothesis_idx] + hypothesis_crop_2D[3 * num_hypothesis + hypothesis_idx];
-          // cv::rectangle(curr_frame_color, cv::Point(crop_x1, crop_y1), cv::Point(crop_x2, crop_y2), cv::Scalar(255, 0, 0));
+        if (curr_class_score_raw > 0.9f) {
+
+          // Draw top scoring boxes
+          std::cout << valid_hypothesis_idx << std::endl;
+          int crop_x1 = hypothesis_crop_2D[0 * num_hypothesis + hypothesis_idx];
+          int crop_y1 = hypothesis_crop_2D[1 * num_hypothesis + hypothesis_idx];
+          int crop_x2 = hypothesis_crop_2D[0 * num_hypothesis + hypothesis_idx] + hypothesis_crop_2D[2 * num_hypothesis + hypothesis_idx];
+          int crop_y2 = hypothesis_crop_2D[1 * num_hypothesis + hypothesis_idx] + hypothesis_crop_2D[3 * num_hypothesis + hypothesis_idx];
+          cv::rectangle(curr_frame_color, cv::Point(crop_x1, crop_y1), cv::Point(crop_x2, crop_y2), cv::Scalar(255, 0, 0));
+          float object_location[3] = {0};
+          object_location[0] = (hypothesis_locations[0 * num_hypothesis + hypothesis_idx] + 1) * vox_unit + vox_range_cam[0 * 2 + 0];
+          object_location[1] = (hypothesis_locations[1 * num_hypothesis + hypothesis_idx] + 1) * vox_unit + vox_range_cam[1 * 2 + 0];
+          object_location[2] = (hypothesis_locations[2 * num_hypothesis + hypothesis_idx] + 1) * vox_unit + vox_range_cam[2 * 2 + 0];
+          float object_location_2D[2] = {0};
+          object_location_2D[0] = (object_location[0] * K[0]) / (object_location[2]) + K[2];
+          object_location_2D[1] = (object_location[1] * K[4]) / (object_location[2]) + K[5];
+          cv::circle(curr_frame_color, cv::Point(object_location_2D[0], object_location_2D[1]), 4, cv::Scalar(255, 0, 0), -1);
+          object_location[0] = object_location[0] + translation_score_raw[valid_hypothesis_idx * object_names.size() * 3 + i * 3 + 0]*(0.03f/std::sqrt(2.0f));
+          object_location[1] = object_location[1] + translation_score_raw[valid_hypothesis_idx * object_names.size() * 3 + i * 3 + 1]*(0.03f/std::sqrt(2.0f));
+          object_location[2] = object_location[2] + translation_score_raw[valid_hypothesis_idx * object_names.size() * 3 + i * 3 + 2]*(0.03f/std::sqrt(2.0f));
+          object_location_2D[0] = (object_location[0] * K[0]) / (object_location[2]) + K[2];
+          object_location_2D[1] = (object_location[1] * K[4]) / (object_location[2]) + K[5];
+          cv::circle(curr_frame_color, cv::Point(object_location_2D[0], object_location_2D[1]), 4, cv::Scalar(0, 255, 0), -1);
+
+          if (false) {
+            float curr_quaternion[4] = {0};
+            for (int j = 0; j < 4; j++)
+              curr_quaternion[j] = quaternion_score_raw[valid_hypothesis_idx * object_names.size() * 4 + i * 4 + j];
+
+            // Normalize quaternion 
+            const float curr_quaternion_norm = 1.0f / sqrt(curr_quaternion[0] * curr_quaternion[0] + 
+                                                                 curr_quaternion[1] * curr_quaternion[1] +
+                                                                 curr_quaternion[2] * curr_quaternion[2] +
+                                                                 curr_quaternion[3] * curr_quaternion[3]);
+            curr_quaternion[0] *= curr_quaternion_norm;
+            curr_quaternion[1] *= curr_quaternion_norm;
+            curr_quaternion[2] *= curr_quaternion_norm;
+            curr_quaternion[3] *= curr_quaternion_norm;
+            std::cout << "Quaternion (normalized): " << curr_quaternion[0] << " " << curr_quaternion[1] << " " << curr_quaternion[2] << " " << curr_quaternion[3] << std::endl;
+
+            // Convert quaternion to pose
+            float object_pose[16];
+            object_pose[0 * 4 + 0] = 1.0f - 2.0f * curr_quaternion[2] * curr_quaternion[2] - 2.0f * curr_quaternion[3] * curr_quaternion[3];
+            object_pose[0 * 4 + 1] = 2.0f * curr_quaternion[1] * curr_quaternion[2] - 2.0f * curr_quaternion[3] * curr_quaternion[0];
+            object_pose[0 * 4 + 2] = 2.0f * curr_quaternion[1] * curr_quaternion[3] + 2.0f * curr_quaternion[2] * curr_quaternion[0];
+            object_pose[0 * 4 + 3] = object_location[0];
+            object_pose[1 * 4 + 0] = 2.0f * curr_quaternion[1] * curr_quaternion[2] + 2.0f * curr_quaternion[3] * curr_quaternion[0];
+            object_pose[1 * 4 + 1] = 1.0f - 2.0f * curr_quaternion[1] * curr_quaternion[1] - 2.0f * curr_quaternion[3] * curr_quaternion[3];
+            object_pose[1 * 4 + 2] = 2.0f * curr_quaternion[2] * curr_quaternion[3] - 2.0f * curr_quaternion[1] * curr_quaternion[0];
+            object_pose[1 * 4 + 3] = object_location[1];
+            object_pose[2 * 4 + 0] = 2.0f * curr_quaternion[1] * curr_quaternion[3] - 2.0f * curr_quaternion[2] * curr_quaternion[0];
+            object_pose[2 * 4 + 1] = 2.0f * curr_quaternion[2] * curr_quaternion[3] + 2.0f * curr_quaternion[1] * curr_quaternion[0];
+            object_pose[2 * 4 + 2] = 1.0f - 2.0f * curr_quaternion[1] * curr_quaternion[1] - 2.0f * curr_quaternion[2] * curr_quaternion[2];
+            object_pose[2 * 4 + 3] = object_location[2];
+            object_pose[3 * 4 + 0] = 0.0f;
+            object_pose[3 * 4 + 1] = 0.0f;
+            object_pose[3 * 4 + 2] = 0.0f;
+            object_pose[3 * 4 + 3] = 1.0f;
+
+            // Display object pose
+            show_object_pose(K, object_pose, curr_frame_color);
+          }
+
           if (curr_class_score_raw > highest_class_scores[i]) {
             highest_class_scores[i] = curr_class_score_raw;
             best_guess_IDX[i] = hypothesis_idx;
@@ -421,20 +493,28 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
             for (int j = 0; j < 4; j++)
               best_guess_quaternion[i * 4 + j] = quaternion_score_raw[valid_hypothesis_idx * object_names.size() * 4 + i * 4 + j];
 
+            // Get best guess translation
+            for (int j = 0; j < 3; j++)
+              best_guess_translation[i * 3 + j] = translation_score_raw[valid_hypothesis_idx * object_names.size() * 3 + i * 3 + j];
+
           }
         }
       }
-      std::cout << std::endl;
       valid_hypothesis_idx++;
     }
   }
 
+      // std::cout << "got here" << std::endl;
   // // If no objects are detected
-  // if (highest_class_score == 0) {
+  // if (highest_class_scores[0] == 0 && highest_class_scores[1] == 0) {
   //   std::cout << "No objects detected!" << std::endl;
+  //   object_names.clear();
   // }
 
   for (int object_idx = 0; object_idx < object_names.size(); object_idx++) {
+
+    if (highest_class_scores[object_idx] == 0)
+      continue;
 
     // Display detection results
     int crop_x1 = hypothesis_crop_2D[0 * num_hypothesis + best_guess_IDX[object_idx]];
@@ -444,7 +524,7 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
     cv::rectangle(curr_frame_color, cv::Point(crop_x1, crop_y1), cv::Point(crop_x2, crop_y2), cv::Scalar(0, 255, 0), 2);
     // cv::circle(curr_frame_color, cv::Point((crop_x1 + crop_x2) / 2, (crop_y1 + crop_y2) / 2), 5, cv::Scalar(0, 255, 0), -1);
 
-    std::cout << best_guess_quaternion[object_idx * 4 + 0] << " " << best_guess_quaternion[object_idx * 4 + 1] << " " << best_guess_quaternion[object_idx * 4 + 2] << " " << best_guess_quaternion[object_idx * 4 + 3] << std::endl;
+    std::cout << "Quaternion (raw): " << best_guess_quaternion[object_idx * 4 + 0] << " " << best_guess_quaternion[object_idx * 4 + 1] << " " << best_guess_quaternion[object_idx * 4 + 2] << " " << best_guess_quaternion[object_idx * 4 + 3] << std::endl;
 
     // Retrieve object location
     float object_location[3] = {0};
@@ -452,13 +532,19 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
     object_location[1] = (hypothesis_locations[1 * num_hypothesis + best_guess_IDX[object_idx]] + 1) * vox_unit + vox_range_cam[1 * 2 + 0];
     object_location[2] = (hypothesis_locations[2 * num_hypothesis + best_guess_IDX[object_idx]] + 1) * vox_unit + vox_range_cam[2 * 2 + 0];
 
+    // Apply translation prediction to object location
+    std::cout << "Translation (raw): " << best_guess_translation[object_idx * 3 + 0] << " " << best_guess_translation[object_idx * 3 + 1] << " " << best_guess_translation[object_idx * 3 + 2] << std::endl;
+    object_location[0] = object_location[0] + best_guess_translation[object_idx * 3 + 0]*(0.03f/std::sqrt(2.0f));
+    object_location[1] = object_location[1] + best_guess_translation[object_idx * 3 + 1]*(0.03f/std::sqrt(2.0f));
+    object_location[2] = object_location[2] + best_guess_translation[object_idx * 3 + 2]*(0.03f/std::sqrt(2.0f));
+
     // Normalize quaternion 
     const float best_guess_quaternion_norm = 1.0f / sqrt(best_guess_quaternion[object_idx * 4 + 0] * best_guess_quaternion[object_idx * 4 + 0] + best_guess_quaternion[object_idx * 4 + 1] * best_guess_quaternion[object_idx * 4 + 1] + best_guess_quaternion[object_idx * 4 + 2] * best_guess_quaternion[object_idx * 4 + 2] + best_guess_quaternion[object_idx * 4 + 3] * best_guess_quaternion[object_idx * 4 + 3]);
     best_guess_quaternion[object_idx * 4 + 0] *= best_guess_quaternion_norm;
     best_guess_quaternion[object_idx * 4 + 1] *= best_guess_quaternion_norm;
     best_guess_quaternion[object_idx * 4 + 2] *= best_guess_quaternion_norm;
     best_guess_quaternion[object_idx * 4 + 3] *= best_guess_quaternion_norm;
-    std::cout << "    " << best_guess_quaternion[object_idx * 4 + 0] << " " << best_guess_quaternion[object_idx * 4 + 1] << " " << best_guess_quaternion[object_idx * 4 + 2] << " " << best_guess_quaternion[object_idx * 4 + 3] << std::endl;
+    std::cout << "Quaternion (normalized): " << best_guess_quaternion[object_idx * 4 + 0] << " " << best_guess_quaternion[object_idx * 4 + 1] << " " << best_guess_quaternion[object_idx * 4 + 2] << " " << best_guess_quaternion[object_idx * 4 + 3] << std::endl;
 
     // Convert quaternion to pose
     float object_pose[16];
@@ -481,6 +567,9 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
 
     // Display object pose
     show_object_pose(K, object_pose, curr_frame_color);
+
+    // Show object class label
+    cv::putText(curr_frame_color, "Class: " + object_names[object_idx], cv::Point(crop_x1 + 5, crop_y2 - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
 
     // // Compare against ground truth
     // if (true) {
@@ -581,7 +670,8 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
 
 int main(int argc, char **argv) {
 
-  std::string object_directory = "data/test/glue";
+  // std::string object_directory = "data/test/glue";
+
 
   init_fusion_GPU();
 
@@ -592,28 +682,39 @@ int main(int argc, char **argv) {
   // detect("data/test/glue/seq04","frame-000174");
   // toc();
 
-  // List RGB-D sequences
-  std::vector<std::string> sequence_names;
-  get_files_in_directory(object_directory, sequence_names, "");
-  int rand_sequence_idx = (int)floor(gen_random_float(0, (float)sequence_names.size()));
+  // // List RGB-D sequences
+  // std::vector<std::string> sequence_names;
+  // get_files_in_directory(object_directory, sequence_names, "");
+  // int rand_sequence_idx = (int)floor(gen_random_float(0, (float)sequence_names.size()));
 
-  for (int sequence_idx = 0; sequence_idx < sequence_names.size(); sequence_idx++) {
-    std::string curr_sequence_name = sequence_names[sequence_idx];
-    std::string curr_sequence_directory = object_directory + "/" + curr_sequence_name;
+  // for (int sequence_idx = 0; sequence_idx < sequence_names.size(); sequence_idx++) {
+  //   std::string curr_sequence_name = sequence_names[sequence_idx];
+  //   std::string curr_sequence_directory = object_directory + "/" + curr_sequence_name;
 
-    // List RGB-D frames
-    std::vector<std::string> frame_names;
-    get_files_in_directory(curr_sequence_directory, frame_names, ".color.png");
-    for (int frame_idx = 0; frame_idx < frame_names.size(); frame_idx++) {
-      std::string curr_frame_name = frame_names[frame_idx];
-      curr_frame_name = curr_frame_name.substr(0, curr_frame_name.length() - 10);
-      tic();
-      detect(curr_sequence_directory,curr_frame_name);
-      toc();
-    }
+  //   // List RGB-D frames
+  //   std::vector<std::string> frame_names;
+  //   get_files_in_directory(curr_sequence_directory, frame_names, ".color.png");
+  //   for (int frame_idx = 0; frame_idx < frame_names.size(); frame_idx++) {
+  //     std::string curr_frame_name = frame_names[frame_idx];
+  //     curr_frame_name = curr_frame_name.substr(0, curr_frame_name.length() - 10);
+  //     tic();
+  //     detect(curr_sequence_directory,curr_frame_name);
+  //     toc();
+  //   }
+  // }
+
+
+  std::string curr_sequence_directory = "data/sample";
+  // List RGB-D frames
+  std::vector<std::string> frame_names;
+  get_files_in_directory(curr_sequence_directory, frame_names, ".color.png");
+  for (int frame_idx = 0; frame_idx < frame_names.size(); frame_idx++) {
+    std::string curr_frame_name = frame_names[frame_idx];
+    curr_frame_name = curr_frame_name.substr(0, curr_frame_name.length() - 10);
+    tic();
+    detect(curr_sequence_directory,curr_frame_name);
+    toc();
   }
-
-
 
 
 

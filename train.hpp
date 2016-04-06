@@ -145,7 +145,7 @@ void process_3D_patch(int batch_idx, float* tmp_batch_3D, int crop_x, int crop_y
 
 ////////////////////////////////////////////////////////////////////////////////
 
-std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D, const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label, float* object_pose_quaternion) {
+std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D, const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label, float* object_pose_quaternion, float* object_translation) {
 
   bool is_hypothesis_pair_found = false;
   std::vector<cv::Mat> patches_2D;
@@ -277,11 +277,6 @@ std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D,
     // show_object_pose(K, object_pose, curr_frame_color);
     // cv::waitKey(0);
 
-    // // Compute center of ground truth object in 3D camera coordinates
-    // float object_center_cam[3] = {0};
-    // for (int i = 0; i < 3; i++)
-    //   object_center_cam[i] = object_pose[i * 4 + 3];
-
     // Convert pose from rotation matrix to axis/angle (radians) representation (x, y, z, theta)
     float object_pose_axis[3] = {0};
     float object_pose_angle = std::acos(0.5f * (object_pose[0] + object_pose[5] + object_pose[10] - 1));
@@ -365,6 +360,7 @@ std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D,
     //   std::cout << train_labels[(num_positive_hypotheses + rand_negative_idx) * 8 + i] << std::endl;
 
     // If no positive hypotheses, exit
+    // std::cout << curr_sequence_directory << " " << num_positive_hypotheses << " " << num_negative_hypotheses << std::endl;
     if (num_positive_hypotheses == 0 || num_negative_hypotheses == 0)
       continue;
 
@@ -390,6 +386,28 @@ std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D,
     // for (int i = 0; i < 8; i++)
     //   std::cout << negative_hypothesis_crop_info[i] << " ";
     // std::cout << std::endl;
+
+    // Compute center of ground truth object in 3D camera coordinates
+    float object_center_cam[3] = {0};
+    for (int i = 0; i < 3; i++)
+      object_center_cam[i] = object_pose[i * 4 + 3];
+    float object_location_hypothesis[3] = {0};
+    object_location_hypothesis[0] = (positive_hypothesis_crop_info[1] + 1) * vox_unit + vox_range_cam[0 * 2 + 0];
+    object_location_hypothesis[1] = (positive_hypothesis_crop_info[2] + 1) * vox_unit + vox_range_cam[1 * 2 + 0];
+    object_location_hypothesis[2] = (positive_hypothesis_crop_info[3] + 1) * vox_unit + vox_range_cam[2 * 2 + 0];
+    object_translation[0] = object_center_cam[0] - object_location_hypothesis[0];
+    object_translation[1] = object_center_cam[1] - object_location_hypothesis[1];
+    object_translation[2] = object_center_cam[2] - object_location_hypothesis[2];
+
+    // Scale object translation
+    for (int i = 0; i < 3; i++)
+      object_translation[i] = object_translation[i]/(0.03f/std::sqrt(2.0f));
+
+    // // Debug
+    // std::cout << object_pose[0 * 4 + 3] << " " << object_pose[1 * 4 + 3] << " " << object_pose[2 * 4 + 3] << std::endl;
+    // std::cout << positive_hypothesis_crop_info[1] << " " << positive_hypothesis_crop_info[2] << " " << positive_hypothesis_crop_info[3] << std::endl;
+    // std::cout << object_location_hypothesis[0] << " " << object_location_hypothesis[1] << " " << object_location_hypothesis[2] << std::endl;
+    // std::cout << std::sqrt((translation[0])*(translation[0])+(translation[1])*(translation[1])+(translation[2])*(translation[2])) << std::endl;
 
     // Load image/depth/extrinsic data for current frame
     unsigned short * depth_data = (unsigned short *) malloc(480 * 640 * sizeof(unsigned short));
@@ -522,11 +540,12 @@ int sample(int argc, char **argv) {
 
     // Create positive and negative hypothesis
     std::string data_directory = "data/train";
-    std::string object_name = "duck";
+    std::string object_name = "glue";
     std::string object_directory = data_directory + "/" + object_name;
     int axis_angle_label[2] = {0};
     float object_pose_quaternion[4] = {0};
-    std::vector<cv::Mat> patches_2D = gen_train_hypothesis_pair(i, d_batch_3D, object_directory, positive_hypothesis_crop_info, negative_hypothesis_crop_info, axis_angle_label, object_pose_quaternion);
+    float object_translation[3] = {0};
+    std::vector<cv::Mat> patches_2D = gen_train_hypothesis_pair(i, d_batch_3D, object_directory, positive_hypothesis_crop_info, negative_hypothesis_crop_info, axis_angle_label, object_pose_quaternion, object_translation);
 
     // // Show image patches
     // cv::namedWindow("Positive Patch", CV_WINDOW_AUTOSIZE);
@@ -544,8 +563,12 @@ int sample(int argc, char **argv) {
     kCheckCUDA(__LINE__, cudaMemcpy(&d_batch_2D[(i * 2 + 1) * 3 * 227 * 227], neg_patch_data, 3 * 227 * 227 * sizeof(float), cudaMemcpyHostToDevice));
 
     // Copy axis/angle label
-    std::cout << axis_angle_label[0] << " " << axis_angle_label[1] << std::endl;
-    std::cout << object_pose_quaternion[0] << " " << object_pose_quaternion[1] << " " << object_pose_quaternion[2] << " " << object_pose_quaternion[3] << std::endl;
+    // std::cout << axis_angle_label[0] << " " << axis_angle_label[1] << std::endl;
+    // std::cout << object_pose_quaternion[0] << " " << object_pose_quaternion[1] << " " << object_pose_quaternion[2] << " " << object_pose_quaternion[3] << std::endl;
+    // std::cout << object_translation[0] << " " << object_translation[1] << " " << object_translation[2] << std::endl;
+
+
+
 
   }
   toc();

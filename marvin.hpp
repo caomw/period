@@ -83,9 +83,9 @@
 #include <cudnn.h>
 #include <sys/time.h>
 #include <opencv2/opencv.hpp>
-#include "train.hpp"
-// std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D, const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label, float* object_pose_quaternion) {std::vector<cv::Mat> patches_2D; return patches_2D;}
-// void patch2tensor(cv::Mat curr_patch, float* patch_data) {}
+// #include "train.hpp"
+std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D, const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label, float* object_pose_quaternion, float* object_translation) {std::vector<cv::Mat> patches_2D; return patches_2D;}
+void patch2tensor(cv::Mat curr_patch, float* patch_data) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global data structures to hold test data and labels passed to and from Marvin
@@ -93,6 +93,7 @@ std::vector<std::vector<float>> buffer_data2D;
 std::vector<std::vector<float>> buffer_data3D;
 std::vector<float> buffer_scores_class;
 std::vector<float> buffer_scores_quaternion;
+std::vector<float> buffer_scores_translation;
 
 namespace marvin {
 
@@ -3512,6 +3513,8 @@ public:
     std::string file_label;
     int batch_size;
 
+    int num_objects = 7;
+
     int numofitems() {
         return 0; //labelCPUall->numofitems();
     };
@@ -3601,11 +3604,13 @@ public:
         // std::vector<int> label_dim = labelCPUall->dim;
         // label_dim[0] = batch_size;
         // labelCPU = new Tensor<StorageT>(label_dim);
-        labelCPU.resize(3);
-        labelGPU.resize(3);
+        labelCPU.resize(5);
+        labelGPU.resize(5);
         labelCPU[0] = new T[batch_size]; // class
-        labelCPU[1] = new T[batch_size*4*2]; // quaternion
-        labelCPU[2] = new T[batch_size*4*2]; // quaternion weights
+        labelCPU[1] = new T[batch_size*4*num_objects]; // quaternion
+        labelCPU[2] = new T[batch_size*4*num_objects]; // quaternion weights
+        labelCPU[3] = new T[batch_size*3*num_objects]; // translation
+        labelCPU[4] = new T[batch_size*3*num_objects]; // translation weights
 
         init_fusion_GPU();
 
@@ -3702,10 +3707,15 @@ public:
         // kCheckCUDA(__LINE__, cudaMalloc(&d_batch_3D, 32 * 30 * 30 * 30 * sizeof(float)));
 
         std::vector<std::string> object_list;
-        object_list.push_back("glue");
+        object_list.push_back("book");
         object_list.push_back("duck");
+        object_list.push_back("expo");
+        object_list.push_back("frog");
+        object_list.push_back("glue");
+        object_list.push_back("plugs");
+        object_list.push_back("spark");
 
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < batch_size/2; i++) {
 
             // Create positive and negative hypothesis
             std::string data_directory = file_data[0];
@@ -3713,7 +3723,8 @@ public:
             std::string object_directory = data_directory + "/" + object_name;
             int axis_angle_label[2] = {0};
             float object_pose_quaternion[4] = {0};
-            std::vector<cv::Mat> patches_2D = gen_train_hypothesis_pair(i, dataGPU[1], object_directory, positive_hypothesis_crop_info, negative_hypothesis_crop_info, axis_angle_label, object_pose_quaternion);
+            float object_translation[3] = {0};
+            std::vector<cv::Mat> patches_2D = gen_train_hypothesis_pair(i, dataGPU[1], object_directory, positive_hypothesis_crop_info, negative_hypothesis_crop_info, axis_angle_label, object_pose_quaternion, object_translation);
 
             // Show image patches
             // cv::namedWindow("Positive Patch", CV_WINDOW_AUTOSIZE);
@@ -3740,25 +3751,90 @@ public:
 
             // std::cout << pos_class_label << " " << neg_class_label << " " << std::endl;
             // std::cout << object_pose_quaternion[0] << " " << object_pose_quaternion[1] << " " << object_pose_quaternion[2] << " " << object_pose_quaternion[3] << std::endl;
+            // std::cout << object_translation[0] << " " << object_translation[1] << " " << object_translation[2] << std::endl;
+            // std::cout << std::endl;
 
             // Copy quaternion label
-            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[1][(i * 2) * 4 * 2]), object_pose_quaternion, 4 * 2 * sizeof(float), cudaMemcpyHostToDevice));
-            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[1][(i * 2 + 1) * 4 * 2]), object_pose_quaternion, 4 * 2 * sizeof(float), cudaMemcpyHostToDevice));
-
-            // Copy label weights
-            float label_quaternion_weights[4 * 2] = {0};
-            // std::cout << label_quaternion_weights[0] << " " << label_quaternion_weights[1] << " " << label_quaternion_weights[2] << " " << label_quaternion_weights[3] << std::endl;
-            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][(i * 2 + 1) * 4 * 2]), label_quaternion_weights, 4 * 2 * sizeof(float), cudaMemcpyHostToDevice));
+            float quaternion_label_weight = 1.0f;
+            float * label_quaternions = new float[4 * num_objects];
+            for (int j = 0; j < 4 * num_objects; j++)
+              label_quaternions[j] = 0;
             int quaternion_label_idx = i % (object_list.size());
+            for (int j = 0; j < 4; j++)
+                label_quaternions[quaternion_label_idx * 4 + j] = object_pose_quaternion[j];
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[1][(i * 2) * 4 * num_objects]), label_quaternions, 4 * num_objects * sizeof(float), cudaMemcpyHostToDevice));
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[1][(i * 2 + 1) * 4 * num_objects]), label_quaternions, 4 * num_objects * sizeof(float), cudaMemcpyHostToDevice));
+
+            // Copy quaternion label weights
+            float * label_quaternion_weights = new float[4 * num_objects];
+            for (int j = 0; j < 4 * num_objects; j++)
+              label_quaternion_weights[j] = 0;
+            // std::cout << label_quaternion_weights[0] << " " << label_quaternion_weights[1] << " " << label_quaternion_weights[2] << " " << label_quaternion_weights[3] << std::endl;
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][(i * 2 + 1) * 4 * num_objects]), label_quaternion_weights, 4 * num_objects * sizeof(float), cudaMemcpyHostToDevice));
             for (int j = quaternion_label_idx * 4; j < (quaternion_label_idx + 1) * 4; j++)
-                label_quaternion_weights[j] = 10;
+                label_quaternion_weights[j] = 4 * num_objects * quaternion_label_weight;
             // std::cout << label_quaternion_weights[0] << " " << label_quaternion_weights[1] << " " << label_quaternion_weights[2] << " " << label_quaternion_weights[3] << " " << label_quaternion_weights[4] << " " << label_quaternion_weights[5] << " " << label_quaternion_weights[6] << " " << label_quaternion_weights[7] << std::endl;
-            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][(i * 2) * 4 * 2]), label_quaternion_weights, 4 * 2 * sizeof(float), cudaMemcpyHostToDevice));
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][(i * 2) * 4 * num_objects]), label_quaternion_weights, 4 * num_objects * sizeof(float), cudaMemcpyHostToDevice));
 
+            // for (int j = 0; j < 4 * num_objects; j++)
+            //   std::cerr << label_quaternions[0] << " ";
+            // std::cerr << std::endl;
 
+            // for (int j = 0; j < 4 * num_objects; j++)
+            //   std::cerr << label_quaternion_weights[0] << " ";
+            // std::cerr << std::endl;
+            // std::cout << label_quaternions[0] << " " 
+            //           << label_quaternions[1] << " " 
+            //           << label_quaternions[2] << " " 
+            //           << label_quaternions[3] << " " 
+            //           << label_quaternions[4] << " " 
+            //           << label_quaternions[5] << " " 
+            //           << label_quaternions[6] << " " 
+            //           << label_quaternions[7] << " " 
+            //           << label_quaternions[8] << " " 
+            //           << label_quaternions[9] << " " 
+            //           << label_quaternions[10] << " " 
+            //           << label_quaternions[11] << " " 
+            //           << label_quaternions[12] << " " 
+            //           << label_quaternions[13] << " " 
+            //           << label_quaternions[14] << " " 
+            //           << label_quaternions[15] << " " 
+            //           << label_quaternions[16] << " " 
+            //           << label_quaternions[17] << " " 
+            //           << label_quaternions[18] << " " 
+            //           << label_quaternions[19] << " " 
+            //           << label_quaternions[20] << " " 
+            //           << label_quaternions[21] << " " 
+            //           << label_quaternions[22] << " " 
+            //           << label_quaternions[23] << " " 
+            //           << label_quaternions[24] << " " 
+            //           << label_quaternions[25] << " " 
+            //           << label_quaternions[26] << " " 
+            //           << label_quaternions[27] << std::endl;
+            // std::cout << label_quaternion_weights[0] << " " << label_quaternion_weights[1] << " " << label_quaternion_weights[2] << " " << label_quaternion_weights[3] << " " << label_quaternion_weights[4] << " " << label_quaternion_weights[5] << " " << label_quaternion_weights[6] << " " << label_quaternion_weights[7] << std::endl;
 
+            // Copy translation label
+            float translation_label_weight = 1.0f;
+            float * label_translations = new float[3 * num_objects];
+            for (int j = 0; j < 3 * num_objects; j++)
+              label_translations[j] = 0;
+            int translation_label_idx = i % (object_list.size());
+            for (int j = 0; j < 3; j++)
+                label_translations[translation_label_idx * 3 + j] = object_translation[j];
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[3][(i * 2) * 3 * num_objects]), label_translations, 3 * num_objects * sizeof(float), cudaMemcpyHostToDevice));
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[3][(i * 2 + 1) * 3 * num_objects]), label_translations, 3 * num_objects * sizeof(float), cudaMemcpyHostToDevice));
 
+            // Copy translation label weights
+            float * label_translation_weights = new float[3 * num_objects];
+            for (int j = 0; j < 3 * num_objects; j++)
+              label_translation_weights[j] = 0;
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[4][(i * 2 + 1) * 3 * num_objects]), label_translation_weights, 3 * num_objects * sizeof(float), cudaMemcpyHostToDevice));
+            for (int j = 0; j < 3; j++)
+                label_translation_weights[translation_label_idx * 3 + j] = 3 * num_objects * translation_label_weight;
+            kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[4][(i * 2) * 3 * num_objects]), label_translation_weights, 3 * num_objects * sizeof(float), cudaMemcpyHostToDevice));
 
+            // std::cout << label_translations[0] << " " << label_translations[1] << " " << label_translations[2] << " " << label_translations[3] << " " << label_translations[4] << " " << label_translations[5] << std::endl;
+            // std::cout << label_translation_weights[0] << " " << label_translation_weights[1] << " " << label_translation_weights[2] << " " << label_translation_weights[3] << " " << label_translation_weights[4] << " " << label_translation_weights[5] << std::endl;
 
 
 
@@ -3803,6 +3879,8 @@ public:
             // Clear memory
             delete [] pos_patch_data;
             delete [] neg_patch_data;
+            delete [] label_quaternions;
+            delete [] label_quaternion_weights;
         }
 
         // Debug 3D
@@ -3916,6 +3994,8 @@ public:
         std::swap(out[2]->dataGPU, labelGPU[0]);
         std::swap(out[3]->dataGPU, labelGPU[1]);
         std::swap(out[4]->dataGPU, labelGPU[2]);
+        std::swap(out[5]->dataGPU, labelGPU[3]);
+        std::swap(out[6]->dataGPU, labelGPU[4]);
         lock = std::async(std::launch::async, &PeriodTrainDataLayer<T>::prefetch, this);
     };
 
@@ -3924,7 +4004,7 @@ public:
 
         if (phase == Training && phase_ == Testing) return 0;
 
-        if (out.size() != 5) {
+        if (out.size() != 7) {
             std::cout << "PeriodTrainDataLayer: incorrect # of out's" << std::endl;
             FatalError(__LINE__);
         }
@@ -3967,19 +4047,28 @@ public:
         out[2]->need_diff = false;
         out[3]->need_diff = false;
         out[4]->need_diff = false;
+        out[5]->need_diff = false;
+        out[6]->need_diff = false;
         std::vector<int> labels_dim; labels_dim.push_back(batch_size); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1);
         memoryBytes += out[2]->Malloc(labels_dim);
-        labels_dim.clear(); labels_dim.push_back(batch_size); labels_dim.push_back(4 * 2); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1);
+        labels_dim.clear(); labels_dim.push_back(batch_size); labels_dim.push_back(4 * num_objects); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1);
         memoryBytes += out[3]->Malloc(labels_dim);
         memoryBytes += out[4]->Malloc(labels_dim);
+        labels_dim.clear(); labels_dim.push_back(batch_size); labels_dim.push_back(3 * num_objects); labels_dim.push_back(1); labels_dim.push_back(1); labels_dim.push_back(1);
+        memoryBytes += out[5]->Malloc(labels_dim);
+        memoryBytes += out[6]->Malloc(labels_dim);
 
         // CUDA Malloc labels
         checkCUDA(__LINE__, cudaMalloc(&labelGPU[0], size_t(batch_size) * sizeof(T)) );
-        checkCUDA(__LINE__, cudaMalloc(&labelGPU[1], size_t(batch_size) * 4 * 2 * sizeof(T)) );
-        checkCUDA(__LINE__, cudaMalloc(&labelGPU[2], size_t(batch_size) * 4 * 2 * sizeof(T)) );
+        checkCUDA(__LINE__, cudaMalloc(&labelGPU[1], size_t(batch_size) * 4 * num_objects * sizeof(T)) );
+        checkCUDA(__LINE__, cudaMalloc(&labelGPU[2], size_t(batch_size) * 4 * num_objects * sizeof(T)) );
+        checkCUDA(__LINE__, cudaMalloc(&labelGPU[3], size_t(batch_size) * 3 * num_objects * sizeof(T)) );
+        checkCUDA(__LINE__, cudaMalloc(&labelGPU[4], size_t(batch_size) * 3 * num_objects * sizeof(T)) );
         memoryBytes += batch_size * sizeof(T);
-        memoryBytes += batch_size * 4 * 2 * sizeof(T);
-        memoryBytes += batch_size * 4 * 2 * sizeof(T);
+        memoryBytes += batch_size * 4 * num_objects * sizeof(T);
+        memoryBytes += batch_size * 4 * num_objects * sizeof(T);
+        memoryBytes += batch_size * 3 * num_objects * sizeof(T);
+        memoryBytes += batch_size * 3 * num_objects * sizeof(T);
 
         lock = std::async(std::launch::async, &PeriodTrainDataLayer<T>::prefetch, this);
 
@@ -7739,6 +7828,11 @@ public:
                             buffer_scores_quaternion.resize(total_size[i]);
                         }
 
+                        if (responseNames[i] == "trans_pred") {
+                          buffer_scores_translation.clear();
+                          buffer_scores_translation.resize(total_size[i]);
+                        }
+
                         // files[i] = fopen(Fname.c_str(), "wb");
 
                         // while (files[i] == NULL) {
@@ -7778,6 +7872,9 @@ public:
                         for (int j = 0; j < features_batch_size; j++)
                             buffer_scores_quaternion[iter * (features[i]->numel()) + j] = features[i]->CPUmem[j];
 
+                    if (responseNames[i] == "trans_pred")
+                        for (int j = 0; j < features_batch_size; j++)
+                            buffer_scores_translation[iter * (features[i]->numel()) + j] = features[i]->CPUmem[j];
                     // void readGPU(T* GPUmem) {
                     //     cudaMemcpy(CPUmem, GPUmem, numel()*sizeof(T), cudaMemcpyDeviceToHost);
                     // };

@@ -1,15 +1,13 @@
 
 
-list3 = dir('../../../data/test/glue/seq04/results.3/*.png');
-list4 = dir('../../../data/test/glue/seq04/results.4/*.png');
-list6 = dir('../../../data/test/glue/seq04/results.6/*.png');
+list1 = dir('../../../data/test/glue/seq01/results.1/*.png');
+list3 = dir('../../../data/test/glue/seq01/results.3/*.png');
 
-for i = 1:length(list3)
-    im3 = strcat('../../../data/test/glue/seq04/results.3/',list3(i).name);
-    im4 = strcat('../../../data/test/glue/seq04/results.4/',list4(i).name);
-    im6 = strcat('../../../data/test/glue/seq04/results.6/',list6(i).name);
-    combined = cat(2,imread(im3),imread(im4),imread(im6));
-    imwrite(combined,strcat('seq04.',list3(i).name));
+for i = 1:length(list1)
+    im1 = strcat('../../../data/test/glue/seq01/results.1/',list1(i).name);
+    im3 = strcat('../../../data/test/glue/seq01/results.3/',list3(i).name);
+    combined = cat(2,imread(im1),imread(im3));
+    imwrite(combined,strcat('seq01.',list1(i).name));
 end
 
 

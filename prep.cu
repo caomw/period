@@ -79,7 +79,7 @@ void gen_hypothesis_labels(int num_hypothesis, unsigned short* tmp_hypothesis_lo
       }
 
   // Skip near empty cubes
-  if (cube_occ < cube_dim * cube_dim / 2)
+  if (cube_occ < 100) //cube_dim * cube_dim / 2)
     return;
 
   // Convert cube location from grid to camera coordinates
@@ -112,7 +112,7 @@ void gen_hypothesis_labels(int num_hypothesis, unsigned short* tmp_hypothesis_lo
                          (tmp_object_center_cam[2] - z_cam) * (tmp_object_center_cam[2] - z_cam));
 
   // Save label (positive case if dist to ground truth object center < some threshold)
-  if (obj_dist < 0.01f)
+  if (obj_dist < 0.03f)
     tmp_hypothesis_labels[hypothesis_idx] = (char)1;
   else
     tmp_hypothesis_labels[hypothesis_idx] = (char)2;
@@ -182,6 +182,9 @@ void generate_train_labels(const std::string &sequence_directory) {
     // Display ground truth object pose
     show_object_pose(K, object_pose, curr_frame_color);
     cv::waitKey(10);
+
+    if (i == 0)
+      cv::imwrite(sequence_directory + "/" + curr_frame_name + ".pose.check.png", curr_frame_color);
 
     // Compute center of ground truth object in 3D camera coordinates
     float object_center_cam[3] = {0};
@@ -445,18 +448,75 @@ void generate_train_labels(const std::string &sequence_directory) {
 int main(int argc, char **argv) {
 
   init_fusion_GPU();
-  generate_train_labels("data/test/glue/seq01");
-  generate_train_labels("data/test/glue/seq02");
-  generate_train_labels("data/test/glue/seq03");
-  generate_train_labels("data/test/glue/seq04");
+  
+  // generate_train_labels("data/train/book/seq01");
+  // generate_train_labels("data/train/book/seq02");
+  // generate_train_labels("data/train/book/seq03");
+  // generate_train_labels("data/train/book/seq04");
+  // generate_train_labels("data/train/book/seq05");
+  generate_train_labels("data/train/book/seq06");
+
   // generate_train_labels("data/train/duck/seq01");
   // generate_train_labels("data/train/duck/seq02");
   // generate_train_labels("data/train/duck/seq03");
   // generate_train_labels("data/train/duck/seq04");
+
+  // generate_train_labels("data/train/expo/seq01");
+  // generate_train_labels("data/train/expo/seq02");
+  // generate_train_labels("data/train/expo/seq03");
+  // generate_train_labels("data/train/expo/seq04");
+  // generate_train_labels("data/train/expo/seq05");
+  // generate_train_labels("data/train/expo/seq06");
+
+  // generate_train_labels("data/train/frog/seq01");
+  // generate_train_labels("data/train/frog/seq02");
+  // generate_train_labels("data/train/frog/seq03");
+  // generate_train_labels("data/train/frog/seq04");
+
+  // generate_train_labels("data/train/glue/seq01");
+  // generate_train_labels("data/train/glue/seq02");
+  // generate_train_labels("data/train/glue/seq03");
+  // generate_train_labels("data/train/glue/seq04");
+  // generate_train_labels("data/train/glue/seq05");
+  // generate_train_labels("data/train/glue/seq06");
+  // generate_train_labels("data/train/glue/seq07");
+
+  // generate_train_labels("data/train/plugs/seq01");
+  // generate_train_labels("data/train/plugs/seq02");
+  // generate_train_labels("data/train/plugs/seq03");
+  // generate_train_labels("data/train/plugs/seq04");
+
+  // generate_train_labels("data/train/spark/seq01");
+  // generate_train_labels("data/train/spark/seq02");
+  // generate_train_labels("data/train/spark/seq03");
+
+
+
+
+
+
+
+
+
+
+
+  // generate_train_labels("data/train/glue/seq01");
+  // generate_train_labels("data/train/glue/seq02");
+  // generate_train_labels("data/train/glue/seq03");
+  // generate_train_labels("data/train/glue/seq04");
+  // generate_train_labels("data/test/glue/seq01");
+  // generate_train_labels("data/test/glue/seq02");
+  // generate_train_labels("data/test/glue/seq03");
+  // generate_train_labels("data/test/glue/seq04");
+
   // generate_train_labels("data/train/duck/seq01");
   // generate_train_labels("data/train/duck/seq02");
   // generate_train_labels("data/train/duck/seq03");
   // generate_train_labels("data/train/duck/seq04");
+  // generate_train_labels("data/test/duck/seq01");
+  // generate_train_labels("data/test/duck/seq02");
+  // generate_train_labels("data/test/duck/seq03");
+  // generate_train_labels("data/test/duck/seq04");
 
   return 0;
 }
