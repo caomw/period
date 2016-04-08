@@ -8,17 +8,17 @@
     "lr_policy": "LR_step",
     "lr_gamma": 0.9,
     "lr_stepsize": 10000,
-    "path": "models/PeriodNet.4.4",
-    "snapshot_prefix": "models/PeriodNet.4.4.",
+    "path": "models/PeriodNet.4.2",
+    "snapshot_prefix": "models/PeriodNet.4.2.",
     "max_iter": 100000,
     "snapshot_iter": 5000,
     "display_iter": 1,
     "test_iter": 5,
     "test_interval": 100,
-    "GPU": 4
+    "GPU": 2
   },
   "test": {
-    "GPU": 4
+    "GPU": 2
   },
   "layers": [
     {
@@ -184,6 +184,52 @@
       "dropout_ratio": 0.5,
       "out": ["3Dfc4"]
     },
+    {
+      "in": ["3Dfc4"],
+      "type": "InnerProduct",
+      "name": "3Dfc5",
+      "num_output": 1000,
+      "weight_lr_mult": 1,
+      "weight_decay_mult": 1,
+      "weight_filler": "Gaussian",
+      "weight_filler_param": 0.005,
+      "bias_lr_mult": 2,
+      "bias_decay_mult": 0,
+      "bias_filler": "Constant",
+      "bias_filler_param": 1,
+      "train_me": true,
+      "out": ["3Dfc5"]
+    },
+    {
+      "in": ["3Dfc5"],
+      "type": "Activation",
+      "name": "3Drelu5",
+      "mode": "ReLU",
+      "out":  ["3Dfc5"]
+    },
+    {
+      "in": ["3Dfc5"],
+      "type": "Dropout",
+      "name": "3Ddrop5",
+      "dropout_ratio": 0.5,
+      "out": ["3Dfc5"]
+    },
+    {
+      "in": ["3Dfc5"],
+      "type": "InnerProduct",
+      "name": "3Dfc6",
+      "num_output": 1000,
+      "weight_lr_mult": 1,
+      "weight_decay_mult": 1,
+      "weight_filler": "Gaussian",
+      "weight_filler_param": 0.005,
+      "bias_lr_mult": 2,
+      "bias_decay_mult": 0,
+      "bias_filler": "Constant",
+      "bias_filler_param": 1,
+      "train_me": true,
+      "out": ["3Dfc6"]
+    },
 
 
 
@@ -202,67 +248,7 @@
 
     
     {
-      "in": ["3Dfc4"],
-      "type": "InnerProduct",
-      "name": "Cfc1",
-      "num_output": 4096,
-      "weight_lr_mult": 1,
-      "weight_decay_mult": 1,
-      "weight_filler": "Gaussian",
-      "weight_filler_param": 0.005,
-      "bias_lr_mult": 2,
-      "bias_decay_mult": 0,
-      "bias_filler": "Constant",
-      "bias_filler_param": 1,
-      "train_me": true,
-      "out": ["Cfc1"]
-    },
-    {
-      "in": ["Cfc1"],
-      "type": "Activation",
-      "name": "Crelu1",
-      "mode": "ReLU",
-      "out":  ["Cfc1"]
-    },
-    {
-      "in": ["Cfc1"],
-      "type": "Dropout",
-      "name": "Cdrop1",
-      "dropout_ratio": 0.5,
-      "out": ["Cfc1"]
-    },
-    {
-      "in": ["Cfc1"],
-      "type": "InnerProduct",
-      "name": "Cfc2",
-      "num_output": 4096,
-      "weight_lr_mult": 1,
-      "weight_decay_mult": 1,
-      "weight_filler": "Gaussian",
-      "weight_filler_param": 0.005,
-      "bias_lr_mult": 2,
-      "bias_decay_mult": 0,
-      "bias_filler": "Constant",
-      "bias_filler_param": 1,
-      "train_me": true,
-      "out": ["Cfc2"]
-    },
-    {
-      "in": ["Cfc2"],
-      "type": "Activation",
-      "name": "Crelu2",
-      "mode": "ReLU",
-      "out":  ["Cfc2"]
-    },
-    {
-      "in": ["Cfc2"],
-      "type": "Dropout",
-      "name": "Cdrop2",
-      "dropout_ratio": 0.5,
-      "out": ["Cfc2"]
-    },
-    {
-      "in": ["Cfc2"],
+      "in": ["3Dfc6"],
       "type": "InnerProduct",
       "name": "fc_class",
       "num_output": 8,
@@ -300,11 +286,19 @@
 
 
 
+
+
+
+
+
+
+
+
     {
       "in": ["3Dfc4"],
       "type": "InnerProduct",
       "name": "Qfc1",
-      "num_output": 4096,
+      "num_output": 1000,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -334,7 +328,7 @@
       "in": ["Qfc1"],
       "type": "InnerProduct",
       "name": "Qfc2",
-      "num_output": 4096,
+      "num_output": 1000,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -394,11 +388,23 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
       "in": ["3Dfc4"],
       "type": "InnerProduct",
       "name": "Tfc1",
-      "num_output": 4096,
+      "num_output": 1000,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -428,7 +434,7 @@
       "in": ["Tfc1"],
       "type": "InnerProduct",
       "name": "Tfc2",
-      "num_output": 4096,
+      "num_output": 1000,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -481,6 +487,32 @@
       "mode": "SmoothL1",
       "loss_weight": 1
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
