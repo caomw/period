@@ -15,13 +15,13 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global variables for Marvin
-std::string model_idx = "3";
+std::string model_idx = "5";
 marvin::Net main_net("models/model" + model_idx + ".test.json");
 
 // Init marvin net
 void init_marvin() {
   main_net.Malloc(marvin::Testing);
-  std::vector<std::string> models = marvin::getStringVector("models/PeriodNet.4." + model_idx + ".25000.marvin");
+  std::vector<std::string> models = marvin::getStringVector("models/PeriodNet.4." + model_idx + ".35000.marvin");
   for (int m=0;m<models.size();++m)   
     main_net.loadWeights(models[m]);
 //     // marvin::Net net("tools/marvin/model" + model_idx + ".test.json");
@@ -410,6 +410,10 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
     if ((int)(hypothesis_labels[hypothesis_idx]) == 1) {
       // std::cout << hypothesis_idx << " " << num_hypothesis << " " << valid_hypothesis_idx << std::endl;
 
+      for (int j = 0; j < 8; j++)
+        std::cout << class_score_raw[valid_hypothesis_idx * 8 + j] << " ";
+      std::cout << std::endl;
+
       // Loop through each object type
       for (int i = 0; i < object_names.size(); i++) {
 
@@ -422,7 +426,7 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
         std::cout << std::endl;
 
         float curr_class_score_raw = class_score_raw[valid_hypothesis_idx * (object_names.size() + 1) + i + 1];
-        if (curr_class_score_raw > 0.9f) {
+        if (curr_class_score_raw > 0.5f) {
 
           // Draw top scoring boxes
           std::cout << valid_hypothesis_idx << std::endl;
