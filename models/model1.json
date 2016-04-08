@@ -857,7 +857,7 @@
       ],
       "type": "Loss",
       "name": "loss_quat",
-      "mode": "SmoothL1",
+      "mode": "EuclideanSSE",
       "loss_weight": 1
     },
 
@@ -951,7 +951,7 @@
       ],
       "type": "Loss",
       "name": "loss_trans",
-      "mode": "EuclideanSSE",
+      "mode": "SmoothL1",
       "loss_weight": 1
     }
 
