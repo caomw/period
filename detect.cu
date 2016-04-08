@@ -708,7 +708,7 @@ int main(int argc, char **argv) {
   // }
 
 
-  std::string curr_sequence_directory = "data/sample/seq01";
+  std::string curr_sequence_directory = "data/robot";
   // List RGB-D frames
   std::vector<std::string> frame_names;
   get_files_in_directory(curr_sequence_directory, frame_names, ".color.png");
