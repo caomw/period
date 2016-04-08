@@ -3811,7 +3811,7 @@ public:
             // std::cout << label_quaternion_weights[0] << " " << label_quaternion_weights[1] << " " << label_quaternion_weights[2] << " " << label_quaternion_weights[3] << std::endl;
             kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][(i * 2 + 1) * 4 * num_objects]), label_quaternion_weights, 4 * num_objects * sizeof(float), cudaMemcpyHostToDevice));
             for (int j = quaternion_label_idx * 4; j < (quaternion_label_idx + 1) * 4; j++)
-                label_quaternion_weights[j] = (float) num_objects;//4 * num_objects * quaternion_label_weight;
+                label_quaternion_weights[j] = 4 * num_objects * quaternion_label_weight;
             // std::cout << label_quaternion_weights[0] << " " << label_quaternion_weights[1] << " " << label_quaternion_weights[2] << " " << label_quaternion_weights[3] << " " << label_quaternion_weights[4] << " " << label_quaternion_weights[5] << " " << label_quaternion_weights[6] << " " << label_quaternion_weights[7] << std::endl;
             kCheckCUDA(__LINE__, cudaMemcpy(&(labelGPU[2][(i * 2) * 4 * num_objects]), label_quaternion_weights, 4 * num_objects * sizeof(float), cudaMemcpyHostToDevice));
 
