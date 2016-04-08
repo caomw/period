@@ -250,66 +250,6 @@
     {
       "in": ["3Dfc6"],
       "type": "InnerProduct",
-      "name": "Cfc1",
-      "num_output": 4096,
-      "weight_lr_mult": 1,
-      "weight_decay_mult": 1,
-      "weight_filler": "Gaussian",
-      "weight_filler_param": 0.005,
-      "bias_lr_mult": 2,
-      "bias_decay_mult": 0,
-      "bias_filler": "Constant",
-      "bias_filler_param": 1,
-      "train_me": true,
-      "out": ["Cfc1"]
-    },
-    {
-      "in": ["Cfc1"],
-      "type": "Activation",
-      "name": "Crelu1",
-      "mode": "ReLU",
-      "out":  ["Cfc1"]
-    },
-    {
-      "in": ["Cfc1"],
-      "type": "Dropout",
-      "name": "Cdrop1",
-      "dropout_ratio": 0.5,
-      "out": ["Cfc1"]
-    },
-    {
-      "in": ["Cfc1"],
-      "type": "InnerProduct",
-      "name": "Cfc2",
-      "num_output": 4096,
-      "weight_lr_mult": 1,
-      "weight_decay_mult": 1,
-      "weight_filler": "Gaussian",
-      "weight_filler_param": 0.005,
-      "bias_lr_mult": 2,
-      "bias_decay_mult": 0,
-      "bias_filler": "Constant",
-      "bias_filler_param": 1,
-      "train_me": true,
-      "out": ["Cfc2"]
-    },
-    {
-      "in": ["Cfc2"],
-      "type": "Activation",
-      "name": "Crelu2",
-      "mode": "ReLU",
-      "out":  ["Cfc2"]
-    },
-    {
-      "in": ["Cfc2"],
-      "type": "Dropout",
-      "name": "Cdrop2",
-      "dropout_ratio": 0.5,
-      "out": ["Cfc2"]
-    },
-    {
-      "in": ["Cfc2"],
-      "type": "InnerProduct",
       "name": "fc_class",
       "num_output": 8,
       "weight_lr_mult": 1,
