@@ -83,9 +83,9 @@
 #include <cudnn.h>
 #include <sys/time.h>
 #include <opencv2/opencv.hpp>
-// #include "train.hpp"
-std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D, const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label, float* object_pose_quaternion, float* object_translation) {std::vector<cv::Mat> patches_2D; return patches_2D;}
-void patch2tensor(cv::Mat curr_patch, float* patch_data) {}
+#include "train.hpp"
+// std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D, const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label, float* object_pose_quaternion, float* object_translation) {std::vector<cv::Mat> patches_2D; return patches_2D;}
+// void patch2tensor(cv::Mat curr_patch, float* patch_data) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global data structures to hold test data and labels passed to and from Marvin
@@ -1146,6 +1146,25 @@ __global__ void Loss_SmoothL1(size_t CUDA_NUM_LOOPS, size_t N,
     }
 }
 
+__global__ void Loss_EuclideanSSE(size_t CUDA_NUM_LOOPS, size_t N,
+                              const StorageT *pred, const StorageT *target,
+                              const StorageT *weight, StorageT *loss) {
+    // diff = f( weight * (pred - target) )
+    // f(x) = 0.5 * x^2
+    const size_t idxBase = size_t(CUDA_NUM_LOOPS) *
+                           (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) +
+                            size_t(threadIdx.x));
+    if (idxBase >= N) return;
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx) {
+
+        ComputeT val =
+            GPUStorage2ComputeT(pred[idx]) - GPUStorage2ComputeT(target[idx]);
+        if (weight != NULL) val *= GPUStorage2ComputeT(weight[idx]);
+
+        loss[idx] = GPUCompute2StorageT(0.5 * val * val);
+    }
+}
+
 __global__ void LossGrad_SmoothL1(
     size_t CUDA_NUM_LOOPS, size_t N, ComputeT scale, const StorageT *pred,
     const StorageT *target, const StorageT *weight, StorageT *diff) {
@@ -1172,6 +1191,26 @@ __global__ void LossGrad_SmoothL1(
                                             scale * ((ComputeT(0) < val) -
                                                     (val < ComputeT(0))));
         }
+    }
+}
+
+__global__ void LossGrad_EuclideanSSE(
+    size_t CUDA_NUM_LOOPS, size_t N, ComputeT scale, const StorageT *pred,
+    const StorageT *target, const StorageT *weight, StorageT *diff) {
+    // diff = scale * f'( weight * (pred - target) )
+    // f'(x) = x
+
+    const size_t idxBase = size_t(CUDA_NUM_LOOPS) *
+                           (size_t(CUDA_NUM_THREADS) * size_t(blockIdx.x) +
+                            size_t(threadIdx.x));
+    if (idxBase >= N) return;
+    for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx) {
+
+        ComputeT val =
+            GPUStorage2ComputeT(pred[idx]) - GPUStorage2ComputeT(target[idx]);
+        if (weight != NULL) val *= GPUStorage2ComputeT(weight[idx]);
+
+        diff[idx] = GPUCompute2StorageT(GPUStorage2ComputeT(diff[idx]) + scale * val);        
     }
 }
 
@@ -6080,6 +6119,24 @@ public:
             loss_numel = numExamples;
             break;
         case EuclideanSSE:
+            if (!(in.size() == 2 || in.size() == 3)) {
+                std::cout << "LossLayer: EuclideanSSE should have 2 or 3 ins" <<
+                std::endl;
+                FatalError(__LINE__);
+            }
+            if (!same_dim(in[0]->dim, in[1]->dim)) {
+                std::cout <<
+                "LossLayer: EuclideanSSE should have the same dimensions" <<
+                std::endl;
+                FatalError(__LINE__);
+            }
+            if (in.size() == 3 && !same_dim(in[0]->dim, in[2]->dim)) {
+                std::cout <<
+                "LossLayer: EuclideanSSE should have the same dimensions" <<
+                std::endl;
+                FatalError(__LINE__);
+            }
+            loss_numel = numel(in[0]->dim);
             break;
         case HingeL1:
             break;
@@ -6162,6 +6219,11 @@ public:
                                                  loss_values);
             break;
         case EuclideanSSE:
+            Loss_EuclideanSSE<<<CUDA_GET_BLOCKS(loss_numel),
+                            CUDA_NUM_THREADS>>>(
+                CUDA_GET_LOOPS(loss_numel),
+                loss_numel, in[0]->dataGPU, in[1]->dataGPU,
+                (in.size()==3 ? in[2]->dataGPU : NULL), loss_values);
             break;
         case HingeL1:
             break;
@@ -6220,6 +6282,12 @@ public:
                                          in[0]->diffGPU, in[1]->diffGPU);
                 break;
             case EuclideanSSE:
+                LossGrad_EuclideanSSE<<<CUDA_GET_BLOCKS(loss_numel),
+                        CUDA_NUM_THREADS>>>(
+                    CUDA_GET_LOOPS(loss_numel),
+                    loss_numel, scale, in[0]->dataGPU, in[1]->dataGPU,
+                    (in.size()==3 ? in[2]->dataGPU : NULL),
+                    in[0]->diffGPU);
                 break;
             case HingeL1:
                 break;
