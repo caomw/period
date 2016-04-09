@@ -16,8 +16,8 @@ CUDNN_LIB_DIR=/usr/local/cudnn/v4rc/lib64
 
 
 
-nvcc detect.cu -std=c++11 -O3 -Iinclude -I/usr/local/cuda/include -I/usr/local/cudnn/v4rc/include -Llib -lm -lpng -L$CUDA_LIB_DIR -L$CUDNN_LIB_DIR -lcurand -lcudart -lcublas -lcudnn `libpng-config --cflags` `pkg-config --cflags opencv` `pkg-config --libs opencv` -o detect
+# nvcc detect.cu -std=c++11 -O3 -Iinclude -I/usr/local/cuda/include -I/usr/local/cudnn/v4rc/include -Llib -lm -lpng -L$CUDA_LIB_DIR -L$CUDNN_LIB_DIR -lcurand -lcudart -lcublas -lcudnn `libpng-config --cflags` `pkg-config --cflags opencv` `pkg-config --libs opencv` -o detect
 
 
 
-# nvcc -std=c++11 -O3 -o marvin marvin.cu -Iinclude -I/usr/local/cuda/include -I/usr/local/cudnn/v4rc/include -L$CUDA_LIB_DIR -L$CUDNN_LIB_DIR -lcudart -lcublas -lcudnn -lcurand -lm `libpng-config --cflags` `pkg-config --cflags opencv` `pkg-config --libs opencv`
+nvcc -std=c++11 -O3 -o marvin marvin.cu -Iinclude -I/usr/local/cuda/include -I/usr/local/cudnn/v4rc/include -L$CUDA_LIB_DIR -L$CUDNN_LIB_DIR -lcudart -lcublas -lcudnn -lcurand -lm `libpng-config --cflags` `pkg-config --cflags opencv` `pkg-config --libs opencv`

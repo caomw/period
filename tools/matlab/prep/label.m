@@ -58,8 +58,8 @@ end
 
 % Create downsampled point cloud
 ptCloud = pointCloud(objCoords','Color',objColors');
-% ptCloud = pcdownsample(ptCloud,'random',0.1);
-pcwrite(ptCloud,'test','PLYFormat','binary');
+ptCloud = pcdownsample(ptCloud,'random',0.1);
+% pcwrite(ptCloud,'test','PLYFormat','binary');
 
 
 %% Create GUI to label data
@@ -67,7 +67,7 @@ f = figure; pcshow(ptCloud);
 
 global poseLoc;
 global poseRot;
-poseLoc = [0,0,0];
+poseLoc = [mean(ptCloud.XLimits),mean(ptCloud.YLimits),mean(ptCloud.ZLimits)];
 poseRot = eye(3);
 axisR = [poseLoc - 0.05*poseRot(:,1)'; poseLoc + 0.25*poseRot(:,1)'];
 axisG = [poseLoc - 0.05*poseRot(:,2)'; poseLoc + 0.25*poseRot(:,2)'];

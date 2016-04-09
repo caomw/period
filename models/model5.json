@@ -15,10 +15,10 @@
     "display_iter": 1,
     "test_iter": 5,
     "test_interval": 100,
-    "GPU": 5
+    "GPU": 0
   },
   "test": {
-    "GPU": 5
+    "GPU": 0
   },
   "layers": [
     {

@@ -83,9 +83,9 @@
 #include <cudnn.h>
 #include <sys/time.h>
 #include <opencv2/opencv.hpp>
-// #include "train.hpp"
-std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D, const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label, float* object_pose_quaternion, float* object_translation) {std::vector<cv::Mat> patches_2D; return patches_2D;}
-void patch2tensor(cv::Mat curr_patch, float* patch_data) {}
+#include "train.hpp"
+// std::vector<cv::Mat> gen_train_hypothesis_pair(int batch_idx, float* d_batch_3D, const std::string &object_directory, int* positive_hypothesis_crop_info, int* negative_hypothesis_crop_info, int* axis_angle_label, float* object_pose_quaternion, float* object_translation) {std::vector<cv::Mat> patches_2D; return patches_2D;}
+// void patch2tensor(cv::Mat curr_patch, float* patch_data) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global data structures to hold test data and labels passed to and from Marvin
@@ -3924,24 +3924,25 @@ public:
 
         // Debug 3D
         // float * batch_2D = new float[32 * 3 * 227 * 227];
-        // float * batch_3D = new float[32 * 30 * 30 * 30];
+        float * batch_3D = new float[batch_size * 30 * 30 * 30];
         // memset(batch_2D, 0, sizeof(float) * 32 * 3 * 227 * 227);
-        // memset(batch_3D, 0, sizeof(float) * 32 * 30 * 30 * 30);
+        memset(batch_3D, 0, sizeof(float) * batch_size * 30 * 30 * 30);
         // kCheckCUDA(__LINE__, cudaMemcpy(batch_2D, dataGPU[0], 32 * 3 * 227 * 227 * sizeof(float), cudaMemcpyDeviceToHost));
-        // kCheckCUDA(__LINE__, cudaMemcpy(batch_3D, dataGPU[1], 32 * 30 * 30 * 30 * sizeof(float), cudaMemcpyDeviceToHost));
+        // std::cout << "GOT HERE" << std::endl;
+        kCheckCUDA(__LINE__, cudaMemcpy(batch_3D, dataGPU[1], batch_size * 30 * 30 * 30 * sizeof(float), cudaMemcpyDeviceToHost));
         // for (int i = 0; i < 32 * 3 * 227 * 227; i++)
         //   std::cout << "2D batch data: " << batch_2D[i] << std::endl;
-        // for (int i = 0; i < 32 * 30 * 30 * 30; i++)
+        // for (int i = 0; i < batch_size * 30 * 30 * 30; i++)
         //   std::cout << "3D batch data: " << batch_3D[i] << std::endl;
-        // // Save curr volumes to file
-        // int patch3D_size[3];
-        // patch3D_size[0] = 30;
-        // patch3D_size[1] = 30;
-        // patch3D_size[2] = 30;
-        // for (int i = 0; i < 32; i++) {
-        //   std::string scene_ply_name = "patch." + std::to_string(i) + ".ply";
-        //   save_volume_to_ply(scene_ply_name, patch3D_size, &batch_3D[i * 30 * 30 * 30]);
-        // }
+        // Save curr volumes to file
+        int patch3D_size[3];
+        patch3D_size[0] = 30;
+        patch3D_size[1] = 30;
+        patch3D_size[2] = 30;
+        for (int i = 0; i < batch_size; i++) {
+          std::string scene_ply_name = "patch." + std::to_string(i) + "." + object_list[i/2 % (object_list.size())] + ".ply";
+          save_volume_to_ply(scene_ply_name, patch3D_size, &batch_3D[i * 30 * 30 * 30]);
+        }
 
         // // Debug labels
         // float * label_class = new float[32];
