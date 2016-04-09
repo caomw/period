@@ -8,8 +8,8 @@
     "lr_policy": "LR_step",
     "lr_gamma": 0.9,
     "lr_stepsize": 10000,
-    "path": "models/PeriodNet.4.3",
-    "snapshot_prefix": "models/PeriodNet.4.3.",
+    "path": "models/PeriodNet.5.3",
+    "snapshot_prefix": "models/PeriodNet.5.3.",
     "max_iter": 100000,
     "snapshot_iter": 5000,
     "display_iter": 1,
@@ -668,6 +668,22 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
     {
       "in":["3Dfc6","fc7"],
       "type":"Concat",
@@ -678,7 +694,7 @@
       "in": ["combine"],
       "type": "InnerProduct",
       "name": "Cfc1",
-      "num_output": 4096,
+      "num_output": 1000,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -708,7 +724,7 @@
       "in": ["Cfc1"],
       "type": "InnerProduct",
       "name": "Cfc2",
-      "num_output": 4096,
+      "num_output": 1000,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -738,7 +754,7 @@
       "in": ["Cfc2"],
       "type": "InnerProduct",
       "name": "fc_class",
-      "num_output": 8,
+      "num_output": 3,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -773,11 +789,19 @@
 
 
 
+
+
+
+
+
+
+
+
     {
       "in": ["combine"],
       "type": "InnerProduct",
       "name": "Qfc1",
-      "num_output": 4096,
+      "num_output": 1000,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -807,7 +831,7 @@
       "in": ["Qfc1"],
       "type": "InnerProduct",
       "name": "Qfc2",
-      "num_output": 4096,
+      "num_output": 1000,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -837,7 +861,7 @@
       "in": ["Qfc2"],
       "type": "InnerProduct",
       "name": "fc_quat",
-      "num_output": 28,
+      "num_output": 8,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -867,11 +891,23 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
       "in": ["combine"],
       "type": "InnerProduct",
       "name": "Tfc1",
-      "num_output": 4096,
+      "num_output": 1000,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -901,7 +937,7 @@
       "in": ["Tfc1"],
       "type": "InnerProduct",
       "name": "Tfc2",
-      "num_output": 4096,
+      "num_output": 1000,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -931,7 +967,7 @@
       "in": ["Tfc2"],
       "type": "InnerProduct",
       "name": "fc_trans",
-      "num_output": 21,
+      "num_output": 6,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -954,6 +990,32 @@
       "mode": "SmoothL1",
       "loss_weight": 1
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

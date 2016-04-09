@@ -448,13 +448,32 @@ void generate_train_labels(const std::string &sequence_directory) {
 int main(int argc, char **argv) {
 
   init_fusion_GPU();
+
+
+  generate_train_labels("data/train/expo/000000");
+  generate_train_labels("data/train/expo/000001");
+  generate_train_labels("data/train/expo/000002");
+  generate_train_labels("data/train/expo/000003");
+  generate_train_labels("data/train/expo/000004");
+  generate_train_labels("data/train/expo/000005");
+  generate_train_labels("data/train/expo/000006");
+  generate_train_labels("data/train/expo/000007");
+
+  generate_train_labels("data/train/glue/000000");
+  generate_train_labels("data/train/glue/000001");
+  generate_train_labels("data/train/glue/000002");
+  generate_train_labels("data/train/glue/000003");
+  generate_train_labels("data/train/glue/000004");
+  generate_train_labels("data/train/glue/000005");
+  generate_train_labels("data/train/glue/000006");
+  generate_train_labels("data/train/glue/000007");
   
   // generate_train_labels("data/train/book/seq01");
   // generate_train_labels("data/train/book/seq02");
   // generate_train_labels("data/train/book/seq03");
   // generate_train_labels("data/train/book/seq04");
   // generate_train_labels("data/train/book/seq05");
-  generate_train_labels("data/train/book/seq06");
+  // generate_train_labels("data/train/book/seq06");
 
   // generate_train_labels("data/train/duck/seq01");
   // generate_train_labels("data/train/duck/seq02");

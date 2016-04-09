@@ -21,7 +21,7 @@ marvin::Net main_net("models/model" + model_idx + ".test.json");
 // Init marvin net
 void init_marvin() {
   main_net.Malloc(marvin::Testing);
-  std::vector<std::string> models = marvin::getStringVector("models/PeriodNet.4." + model_idx + ".35000.marvin");
+  std::vector<std::string> models = marvin::getStringVector("models/PeriodNet.4." + model_idx + ".100000.marvin");
   for (int m=0;m<models.size();++m)   
     main_net.loadWeights(models[m]);
 //     // marvin::Net net("tools/marvin/model" + model_idx + ".test.json");
@@ -165,8 +165,10 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
 
   // Load image/depth/extrinsic data for current frame
   unsigned short * depth_data = (unsigned short *) malloc(480 * 640 * sizeof(unsigned short));
-  for (int i = 0; i < 480 * 640; i++)
+  for (int i = 0; i < 480 * 640; i++) {
     depth_data[i] = (((unsigned short) curr_frame_depth.data[i * 2 + 1]) << 8) + ((unsigned short) curr_frame_depth.data[i * 2 + 0]);
+    // std::cout << depth_data[i] << std::endl;
+  }
 
   std::cout << "GPU: Fusing depth into TSDF volume." << std::endl;
   // Compute relative camera pose transform between current frame and base frame
@@ -205,12 +207,9 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
   kCheckCUDA(__LINE__, cudaMemcpy(vox_tsdf, d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
   kCheckCUDA(__LINE__, cudaMemcpy(vox_weight, d_vox_weight, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
 
-  for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
-    vox_tsdf[i] = 1-abs(vox_tsdf[i]);
-
-  // // Save curr volume to pointcloud file
-  // std::string scene_ply_name = "volume.pointcloud.ply";
-  // save_volume_to_ply(scene_ply_name, vox_size, vox_tsdf);
+  // Save curr volume to pointcloud file
+  std::string scene_ply_name = "volume.pointcloud.ply";
+  save_volume_to_ply(scene_ply_name, vox_size, vox_tsdf);
 
   // // Save curr volume to raw file
   // std::string volume_name = "volume.tsdf.bin";
@@ -391,13 +390,13 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
 
   // List objects
   std::vector<std::string> object_names;
-  object_names.push_back("book");
-  object_names.push_back("duck");
+  // object_names.push_back("book");
+  // object_names.push_back("duck");
   object_names.push_back("expo");
-  object_names.push_back("frog");
+  // object_names.push_back("frog");
   object_names.push_back("glue");
-  object_names.push_back("plugs");
-  object_names.push_back("spark");
+  // object_names.push_back("plugs");
+  // object_names.push_back("spark");
 
   float * highest_class_scores = new float[object_names.size()];
   for (int i = 0; i < object_names.size(); i++)
@@ -410,8 +409,8 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
     if ((int)(hypothesis_labels[hypothesis_idx]) == 1) {
       // std::cout << hypothesis_idx << " " << num_hypothesis << " " << valid_hypothesis_idx << std::endl;
 
-      for (int j = 0; j < 8; j++)
-        std::cout << class_score_raw[valid_hypothesis_idx * 8 + j] << " ";
+      for (int j = 0; j < (object_names.size()+1); j++)
+        std::cout << class_score_raw[valid_hypothesis_idx * (object_names.size()+1) + j] << " ";
       std::cout << std::endl;
 
       // Loop through each object type
@@ -644,7 +643,7 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
 
   cv::namedWindow("Object Poses", CV_WINDOW_AUTOSIZE);
   cv::imshow("Object Poses", curr_frame_color);
-  cv::waitKey(10);
+  cv::waitKey(100);
 
   // Save display result
   std::string results_directory = sequence_directory + "/results." + model_idx;
@@ -674,7 +673,6 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
 
 int main(int argc, char **argv) {
 
-  // std::string object_directory = "data/test/glue";
 
 
   init_fusion_GPU();
@@ -683,10 +681,11 @@ int main(int argc, char **argv) {
   
 
   // tic();
-  // detect("data/test/glue/seq04","frame-000174");
+  // detect("data/train/expo/000000","frame-000000");
   // toc();
 
   // // List RGB-D sequences
+  // std::string object_directory = "data/train/expo";
   // std::vector<std::string> sequence_names;
   // get_files_in_directory(object_directory, sequence_names, "");
   // int rand_sequence_idx = (int)floor(gen_random_float(0, (float)sequence_names.size()));
@@ -708,7 +707,7 @@ int main(int argc, char **argv) {
   // }
 
 
-  std::string curr_sequence_directory = "data/robot";
+  std::string curr_sequence_directory = "data/train/expo/000004";
   // List RGB-D frames
   std::vector<std::string> frame_names;
   get_files_in_directory(curr_sequence_directory, frame_names, ".color.png");

@@ -8,17 +8,17 @@
     "lr_policy": "LR_step",
     "lr_gamma": 0.9,
     "lr_stepsize": 10000,
-    "path": "models/PeriodNet.4.5",
-    "snapshot_prefix": "models/PeriodNet.4.5.",
+    "path": "models/PeriodNet.5.5",
+    "snapshot_prefix": "models/PeriodNet.5.5.",
     "max_iter": 100000,
     "snapshot_iter": 5000,
     "display_iter": 1,
     "test_iter": 5,
     "test_interval": 100,
-    "GPU": 0
+    "GPU": 5
   },
   "test": {
-    "GPU": 0
+    "GPU": 5
   },
   "layers": [
     {
@@ -251,7 +251,7 @@
       "in": ["3Dfc6"],
       "type": "InnerProduct",
       "name": "fc_class",
-      "num_output": 8,
+      "num_output": 3,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -358,7 +358,7 @@
       "in": ["Qfc2"],
       "type": "InnerProduct",
       "name": "fc_quat",
-      "num_output": 28,
+      "num_output": 8,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",
@@ -464,7 +464,7 @@
       "in": ["Tfc2"],
       "type": "InnerProduct",
       "name": "fc_trans",
-      "num_output": 21,
+      "num_output": 6,
       "weight_lr_mult": 1,
       "weight_decay_mult": 1,
       "weight_filler": "Gaussian",

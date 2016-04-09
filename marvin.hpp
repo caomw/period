@@ -3552,7 +3552,7 @@ public:
     std::string file_label;
     int batch_size;
 
-    int num_objects = 7;
+    int num_objects = 2;
 
     int numofitems() {
         return 0; //labelCPUall->numofitems();
@@ -3746,13 +3746,13 @@ public:
         // kCheckCUDA(__LINE__, cudaMalloc(&d_batch_3D, 32 * 30 * 30 * 30 * sizeof(float)));
 
         std::vector<std::string> object_list;
-        object_list.push_back("book");
-        object_list.push_back("duck");
+        // object_list.push_back("book");
+        // object_list.push_back("duck");
         object_list.push_back("expo");
-        object_list.push_back("frog");
+        // object_list.push_back("frog");
         object_list.push_back("glue");
-        object_list.push_back("plugs");
-        object_list.push_back("spark");
+        // object_list.push_back("plugs");
+        // object_list.push_back("spark");
 
         for (int i = 0; i < batch_size/2; i++) {
 
@@ -3922,27 +3922,27 @@ public:
             delete [] label_quaternion_weights;
         }
 
-        // Debug 3D
-        // float * batch_2D = new float[32 * 3 * 227 * 227];
-        float * batch_3D = new float[batch_size * 30 * 30 * 30];
-        // memset(batch_2D, 0, sizeof(float) * 32 * 3 * 227 * 227);
-        memset(batch_3D, 0, sizeof(float) * batch_size * 30 * 30 * 30);
-        // kCheckCUDA(__LINE__, cudaMemcpy(batch_2D, dataGPU[0], 32 * 3 * 227 * 227 * sizeof(float), cudaMemcpyDeviceToHost));
-        // std::cout << "GOT HERE" << std::endl;
-        kCheckCUDA(__LINE__, cudaMemcpy(batch_3D, dataGPU[1], batch_size * 30 * 30 * 30 * sizeof(float), cudaMemcpyDeviceToHost));
-        // for (int i = 0; i < 32 * 3 * 227 * 227; i++)
-        //   std::cout << "2D batch data: " << batch_2D[i] << std::endl;
-        // for (int i = 0; i < batch_size * 30 * 30 * 30; i++)
-        //   std::cout << "3D batch data: " << batch_3D[i] << std::endl;
-        // Save curr volumes to file
-        int patch3D_size[3];
-        patch3D_size[0] = 30;
-        patch3D_size[1] = 30;
-        patch3D_size[2] = 30;
-        for (int i = 0; i < batch_size; i++) {
-          std::string scene_ply_name = "patch." + std::to_string(i) + "." + object_list[i/2 % (object_list.size())] + ".ply";
-          save_volume_to_ply(scene_ply_name, patch3D_size, &batch_3D[i * 30 * 30 * 30]);
-        }
+        // // Debug 3D
+        // // float * batch_2D = new float[32 * 3 * 227 * 227];
+        // float * batch_3D = new float[batch_size * 30 * 30 * 30];
+        // // memset(batch_2D, 0, sizeof(float) * 32 * 3 * 227 * 227);
+        // memset(batch_3D, 0, sizeof(float) * batch_size * 30 * 30 * 30);
+        // // kCheckCUDA(__LINE__, cudaMemcpy(batch_2D, dataGPU[0], 32 * 3 * 227 * 227 * sizeof(float), cudaMemcpyDeviceToHost));
+        // // std::cout << "GOT HERE" << std::endl;
+        // kCheckCUDA(__LINE__, cudaMemcpy(batch_3D, dataGPU[1], batch_size * 30 * 30 * 30 * sizeof(float), cudaMemcpyDeviceToHost));
+        // // for (int i = 0; i < 32 * 3 * 227 * 227; i++)
+        // //   std::cout << "2D batch data: " << batch_2D[i] << std::endl;
+        // // for (int i = 0; i < batch_size * 30 * 30 * 30; i++)
+        // //   std::cout << "3D batch data: " << batch_3D[i] << std::endl;
+        // // Save curr volumes to file
+        // int patch3D_size[3];
+        // patch3D_size[0] = 30;
+        // patch3D_size[1] = 30;
+        // patch3D_size[2] = 30;
+        // for (int i = 0; i < batch_size; i++) {
+        //   std::string scene_ply_name = "patch." + std::to_string(i) + "." + object_list[i/2 % (object_list.size())] + ".ply";
+        //   save_volume_to_ply(scene_ply_name, patch3D_size, &batch_3D[i * 30 * 30 * 30]);
+        // }
 
         // // Debug labels
         // float * label_class = new float[32];
