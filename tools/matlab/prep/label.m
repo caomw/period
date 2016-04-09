@@ -1,6 +1,6 @@
 function label()
 close all;
-seqDir = '/home/mcube/apcdata/princeton_data/raw/glue/000007';
+seqDir = '/home/mcube/software/period/data/train/elmers_washable_no_run_school_glue/000004';
 
 %% Load all RGB-D frames and create a point cloud
 
@@ -67,7 +67,7 @@ f = figure; showPointCloud(ptCloud);
 
 global poseLoc;
 global poseRot;
-poseLoc = [mean(ptCloud.XLimits),mean(ptCloud.YLimits),mean(ptCloud.ZLimits)];
+poseLoc = [mean(ptCloud.XLimits)-0.2,mean(ptCloud.YLimits),mean(ptCloud.ZLimits)];
 poseRot = eye(3);
 axisR = [poseLoc - 0.05*poseRot(:,1)'; poseLoc + 0.25*poseRot(:,1)'];
 axisG = [poseLoc - 0.05*poseRot(:,2)'; poseLoc + 0.25*poseRot(:,2)'];

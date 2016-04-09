@@ -15,13 +15,13 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global variables for Marvin
-std::string model_idx = "4";
-marvin::Net main_net("models/model" + model_idx + ".test.json");
+std::string model_idx = "2";
+marvin::Net main_net("models/round5/model" + model_idx + ".test.json");
 
 // Init marvin net
 void init_marvin() {
   main_net.Malloc(marvin::Testing);
-  std::vector<std::string> models = marvin::getStringVector("models/PeriodNet.5." + model_idx + "_snapshot_25000.marvin");
+  std::vector<std::string> models = marvin::getStringVector("models/round5/PeriodNet.5." + model_idx + "_snapshot_45000.marvin");
   for (int m=0;m<models.size();++m)   
     main_net.loadWeights(models[m]);
 //     // marvin::Net net("tools/marvin/model" + model_idx + ".test.json");
@@ -390,13 +390,13 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
 
   // List objects
   std::vector<std::string> object_names;
-  // object_names.push_back("book");
-  // object_names.push_back("duck");
+  object_names.push_back("book");
+  object_names.push_back("duck");
   object_names.push_back("expo");
-  // object_names.push_back("frog");
+  object_names.push_back("frog");
   object_names.push_back("glue");
-  // object_names.push_back("plugs");
-  // object_names.push_back("spark");
+  object_names.push_back("plugs");
+  object_names.push_back("spark");
 
   float * highest_class_scores = new float[object_names.size()];
   for (int i = 0; i < object_names.size(); i++)
@@ -425,7 +425,7 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
         std::cout << std::endl;
 
         float curr_class_score_raw = class_score_raw[valid_hypothesis_idx * (object_names.size() + 1) + i + 1];
-        if (curr_class_score_raw > 0.5f) {
+        if (curr_class_score_raw > 0.7f) {
 
           // Draw top scoring boxes
           std::cout << valid_hypothesis_idx << std::endl;
@@ -707,7 +707,7 @@ int main(int argc, char **argv) {
   // }
 
 
-  std::string curr_sequence_directory = "data/train/expo/000004";
+  std::string curr_sequence_directory = "data/train_princeton/book/seq01";
   // List RGB-D frames
   std::vector<std::string> frame_names;
   get_files_in_directory(curr_sequence_directory, frame_names, ".color.png");
