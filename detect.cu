@@ -15,13 +15,13 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global variables for Marvin
-std::string model_idx = "5";
+std::string model_idx = "4";
 marvin::Net main_net("models/model" + model_idx + ".test.json");
 
 // Init marvin net
 void init_marvin() {
   main_net.Malloc(marvin::Testing);
-  std::vector<std::string> models = marvin::getStringVector("models/PeriodNet.4." + model_idx + ".100000.marvin");
+  std::vector<std::string> models = marvin::getStringVector("models/PeriodNet.5." + model_idx + "_snapshot_25000.marvin");
   for (int m=0;m<models.size();++m)   
     main_net.loadWeights(models[m]);
 //     // marvin::Net net("tools/marvin/model" + model_idx + ".test.json");
