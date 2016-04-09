@@ -1,6 +1,6 @@
 function label()
 close all;
-seqDir = '../../../data/train/glue/seq07';
+seqDir = '/home/mcube/apcdata/princeton_data/raw/glue/000000';
 
 %% Load all RGB-D frames and create a point cloud
 
@@ -48,6 +48,9 @@ for frameIDX=1:length(depthFiles)
     colors = cat(1,colorsR(:)',colorsG(:)',colorsB(:)');
     colors = colors(:,validIDX);
     
+%     ptCloud = pointCloud(camXYZ','Color',colors');
+%     pcwrite(ptCloud,sprintf('%d',frameIDX),'PLYFormat','binary');
+    
     % Save points and colors
     objCoords = [objCoords,camXYZ];
     objColors = [objColors,colors];
@@ -55,7 +58,9 @@ end
 
 % Create downsampled point cloud
 ptCloud = pointCloud(objCoords','Color',objColors');
-ptCloud = pcdownsample(ptCloud,'random',0.1);
+% ptCloud = pcdownsample(ptCloud,'random',0.1);
+pcwrite(ptCloud,'test','PLYFormat','binary');
+
 
 %% Create GUI to label data
 f = figure; pcshow(ptCloud);
