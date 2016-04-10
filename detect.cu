@@ -160,48 +160,78 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
   // Load RGB-D frame
   std::string curr_frame_color_filename = sequence_directory + "/" + frame_prefix + ".color.png";
   cv::Mat curr_frame_color = cv::imread(curr_frame_color_filename.c_str(), 1);
-  std::string curr_frame_depth_filename = sequence_directory + "/" + frame_prefix + ".depth.png";
-  cv::Mat curr_frame_depth = cv::imread(curr_frame_depth_filename.c_str(), CV_LOAD_IMAGE_UNCHANGED);
 
-  // Load image/depth/extrinsic data for current frame
-  unsigned short * depth_data = (unsigned short *) malloc(480 * 640 * sizeof(unsigned short));
-  for (int i = 0; i < 480 * 640; i++) {
-    depth_data[i] = (((unsigned short) curr_frame_depth.data[i * 2 + 1]) << 8) + ((unsigned short) curr_frame_depth.data[i * 2 + 0]);
-    // std::cout << depth_data[i] << std::endl;
-  }
-
-  std::cout << "GPU: Fusing depth into TSDF volume." << std::endl;
-  // Compute relative camera pose transform between current frame and base frame
-  // Compute camera view frustum bounds within the voxel volume
-  float camera_relative_pose[16] = {0};
-  float view_bounds[6] = {0};
-  std::vector<float> curr_extrinsic;
-  for (int i = 0; i < 3; i++) {
-    curr_extrinsic.push_back(1.0f);
-    for (int i = 0; i < 4; i++) {
-      curr_extrinsic.push_back(0.0f);
-    }
-  }
-  curr_extrinsic.push_back(1.0f);
+  // Get all depth frames and extrinsics in the folder
+  std::vector<std::string> depth_frame_filenames;
+  get_files_in_directory(sequence_directory, depth_frame_filenames, ".depth.png");
+  std::sort(depth_frame_filenames.begin(), depth_frame_filenames.end());
   std::vector<std::vector<float>> extrinsics;
-  extrinsics.push_back(curr_extrinsic);
-  get_frustum_bounds(K, extrinsics, 0, 0, camera_relative_pose, view_bounds,
-                     vox_unit, vox_size, vox_range_cam);
+  int base_frame_idx = 0;
+  for (int frame_idx = 0; frame_idx < depth_frame_filenames.size(); frame_idx++) {
+    std::string curr_frame_name = depth_frame_filenames[frame_idx];
+    curr_frame_name = curr_frame_name.substr(0, curr_frame_name.length() - 10);
+    if (curr_frame_name == frame_prefix)
+      base_frame_idx = frame_idx;
+    std::string curr_extrinsic_filename = sequence_directory + "/" + curr_frame_name + ".pose.txt";
+    std::vector<float> curr_extrinsic = load_matrix_from_file(curr_extrinsic_filename, 4, 4);
+    extrinsics.push_back(curr_extrinsic);
+    std::cout << curr_frame_name << std::endl;
+  }
 
-  // Copy fusion params to GPU
-  kCheckCUDA(__LINE__, cudaMemcpy(d_K, K, 9 * sizeof(float), cudaMemcpyHostToDevice));
-  kCheckCUDA(__LINE__, cudaMemcpy(d_depth_data, depth_data, 480 * 640 * sizeof(unsigned short), cudaMemcpyHostToDevice));
-  kCheckCUDA(__LINE__, cudaMemcpy(d_view_bounds, view_bounds, 6 * sizeof(float), cudaMemcpyHostToDevice));
-  kCheckCUDA(__LINE__, cudaMemcpy(d_camera_relative_pose, camera_relative_pose, 16 * sizeof(float), cudaMemcpyHostToDevice));
-  kCheckCUDA(__LINE__, cudaMemcpy(d_vox_range_cam, vox_range_cam, 6 * sizeof(float), cudaMemcpyHostToDevice));
+  for (int frame_idx = 0; frame_idx < depth_frame_filenames.size(); frame_idx++) {
 
-  // Integrate
-  int num_blocks = vox_size[2];
-  int num_threads = vox_size[1];
-  integrate <<< num_blocks, num_threads >>>(d_K, d_depth_data, d_view_bounds, d_camera_relative_pose,
-      vox_unit, vox_mu, d_vox_size, d_vox_range_cam, d_vox_tsdf, d_vox_weight);
-  kCheckCUDA(__LINE__, cudaGetLastError());
-  // kCheckCUDA(__LINE__, cudaDeviceSynchronize());
+    // Load image/depth/extrinsic data for current frame
+    // std::string curr_frame_depth_filename = sequence_directory + "/" + frame_prefix + ".depth.png";
+    std::string curr_frame_depth_filename = sequence_directory + "/" + depth_frame_filenames[frame_idx];
+    std::cout << curr_frame_depth_filename << std::endl;
+    cv::Mat curr_frame_depth = cv::imread(curr_frame_depth_filename.c_str(), CV_LOAD_IMAGE_UNCHANGED);
+    unsigned short * depth_data = (unsigned short *) malloc(480 * 640 * sizeof(unsigned short));
+    for (int i = 0; i < 480 * 640; i++) {
+      depth_data[i] = (((unsigned short) curr_frame_depth.data[i * 2 + 1]) << 8) + ((unsigned short) curr_frame_depth.data[i * 2 + 0]);
+      // std::cout << depth_data[i] << std::endl;
+    }
+
+    std::cout << "GPU: Fusing depth into TSDF volume." << std::endl;
+    // Compute relative camera pose transform between current frame and base frame
+    // Compute camera view frustum bounds within the voxel volume
+    float camera_relative_pose[16] = {0};
+    float view_bounds[6] = {0};
+    // std::vector<float> curr_extrinsic;
+    // for (int i = 0; i < 3; i++) {
+    //   curr_extrinsic.push_back(1.0f);
+    //   for (int i = 0; i < 4; i++) {
+    //     curr_extrinsic.push_back(0.0f);
+    //   }
+    // }
+    // curr_extrinsic.push_back(1.0f);
+    // std::vector<std::vector<float>> extrinsics;
+    // extrinsics.push_back(curr_extrinsic);
+    get_frustum_bounds(K, extrinsics, base_frame_idx, frame_idx, camera_relative_pose, view_bounds,
+                       vox_unit, vox_size, vox_range_cam);
+
+    // Copy fusion params to GPU
+    kCheckCUDA(__LINE__, cudaMemcpy(d_K, K, 9 * sizeof(float), cudaMemcpyHostToDevice));
+    kCheckCUDA(__LINE__, cudaMemcpy(d_depth_data, depth_data, 480 * 640 * sizeof(unsigned short), cudaMemcpyHostToDevice));
+    kCheckCUDA(__LINE__, cudaMemcpy(d_view_bounds, view_bounds, 6 * sizeof(float), cudaMemcpyHostToDevice));
+    kCheckCUDA(__LINE__, cudaMemcpy(d_camera_relative_pose, camera_relative_pose, 16 * sizeof(float), cudaMemcpyHostToDevice));
+    kCheckCUDA(__LINE__, cudaMemcpy(d_vox_range_cam, vox_range_cam, 6 * sizeof(float), cudaMemcpyHostToDevice));
+
+    // Integrate
+    int num_blocks = vox_size[2];
+    int num_threads = vox_size[1];
+    integrate <<< num_blocks, num_threads >>>(d_K, d_depth_data, d_view_bounds, d_camera_relative_pose,
+        vox_unit, vox_mu, d_vox_size, d_vox_range_cam, d_vox_tsdf, d_vox_weight);
+    kCheckCUDA(__LINE__, cudaGetLastError());
+    // kCheckCUDA(__LINE__, cudaDeviceSynchronize());
+
+
+    // kCheckCUDA(__LINE__, cudaMemcpy(vox_tsdf, d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
+    // std::string scene_ply_name = "volume.pointcloud." + std::to_string(frame_idx) + ".ply";
+    // save_volume_to_ply(scene_ply_name, vox_size, vox_tsdf);
+    
+    // Free memory
+    free(depth_data);
+  }
 
   // Copy data back to memory
   kCheckCUDA(__LINE__, cudaMemcpy(vox_tsdf, d_vox_tsdf, vox_size[0] * vox_size[1] * vox_size[2] * sizeof(float), cudaMemcpyDeviceToHost));
@@ -285,8 +315,8 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
   kCheckCUDA(__LINE__, cudaMalloc(&d_hypothesis_crop_2D, 4 * num_hypothesis * sizeof(unsigned short)));
 
   // Run kernel to get labels for hypotheses
-  num_threads = 512;
-  num_blocks = (int)ceil(((float)num_hypothesis) / ((float)num_threads));
+  int num_threads = 512;
+  int num_blocks = (int)ceil(((float)num_hypothesis) / ((float)num_threads));
   gen_hypothesis_labels<<<num_blocks,num_threads>>>(num_hypothesis, d_hypothesis_locations, d_hypothesis_labels, d_hypothesis_crop_2D, d_K, vox_unit, d_vox_size, d_vox_range_cam, d_vox_tsdf);
   kCheckCUDA(__LINE__, cudaGetLastError());
 
@@ -359,7 +389,7 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
   }
 
   // Clear memory
-  free(depth_data);
+  // free(depth_data);
   cudaFree(d_hypothesis_locations);
   cudaFree(d_hypothesis_labels);
   cudaFree(d_hypothesis_crop_2D);
@@ -681,7 +711,7 @@ int main(int argc, char **argv) {
   
 
   // tic();
-  // detect("data/train/expo/000000","frame-000000");
+  detect("data/train/expo/000000","frame-000000");
   // toc();
 
   // // List RGB-D sequences
@@ -707,17 +737,17 @@ int main(int argc, char **argv) {
   // }
 
 
-  std::string curr_sequence_directory = "data/train_princeton/book/seq01";
-  // List RGB-D frames
-  std::vector<std::string> frame_names;
-  get_files_in_directory(curr_sequence_directory, frame_names, ".color.png");
-  for (int frame_idx = 0; frame_idx < frame_names.size(); frame_idx++) {
-    std::string curr_frame_name = frame_names[frame_idx];
-    curr_frame_name = curr_frame_name.substr(0, curr_frame_name.length() - 10);
-    tic();
-    detect(curr_sequence_directory,curr_frame_name);
-    toc();
-  }
+  // std::string curr_sequence_directory = "data/train/expo/000000";
+  // // List RGB-D frames
+  // std::vector<std::string> frame_names;
+  // get_files_in_directory(curr_sequence_directory, frame_names, ".color.png");
+  // for (int frame_idx = 0; frame_idx < frame_names.size(); frame_idx++) {
+  //   std::string curr_frame_name = frame_names[frame_idx];
+  //   curr_frame_name = curr_frame_name.substr(0, curr_frame_name.length() - 10);
+  //   tic();
+  //   detect(curr_sequence_directory,curr_frame_name);
+  //   toc();
+  // }
 
 
 

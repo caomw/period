@@ -143,8 +143,8 @@ void integrate(float* tmp_K, unsigned short* tmp_depth_data, float* tmp_view_bou
       continue;
 
     float eta = (p_depth - tmp_pos[2]) * sqrtf(1 + powf((tmp_pos[0] / tmp_pos[2]), 2) + powf((tmp_pos[1] / tmp_pos[2]), 2));
-    if (eta <= -tmp_vox_mu)
-      continue;
+    // if (eta <= -tmp_vox_mu)
+    //   continue;
 
     // Integrate
     int volumeIDX = z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x;
