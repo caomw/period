@@ -23,13 +23,13 @@
 % recon('../../../data/train/frog/seq03');
 % recon('../../../data/train/frog/seq04');
 
-recon('../../../data/train/glue/seq01');
-recon('../../../data/train/glue/seq02');
-recon('../../../data/train/glue/seq03');
-recon('../../../data/train/glue/seq04');
-recon('../../../data/train/glue/seq05');
-recon('../../../data/train/glue/seq06');
-recon('../../../data/train/glue/seq07');
+% recon('../../../data/train/glue/seq01');
+% recon('../../../data/train/glue/seq02');
+% recon('../../../data/train/glue/seq03');
+% recon('../../../data/train/glue/seq04');
+% recon('../../../data/train/glue/seq05');
+% recon('../../../data/train/glue/seq06');
+% recon('../../../data/train/glue/seq07');
 
 % recon('../../../data/train/plugs/seq01');
 % recon('../../../data/train/plugs/seq02');

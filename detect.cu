@@ -15,13 +15,13 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global variables for Marvin
-std::string model_idx = "2";
-marvin::Net main_net("models/round5/model" + model_idx + ".test.json");
+std::string model_idx = "5";
+marvin::Net main_net("models/model" + model_idx + ".test.json");
 
 // Init marvin net
 void init_marvin() {
   main_net.Malloc(marvin::Testing);
-  std::vector<std::string> models = marvin::getStringVector("models/round5/PeriodNet.5." + model_idx + "_snapshot_45000.marvin");
+  std::vector<std::string> models = marvin::getStringVector("models/PeriodNet.5." + model_idx + ".60000.marvin");
   for (int m=0;m<models.size();++m)   
     main_net.loadWeights(models[m]);
 //     // marvin::Net net("tools/marvin/model" + model_idx + ".test.json");
@@ -241,12 +241,12 @@ void detect(const std::string &sequence_directory, const std::string &frame_pref
   std::string scene_ply_name = "volume.pointcloud.ply";
   save_volume_to_ply(scene_ply_name, vox_size, vox_tsdf);
 
-  // // Save curr volume to raw file
-  // std::string volume_name = "volume.tsdf.bin";
-  // std::ofstream outFile(volume_name, std::ios::binary | std::ios::out);
-  // for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
-  //   outFile.write((char*)&vox_tsdf[i], sizeof(float));
-  // outFile.close();
+  // Save curr volume to raw file
+  std::string volume_name = "volume.tsdf.bin";
+  std::ofstream outFile(volume_name, std::ios::binary | std::ios::out);
+  for (int i = 0; i < vox_size[0] * vox_size[1] * vox_size[2]; i++)
+    outFile.write((char*)&vox_tsdf[i], sizeof(float));
+  outFile.close();
 
   std::cout << "GPU: Exhaustively generating sliding windows for object detection." << std::endl;
 
@@ -711,7 +711,7 @@ int main(int argc, char **argv) {
   
 
   // tic();
-  detect("data/train/expo/000000","frame-000000");
+  // detect("data/train/book/seq01","frame-000000");
   // toc();
 
   // // List RGB-D sequences
@@ -737,17 +737,18 @@ int main(int argc, char **argv) {
   // }
 
 
-  // std::string curr_sequence_directory = "data/train/expo/000000";
-  // // List RGB-D frames
-  // std::vector<std::string> frame_names;
-  // get_files_in_directory(curr_sequence_directory, frame_names, ".color.png");
-  // for (int frame_idx = 0; frame_idx < frame_names.size(); frame_idx++) {
-  //   std::string curr_frame_name = frame_names[frame_idx];
-  //   curr_frame_name = curr_frame_name.substr(0, curr_frame_name.length() - 10);
-  //   tic();
-  //   detect(curr_sequence_directory,curr_frame_name);
-  //   toc();
-  // }
+  std::string curr_sequence_directory = "data/raw/glue/000000";
+  // std::string curr_sequence_directory = "data/sample";
+  // List RGB-D frames
+  std::vector<std::string> frame_names;
+  get_files_in_directory(curr_sequence_directory, frame_names, ".color.png");
+  for (int frame_idx = 0; frame_idx < frame_names.size(); frame_idx++) {
+    std::string curr_frame_name = frame_names[frame_idx];
+    curr_frame_name = curr_frame_name.substr(0, curr_frame_name.length() - 10);
+    tic();
+    detect(curr_sequence_directory,curr_frame_name);
+    toc();
+  }
 
 
 

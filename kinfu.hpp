@@ -74,6 +74,9 @@ void save_volume_to_ply(const std::string &file_name, int* vox_size, float* vox_
   fprintf(fp, "property float x\n");
   fprintf(fp, "property float y\n");
   fprintf(fp, "property float z\n");
+  fprintf(fp, "property uchar red\n");
+  fprintf(fp, "property uchar green\n");
+  fprintf(fp, "property uchar blue\n");
   fprintf(fp, "end_header\n");
 
   // Create point cloud content for ply file
@@ -94,6 +97,22 @@ void save_volume_to_ply(const std::string &file_name, int* vox_size, float* vox_
       fwrite(&float_x, sizeof(float), 1, fp);
       fwrite(&float_y, sizeof(float), 1, fp);
       fwrite(&float_z, sizeof(float), 1, fp);
+
+      if (vox_tsdf[i] < 0) {
+        unsigned char r = (unsigned char)0;
+        unsigned char g = (unsigned char)0;
+        unsigned char b = (unsigned char)255;
+        fwrite(&r, sizeof(unsigned char), 1, fp);
+        fwrite(&g, sizeof(unsigned char), 1, fp);
+        fwrite(&b, sizeof(unsigned char), 1, fp);
+      } else {
+        unsigned char r = (unsigned char)255;
+        unsigned char g = (unsigned char)0;
+        unsigned char b = (unsigned char)0;
+        fwrite(&r, sizeof(unsigned char), 1, fp);
+        fwrite(&g, sizeof(unsigned char), 1, fp);
+        fwrite(&b, sizeof(unsigned char), 1, fp);
+      }
     }
   }
   fclose(fp);
@@ -143,8 +162,8 @@ void integrate(float* tmp_K, unsigned short* tmp_depth_data, float* tmp_view_bou
       continue;
 
     float eta = (p_depth - tmp_pos[2]) * sqrtf(1 + powf((tmp_pos[0] / tmp_pos[2]), 2) + powf((tmp_pos[1] / tmp_pos[2]), 2));
-    // if (eta <= -tmp_vox_mu)
-    //   continue;
+    if (eta <= -tmp_vox_mu)
+      continue;
 
     // Integrate
     int volumeIDX = z * tmp_vox_size[0] * tmp_vox_size[1] + y * tmp_vox_size[0] + x;
@@ -246,7 +265,7 @@ void reset_vox_whole_GPU(int* tmp_vox_size, float* tmp_vox_tsdf, float* tmp_vox_
 void init_fusion_GPU() {
 
   // Init voxel volume params
-  vox_unit = 0.005;
+  vox_unit = 0.0025;
   vox_mu_grid = 5;
   vox_mu = vox_unit * vox_mu_grid;
   vox_size[0] = 512;

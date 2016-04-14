@@ -1924,7 +1924,7 @@ __global__ void Kernel_update_AdaDeltaL1(size_t CUDA_NUM_LOOPS, size_t N, int nN
     if (idxBase >= N) return;
     for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
-        ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
+        // ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
         size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
         size_t h2_idx = N * (nNets + 2) + idx;
@@ -1950,7 +1950,7 @@ __global__ void Kernel_update_AdaDeltaL2(size_t CUDA_NUM_LOOPS, size_t N, int nN
     if (idxBase >= N) return;
     for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
-        ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
+        // ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
         size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
         size_t h2_idx = N * (nNets + 2) + idx;
@@ -2008,7 +2008,7 @@ __global__ void Kernel_update_AdamL1(size_t CUDA_NUM_LOOPS, size_t N, int nNets,
     if (idxBase >= N) return;
     for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
-        ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
+        // ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
         size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
         size_t h2_idx = N * (nNets + 2) + idx;
@@ -2031,7 +2031,7 @@ __global__ void Kernel_update_AdamL2(size_t CUDA_NUM_LOOPS, size_t N, int nNets,
     if (idxBase >= N) return;
     for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
-        ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
+        // ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
         size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
         size_t h2_idx = N * (nNets + 2) + idx;
@@ -2051,7 +2051,7 @@ __global__ void Kernel_update_NAGL1(size_t CUDA_NUM_LOOPS, size_t N, int nNets, 
     if (idxBase >= N) return;
     for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
-        ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
+        // ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
         size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
         ComputeT g;
@@ -2071,7 +2071,7 @@ __global__ void Kernel_update_NAGL2(size_t CUDA_NUM_LOOPS, size_t N, int nNets, 
     if (idxBase >= N) return;
     for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
-        ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
+        // ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
         size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
         ComputeT g  = decay * w;     // L2 regularization
@@ -2088,7 +2088,7 @@ __global__ void Kernel_update_RMSpropL1(size_t CUDA_NUM_LOOPS, size_t N, int nNe
     if (idxBase >= N) return;
     for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
-        ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
+        // ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
         size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
         ComputeT g;
@@ -2107,7 +2107,7 @@ __global__ void Kernel_update_RMSpropL2(size_t CUDA_NUM_LOOPS, size_t N, int nNe
     if (idxBase >= N) return;
     for (size_t idx = idxBase; idx < min(N, idxBase + CUDA_NUM_LOOPS); ++idx ) {
         ComputeT w  = GPUStorage2ComputeT(weights[idx]);
-        ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
+        // ComputeT u  = GPUStorage2ComputeT(gradients[idx]);
         size_t h_idx = N * (nNets + 1) + idx;
         ComputeT h  = GPUStorage2ComputeT(gradients[h_idx]);
         ComputeT g  = decay * w;     // L2 regularization

@@ -1,6 +1,6 @@
 function label()
 close all;
-seqDir = '/home/mcube/software/period/data/train/elmers_washable_no_run_school_glue/000004';
+seqDir = '../../../data/raw/glue/000000';
 
 %% Load all RGB-D frames and create a point cloud
 
@@ -58,8 +58,8 @@ end
 
 % Create downsampled point cloud
 ptCloud = pointCloud(objCoords','Color',objColors');
-ptCloud = pcdownsample(ptCloud,'random',0.5);
-% pcwrite(ptCloud,'test','PLYFormat','binary');
+% ptCloud = pcdownsample(ptCloud,'random',0.5);
+pcwrite(ptCloud,'pc','PLYFormat','binary');
 
 
 %% Create GUI to label data
