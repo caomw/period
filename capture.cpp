@@ -45,12 +45,30 @@ int main(int argc, char * argv[]) try {
     const uint16_t one_meter = static_cast<uint16_t>(1.0f / dev.get_depth_scale());
 
     // Save intrinsics of depth camera
-    rs::intrinsics depth_K = dev.get_stream_intrinsics(rs::stream::depth_aligned_to_color);
-    std::string intrinsics_filename = saveto_directory + "intrinsics.K.txt";
-    FILE *fp = fopen(intrinsics_filename.c_str(), "w");
-    fprintf(fp, "%.17g %.17g %.17g\n", depth_K.fx, 0.0f, depth_K.ppx);
-    fprintf(fp, "%.17g %.17g %.17g\n", 0.0f, depth_K.fy, depth_K.ppy);
+    rs::intrinsics depth_intrinsics = dev.get_stream_intrinsics(rs::stream::depth);
+    std::string depth_intrinsics_filename = saveto_directory + "camera.intrinsics.depth.txt";
+    FILE *fp = fopen(depth_intrinsics_filename.c_str(), "w");
+    fprintf(fp, "%.17g %.17g %.17g\n", depth_intrinsics.fx, 0.0f, depth_intrinsics.ppx);
+    fprintf(fp, "%.17g %.17g %.17g\n", 0.0f, depth_intrinsics.fy, depth_intrinsics.ppy);
     fprintf(fp, "%.17g %.17g %.17g\n", 0.0f, 0.0f, 1.0f);
+    fclose(fp); 
+
+    // Save intrinsics of color camera
+    rs::intrinsics color_intrinsics = dev.get_stream_intrinsics(rs::stream::color);
+    std::string color_intrinsics_filename = saveto_directory + "camera.intrinsics.color.txt";
+    fp = fopen(color_intrinsics_filename.c_str(), "w");
+    fprintf(fp, "%.17g %.17g %.17g\n", color_intrinsics.fx, 0.0f, color_intrinsics.ppx);
+    fprintf(fp, "%.17g %.17g %.17g\n", 0.0f, color_intrinsics.fy, color_intrinsics.ppy);
+    fprintf(fp, "%.17g %.17g %.17g\n", 0.0f, 0.0f, 1.0f);
+    fclose(fp); 
+
+    // Save extrinsics from depth camera to color camera
+    rs::extrinsics depth2color_extrinsics = dev.get_extrinsics(rs::stream::depth,rs::stream::color);
+    std::string depth2color_extrinsics_filename = saveto_directory + "camera.extrinsics.depth2color.txt";
+    fp = fopen(depth2color_extrinsics_filename.c_str(), "w");
+    fprintf(fp, "%.17g %.17g %.17g %.17g\n", depth2color_extrinsics.rotation[0], depth2color_extrinsics.rotation[3], depth2color_extrinsics.rotation[6], depth2color_extrinsics.translation[0]);
+    fprintf(fp, "%.17g %.17g %.17g %.17g\n", depth2color_extrinsics.rotation[1], depth2color_extrinsics.rotation[4], depth2color_extrinsics.rotation[7], depth2color_extrinsics.translation[1]);
+    fprintf(fp, "%.17g %.17g %.17g %.17g\n", depth2color_extrinsics.rotation[2], depth2color_extrinsics.rotation[5], depth2color_extrinsics.rotation[8], depth2color_extrinsics.translation[2]);
     fclose(fp); 
 
     // Frame increment
@@ -77,6 +95,7 @@ int main(int argc, char * argv[]) try {
 
         // Retrieve depth data, which was previously configured as a 640 x 480 image of 16-bit depth values
         const uint16_t * depth_frame = reinterpret_cast<const uint16_t *>(dev.get_frame_data(rs::stream::depth_aligned_to_color));
+        const uint16_t * depth_frame_raw = reinterpret_cast<const uint16_t *>(dev.get_frame_data(rs::stream::depth));
 
         // Retrieve color data, which was previously configured as a 640 x 480 x 3 image of 8-bit color values
         const uint8_t * color_frame = reinterpret_cast<const uint8_t *>(dev.get_frame_data(rs::stream::color));
@@ -99,6 +118,19 @@ int main(int argc, char * argv[]) try {
         }
         std::string depth_image_name = saveto_directory + "frame-" + frame_name_ss.str() + ".depth.png";
         depth_image.write(depth_image_name);
+
+        int depth_frame_raw_width = dev.get_stream_width(rs::stream::depth);
+        int depth_frame_raw_height = dev.get_stream_height(rs::stream::depth);
+        png::image<png::gray_pixel_16> depth_image_raw(depth_frame_raw_width, depth_frame_raw_height);
+        for (size_t y = 0; y < depth_frame_raw_height; y++) {
+            for (size_t x = 0; x < depth_frame_raw_width; x++) {
+                float depth_meters = ((float)depth_frame_raw[y * depth_frame_raw_width + x]) / ((float)one_meter);
+                // std::cout << depth_meters << std::endl;
+                depth_image_raw[y][x] = png::gray_pixel_16((uint16_t)round(depth_meters * 1000));
+            }
+        }
+        std::string depth_image_raw_name = saveto_directory + "frame-" + frame_name_ss.str() + ".depth.raw.png";
+        depth_image_raw.write(depth_image_raw_name);
 
         // Save color frame to disk (RGB, 24-bit, PNG)
         int color_frame_width = dev.get_stream_width(rs::stream::color);
